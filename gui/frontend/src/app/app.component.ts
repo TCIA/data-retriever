@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FetchFiles, OpenInputFileDialog, OpenOutputDirectoryDialog, RunCLIFetch } from '../../wailsjs/go/main/App';
 
 
@@ -7,7 +7,7 @@ import { FetchFiles, OpenInputFileDialog, OpenOutputDirectoryDialog, RunCLIFetch
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']
 })
-export class AppComponent {
+export class AppComponent implements OnInit {
   status = 'Ready';
   inputFilePath = '';
   outputDirPath = '';
@@ -18,6 +18,30 @@ export class AppComponent {
   maxRetries = 3;
   simultaneousDownloads = 2;
   skipExisting = true;
+
+  // Collapse state
+  filesCollapsed = false;
+  settingsCollapsed = true;
+  outputCollapsed = false;
+
+  // Dark mode
+  isDarkMode = false;
+
+  ngOnInit() {
+    // Detect system theme preference
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      this.isDarkMode = true;
+    }
+
+    // Listen for system theme changes
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+      this.isDarkMode = e.matches;
+    });
+  }
+
+  toggleDarkMode() {
+    this.isDarkMode = !this.isDarkMode;
+  }
 
   onSelectOutputDirectory() {
     OpenOutputDirectoryDialog().then((dirPath: string) => {
@@ -31,7 +55,7 @@ export class AppComponent {
 
   onFetchFiles() {
     if (!this.inputFilePath || !this.outputDirPath) {
-      this.status = "Please select both an input TCIA file and an output directory.";
+      this.status = "Please select an input TCIA file, an output directory, and a Manifests directory.";
       return;
     }
 

@@ -1,7 +1,7 @@
 
 {
     "$schema": "https://wails.io/schemas/config.v2.json",
-    "name": "TCIA Retriever",
+    "name": "wails-ng",
     "assetdir": "frontend/dist",
     "frontend:build": "npx ng build",
     "frontend:install": "npm install",
@@ -9,7 +9,7 @@
     "frontend:dev:serverUrl": "http://localhost:4200",
     "wailsjsdir": "./frontend",
     "Author": {
-        "name": "aregesteruams",
-        "email": "regesterandrew@uams.edu"
+        "name": "Haydex",
+        "email": "hayddex@gmail.com"
     }
 }
