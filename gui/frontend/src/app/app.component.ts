@@ -18,6 +18,7 @@ export class AppComponent implements OnInit {
   maxRetries = 3;
   simultaneousDownloads = 2;
   skipExisting = true;
+  downloadInParallel = true;
 
   // Collapse state
   filesCollapsed = false;
@@ -73,6 +74,9 @@ export class AppComponent implements OnInit {
     parts.push(String(this.maxRetries));
     parts.push('--processes');
     parts.push(String(this.simultaneousDownloads));
+    if (this.downloadInParallel) {
+      parts.push('--download-in-parallel');
+    }
     if (this.skipExisting) {
       parts.push('--skip-existing');
     }
@@ -82,7 +86,7 @@ export class AppComponent implements OnInit {
     this.status = 'Running: ' + cmdStr;
 
     // Call backend to run the CLI
-    RunCLIFetch(this.inputFilePath, this.outputDirPath, this.maxConnections, this.maxRetries, this.simultaneousDownloads, this.skipExisting)
+    RunCLIFetch(this.inputFilePath, this.outputDirPath, this.maxConnections, this.maxRetries, this.simultaneousDownloads, this.skipExisting, this.downloadInParallel)
       .then((result: string) => {
         this.status = result;
       })

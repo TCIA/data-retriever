@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -40,7 +41,7 @@ func (b *App) OpenOutputDirectoryDialog() (string, error) {
 }
 
 // RunCLIFetch runs the CLI tool with the given manifest and output directory and advanced options
-func (b *App) RunCLIFetch(manifestPath string, outputDir string, maxConnections int, maxRetries int, simultaneousDownloads int, skipExisting bool) (string, error) {
+func (b *App) RunCLIFetch(manifestPath string, outputDir string, maxConnections int, maxRetries int, simultaneousDownloads int, skipExisting bool, downloadInParallel bool) (string, error) {
 	cliPath := "../nbia-data-retriever-cli"
 	args := []string{"-i", manifestPath, "--output", outputDir,
 		"--max-connections", fmt.Sprintf("%d", maxConnections),
@@ -49,6 +50,10 @@ func (b *App) RunCLIFetch(manifestPath string, outputDir string, maxConnections 
 	}
 	if skipExisting {
 		args = append(args, "--skip-existing")
+	}
+
+	if downloadInParallel {
+		args = append(args, "--download-in-parallel")
 	}
 
 	cmd := exec.Command(cliPath, args...)
