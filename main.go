@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -56,6 +57,19 @@ func setupCloseHandler() {
 		fmt.Println("\r- Ctrl+C pressed in Terminal")
 		os.Exit(0)
 	}()
+}
+
+// decodeInputFile determines the input file type and calls the appropriate decoder
+func decodeInputFile(filePath string, client *http.Client, token *Token, options *Options) ([]*FileInfo, error) {
+	ext := strings.ToLower(filepath.Ext(filePath))
+	switch ext {
+	case ".tcia":
+		return decodeTCIA(filePath, client, token, options), nil
+	case ".csv", ".tsv", ".xlsx":
+		return decodeSpreadsheet(filePath)
+	default:
+		return nil, fmt.Errorf("unsupported input file format: %s", ext)
+	}
 }
 
 // updateProgress prints the current download progress
@@ -133,7 +147,24 @@ func main() {
 		}
 
 		var wg sync.WaitGroup
-		files := decodeTCIA(options.Input, client, token, options)
+		files, err := decodeInputFile(options.Input, client, token, options)
+		if err != nil {
+			logger.Fatalf("Failed to decode input file: %v", err)
+		}
+
+		// If input is a spreadsheet, copy it to the metadata folder
+		ext := strings.ToLower(filepath.Ext(options.Input))
+		if ext == ".csv" || ext == ".tsv" || ext == ".xlsx" {
+			metaDir := filepath.Join(options.Output, "metadata")
+			if err := os.MkdirAll(metaDir, 0755); err != nil {
+				logger.Fatalf("Failed to create metadata directory: %v", err)
+			}
+			destPath := filepath.Join(metaDir, filepath.Base(options.Input))
+			if err := copyFile(options.Input, destPath); err != nil {
+				logger.Warnf("Failed to copy spreadsheet to metadata folder: %v", err)
+			}
+		}
+
 		stats := &DownloadStats{Total: int32(len(files))}
 
 		// Initialize progress tracking
@@ -164,17 +195,26 @@ func main() {
 					updateProgress(ctx.Stats, fileInfo.SeriesUID, ctx.Options.Debug)
 					logger.Debugf("[Worker %d] Processing %s", ctx.WorkerID, fileInfo.SeriesUID)
 
+					// Skip metadata saving for spreadsheet inputs
+					isSpreadsheetInput := fileInfo.DownloadURL != ""
+
 					if ctx.Options.Meta {
-						// Only download metadata
-						if err := fileInfo.GetMeta(ctx.Options.Output); err != nil {
-							logger.Warnf("[Worker %d] Save meta info %s failed - %s", ctx.WorkerID, fileInfo.SeriesUID, err)
-							atomic.AddInt32(&ctx.Stats.Failed, 1)
+						if isSpreadsheetInput {
+							// For spreadsheets, --meta is a no-op, just skip.
+							logger.Debugf("[Worker %d] Skipping metadata for spreadsheet entry %s", ctx.WorkerID, fileInfo.SeriesUID)
+							atomic.AddInt32(&ctx.Stats.Skipped, 1)
 						} else {
-							atomic.AddInt32(&ctx.Stats.Downloaded, 1)
+							// Only download metadata for TCIA inputs
+							if err := fileInfo.GetMeta(ctx.Options.Output); err != nil {
+								logger.Warnf("[Worker %d] Save meta info %s failed - %s", ctx.WorkerID, fileInfo.SeriesUID, err)
+								atomic.AddInt32(&ctx.Stats.Failed, 1)
+							} else {
+								atomic.AddInt32(&ctx.Stats.Downloaded, 1)
+							}
 						}
 						updateProgress(ctx.Stats, fileInfo.SeriesUID, ctx.Options.Debug)
 					} else {
-						// Download images (and save metadata)
+						// Download images (and save metadata for TCIA inputs)
 						if ctx.Options.SkipExisting && !fileInfo.NeedsDownload(ctx.Options.Output, false, ctx.Options.NoDecompress) {
 							logger.Debugf("[Worker %d] Skip existing %s", ctx.WorkerID, fileInfo.SeriesUID)
 							atomic.AddInt32(&ctx.Stats.Skipped, 1)
@@ -187,9 +227,11 @@ func main() {
 								logger.Warnf("[Worker %d] Download %s failed - %s", ctx.WorkerID, fileInfo.SeriesUID, err)
 								atomic.AddInt32(&ctx.Stats.Failed, 1)
 							} else {
-								// Save metadata after successful download
-								if err := fileInfo.GetMeta(ctx.Options.Output); err != nil {
-									logger.Warnf("[Worker %d] Save meta info %s failed - %s", ctx.WorkerID, fileInfo.SeriesUID, err)
+								// Save metadata only for TCIA inputs
+								if !isSpreadsheetInput {
+									if err := fileInfo.GetMeta(ctx.Options.Output); err != nil {
+										logger.Warnf("[Worker %d] Save meta info %s failed - %s", ctx.WorkerID, fileInfo.SeriesUID, err)
+									}
 								}
 								atomic.AddInt32(&ctx.Stats.Downloaded, 1)
 							}
