@@ -23,10 +23,13 @@ export class AppComponent implements OnInit {
   // Collapse state
   filesCollapsed = false;
   settingsCollapsed = true;
-  outputCollapsed = false;
+  outputCollapsed = true;
 
   // Dark mode
   isDarkMode = false;
+
+  // Overall download progress
+  overallProgress = 67;
 
   ngOnInit() {
     // Detect system theme preference

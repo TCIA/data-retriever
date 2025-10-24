@@ -21,10 +21,96 @@
     
     <!-- Downloads Table Section -->
     <div class="grid-section downloads-section">
-      <div class="section-header">Downloads</div>
+      <div class="section-header">
+        <div class="downloads-header-content">
+          <span class="downloads-title">Downloads</span>
+          <span class="downloads-percentage">{{overallProgress}}%</span>
+        </div>
+        <div class="downloads-progress-bar">
+          <div class="downloads-progress-fill" [style.width.%]="overallProgress"></div>
+        </div>
+      </div>
+
+      <!-- Download Sources Cards -->
+      <div class="sources-cards">
+        <!-- Source 1 Card -->
+        <div class="source-card">
+          <div class="card-header">
+            <div class="card-title">Source 1</div>
+            <button class="icon-btn" title="Settings">
+              <span class="material-icons-outlined">settings</span>
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="progress-wrap">
+              <div class="ring" style="--value: 80; --accent: #4caf50; --track: var(--ring-track); --bg: var(--card-bg);">
+                <div class="ring-inner"></div>
+                <div class="ring-label">80%</div>
+              </div>
+            </div>
+            <div class="card-output">
+              <div>Connecting…</div>
+              <div>Downloading series 1/5</div>
+              <div>Chunk 32/120</div>
+              <div>Writing file 00000001.dcm</div>
+              <div>Writing file 00000002.dcm</div>
+              <div>…</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Source 2 Card -->
+        <div class="source-card">
+          <div class="card-header">
+            <div class="card-title">Source 2</div>
+            <button class="icon-btn" title="Settings">
+              <span class="material-icons-outlined">settings</span>
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="progress-wrap">
+              <div class="ring" style="--value: 25; --accent: #ff9800; --track: var(--ring-track); --bg: var(--card-bg);">
+                <div class="ring-inner"></div>
+                <div class="ring-label">25%</div>
+              </div>
+            </div>
+            <div class="card-output">
+              <div>Queued…</div>
+              <div>Preparing download</div>
+              <div>Resolving metadata</div>
+              <div>Starting…</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Source 3 Card -->
+        <div class="source-card">
+          <div class="card-header">
+            <div class="card-title">Source 3</div>
+            <button class="icon-btn" title="Settings">
+              <span class="material-icons-outlined">settings</span>
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="progress-wrap">
+              <div class="ring" style="--value: 50; --accent: #3f51b5; --track: var(--ring-track); --bg: var(--card-bg);">
+                <div class="ring-inner"></div>
+                <div class="ring-label">50%</div>
+              </div>
+            </div>
+            <div class="card-output">
+              <div>Downloading…</div>
+              <div>File 10/200</div>
+              <div>Rate 8.3 MB/s</div>
+              <div>ETA 02:14</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
       
       <!-- Table Header -->
-      <div class="table-header">
+      <!-- <div class="table-header">
         <div class="table-cell">Collection</div>
         <div class="table-cell">Patient ID</div>
         <div class="table-cell">Series UID</div>
@@ -33,10 +119,10 @@
         <div class="table-cell">Progress</div>
         <div class="table-cell">Details</div>
         <div class="table-cell">Status</div>
-      </div>
+      </div> -->
       
       <!-- Table Rows -->
-      <div class="table-body">
+      <!-- <div class="table-body">
         <div class="table-row" *ngFor="let item of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]; let i = index">
           <div class="table-cell">—</div>
           <div class="table-cell">—</div>
@@ -47,7 +133,7 @@
           <div class="table-cell">—</div>
           <div class="table-cell">—</div>
         </div>
-      </div>
+      </div> -->
     </div>
 
     <!-- Files Location Section -->

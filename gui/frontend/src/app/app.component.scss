@@ -89,7 +89,8 @@
   grid-template-rows: 2fr auto auto auto;
   gap: 16px;
   padding: 16px;
-  overflow: hidden;
+  /* Allow page to scroll when content exceeds viewport */
+  overflow: auto;
 }
 
 /* Grid Sections */
@@ -142,10 +143,46 @@
 /* Downloads section header (non-clickable) */
 .downloads-section .section-header {
   cursor: default;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
   
   &:hover {
     background: #f8f9fa;
   }
+}
+
+.downloads-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.downloads-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.downloads-percentage {
+  font-weight: 700;
+  font-size: 18px;
+  color: #333;
+}
+
+.downloads-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: #e0e0e0;
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.downloads-progress-fill {
+  height: 100%;
+  background: #2196F3;
+  border-radius: 3px;
+  transition: width 0.3s ease;
 }
 
 .section-content {
@@ -156,6 +193,160 @@
 /* Downloads Table */
 .downloads-section {
   min-height: 100px;
+}
+
+/* Download Sources Cards */
+.downloads-section {
+  /* Theme tokens for cards */
+  --card-bg: #fff;
+  --ring-track: #e9ecef;
+}
+
+.sources-cards {
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  /* Allow horizontal scroll on narrow screens */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.source-card {
+  background: var(--card-bg, #fff);
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.card-title {
+  font-weight: 600;
+  color: #333;
+}
+
+.icon-btn {
+  background: transparent;
+  border: none;
+  padding: 6px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+  
+  .material-icons-outlined {
+    font-size: 20px;
+    color: #666;
+  }
+  
+  &:hover {
+    background: rgba(0,0,0,0.06);
+  }
+}
+
+.card-body {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.progress-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.ring {
+  --size: 96px;           /* overall size */
+  --thickness: 12px;      /* ring thickness */
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  position: relative;
+  background: conic-gradient(var(--accent, #4caf50) calc(var(--value, 0) * 1%), var(--track, #e9ecef) 0);
+  display: grid;
+  place-items: center;
+  
+  /* Rounded caps at start and end of arc */
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    width: var(--thickness);
+    height: var(--thickness);
+    border-radius: 50%;
+    background: var(--accent, #4caf50);
+    top: 50%;
+    left: 50%;
+    /* place dot at top of circle */
+    transform: translate(-50%, -50%) translateY(calc((var(--size) / -2) + (var(--thickness) / 2)));
+  }
+  
+  /* end cap rotates with progress */
+  &::after {
+    transform: translate(-50%, -50%) rotate(calc(var(--value, 0) * 3.6deg))
+               translateY(calc((var(--size) / -2) + (var(--thickness) / 2)));
+  }
+}
+
+.ring-inner {
+  width: calc(var(--size) - var(--thickness) * 2);
+  height: calc(var(--size) - var(--thickness) * 2);
+  border-radius: 50%;
+  background: var(--bg, #fff);
+}
+
+.ring-label {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  color: #333;
+}
+
+.ring-caption {
+  font-size: 11px;
+  color: #888;
+}
+
+.card-output {
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+  background: #fafafa;
+  padding: 8px;
+  min-height: 84px;
+  max-height: 120px;
+  overflow: auto;
+  font-family: 'Fira Mono', 'Consolas', 'Menlo', monospace;
+  font-size: 12px;
+  color: #555;
+}
+
+@media (max-width: 1200px) {
+  .sources-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .sources-cards {
+    grid-template-columns: 1fr;
+  }
 }
 
 .table-header {
@@ -387,6 +578,22 @@
   .collapse-icon {
     color: #e0e0e0;
   }
+
+  .downloads-percentage {
+    color: #e0e0e0;
+  }
+
+  .downloads-progress-bar {
+    background: #404040;
+  }
+
+  .downloads-progress-fill {
+    background: #2196F3;
+  }
+  
+  .downloads-section .section-header:hover {
+    background: #252525;
+  }
   
   .table-header {
     background: #252525;
@@ -464,5 +671,28 @@
   
   .output-text {
     color: #d4d4d4;
+  }
+
+  /* Downloads cards theming for dark mode */
+  .downloads-section {
+    --card-bg: #2d2d2d;
+    --ring-track: #3a3a3a;
+  }
+  
+  .source-card {
+    border-color: #404040;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+  }
+  
+  .card-title { color: #e0e0e0; }
+  .icon-btn .material-icons-outlined { color: #bbb; }
+  .icon-btn:hover { background: rgba(255,255,255,0.08); }
+  .ring-label { color: #e0e0e0; }
+  .ring-inner { background: var(--bg, #2d2d2d); }
+  .ring-caption { color: #aaa; }
+  .card-output {
+    background: #0d0d0d;
+    border-color: #333;
+    color: #cfcfcf;
   }
 }
