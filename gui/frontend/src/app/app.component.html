@@ -19,7 +19,7 @@
   <!-- Main Grid Layout -->
   <div class="main-grid">
     
-    <!-- Downloads Table Section -->
+    <!-- Downloads Section -->
     <div class="grid-section downloads-section">
       <div class="section-header">
         <div class="downloads-header-content">
@@ -33,80 +33,31 @@
 
       <!-- Download Sources Cards -->
       <div class="sources-cards">
-        <!-- Source 1 Card -->
-        <div class="source-card">
+        <div class="source-card" *ngFor="let src of sources">
           <div class="card-header">
-            <div class="card-title">Source 1</div>
+            <div class="card-title">{{ src.title }}</div>
             <button class="icon-btn" title="Settings">
               <span class="material-icons-outlined">settings</span>
             </button>
           </div>
           <div class="card-body">
             <div class="progress-wrap">
-              <div class="ring" style="--value: 80; --accent: #4caf50; --track: var(--ring-track); --bg: var(--card-bg);">
+              <div
+                class="ring"
+                [style.--value]="src.progress"
+                [style.--accent]="src.accent"
+                [style.--track]="'var(--ring-track)'"
+                [style.--bg]="'var(--card-bg)'"
+              >
                 <div class="ring-inner"></div>
-                <div class="ring-label">80%</div>
+                <div class="ring-label">{{ src.progress }}%</div>
               </div>
             </div>
             <div class="card-output">
-              <div>Connecting…</div>
-              <div>Downloading series 1/5</div>
-              <div>Chunk 32/120</div>
-              <div>Writing file 00000001.dcm</div>
-              <div>Writing file 00000002.dcm</div>
-              <div>…</div>
+              <div *ngFor="let line of src.logs">{{ line }}</div>
             </div>
           </div>
         </div>
-
-        <!-- Source 2 Card -->
-        <div class="source-card">
-          <div class="card-header">
-            <div class="card-title">Source 2</div>
-            <button class="icon-btn" title="Settings">
-              <span class="material-icons-outlined">settings</span>
-            </button>
-          </div>
-          <div class="card-body">
-            <div class="progress-wrap">
-              <div class="ring" style="--value: 25; --accent: #ff9800; --track: var(--ring-track); --bg: var(--card-bg);">
-                <div class="ring-inner"></div>
-                <div class="ring-label">25%</div>
-              </div>
-            </div>
-            <div class="card-output">
-              <div>Queued…</div>
-              <div>Preparing download</div>
-              <div>Resolving metadata</div>
-              <div>Starting…</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Source 3 Card -->
-        <div class="source-card">
-          <div class="card-header">
-            <div class="card-title">Source 3</div>
-            <button class="icon-btn" title="Settings">
-              <span class="material-icons-outlined">settings</span>
-            </button>
-          </div>
-          <div class="card-body">
-            <div class="progress-wrap">
-              <div class="ring" style="--value: 50; --accent: #3f51b5; --track: var(--ring-track); --bg: var(--card-bg);">
-                <div class="ring-inner"></div>
-                <div class="ring-label">50%</div>
-              </div>
-            </div>
-            <div class="card-output">
-              <div>Downloading…</div>
-              <div>File 10/200</div>
-              <div>Rate 8.3 MB/s</div>
-              <div>ETA 02:14</div>
-            </div>
-          </div>
-        </div>
-
       </div>
       
       <!-- Table Header -->
