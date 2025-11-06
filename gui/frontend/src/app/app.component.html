@@ -1,46 +1,308 @@
-<div class="main-card">
-  <h2>NBIA Data Retriever</h2>
-  <div class="row align-row">
-    <div class="button-label-group">
-      <button class="action-btn" (click)="onSelectInputFile()">Select Input TCIA File</button>
-      <span class="path-label">{{ inputFilePath }}</span>
+<div class="app-container" [class.dark-mode]="isDarkMode">
+  
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <img [src]="isDarkMode ? 'assets/app-title-dark.svg' : 'assets/app-title.svg'" alt="TCIA" class="app-icon">
     </div>
-  </div>
-  <div class="row align-row">
-    <div class="button-label-group">
-      <button class="action-btn" (click)="onSelectOutputDirectory()">Select Output Directory</button>
-      <span class="path-label">{{ outputDirPath }}</span>
-    </div>
-  </div>
-
-  <!-- Advanced Options Accordion -->
-  <div class="accordion">
-    <button class="accordion-toggle" (click)="showAdvanced = !showAdvanced" [attr.aria-expanded]="showAdvanced">
-      Advanced Options
-      <span class="accordion-icon" [class.open]="showAdvanced"></span>
-    </button>
-    <div class="accordion-content" *ngIf="showAdvanced">
-      <div class="advanced-option">
-        <label for="maxConnections">Max Connections:</label>
-        <input id="maxConnections" type="number" min="1" [(ngModel)]="maxConnections" />
-      </div>
-      <div class="advanced-option">
-        <label for="maxRetries">Max Retries:</label>
-        <input id="maxRetries" type="number" min="0" [(ngModel)]="maxRetries" />
-      </div>
-      <div class="advanced-option">
-        <label for="simultaneousDownloads">Simultaneous Downloads Allowed:</label>
-        <input id="simultaneousDownloads" type="number" min="1" [(ngModel)]="simultaneousDownloads" />
-      </div>
-      <div class="advanced-option">
-        <label>
-          <input type="checkbox" [(ngModel)]="skipExisting" />
-          Skip Existing
-        </label>
+    <div class="header-right">
+      <button class="theme-toggle" (click)="toggleDarkMode()" [title]="isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'">
+        <span class="material-icons-outlined">{{ isDarkMode ? 'light_mode' : 'dark_mode' }}</span>
+      </button>
+      <div class="user-info">
+        <div class="user-name">Human</div>
+        <div class="user-role">System Admin</div>
       </div>
     </div>
   </div>
 
-  <button class="fetch-btn" (click)="onFetchFiles()">Fetch Files</button>
-  <pre class="terminal-output">{{ status }}</pre>
+  <!-- Main Grid Layout -->
+  <div class="main-grid">
+    
+    <!-- Downloads Section -->
+    <div class="grid-section downloads-section">
+      <div class="section-header">
+        <div class="downloads-header-content">
+          <span class="downloads-title">Downloads</span>
+          <span class="downloads-percentage">{{overallProgress}}%</span>
+        </div>
+        <div class="downloads-progress-bar">
+          <div class="downloads-progress-fill" [style.width.%]="overallProgress"></div>
+        </div>
+      </div>
+
+      <!-- Download Sources Cards -->
+      <div class="sources-cards">
+        <div class="source-card" *ngFor="let src of sources">
+          <div class="card-header">
+            <div class="card-title">{{ src.title }}</div>
+            <button class="icon-btn" title="Settings">
+              <span class="material-icons-outlined">settings</span>
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="progress-wrap">
+              <div
+                class="ring"
+                [style.--value]="src.progress"
+                [style.--accent]="src.accent"
+                [style.--track]="'var(--ring-track)'"
+                [style.--bg]="'var(--card-bg)'"
+              >
+                <div class="ring-inner"></div>
+                <div class="ring-label">{{ src.progress }}%</div>
+              </div>
+            </div>
+            <div class="card-output">
+              <div *ngFor="let line of src.logs">{{ line }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Table Header -->
+      <!-- <div class="table-header">
+        <div class="table-cell">Collection</div>
+        <div class="table-cell">Patient ID</div>
+        <div class="table-cell">Series UID</div>
+        <div class="table-cell">Size</div>
+        <div class="table-cell">No. of Images</div>
+        <div class="table-cell">Progress</div>
+        <div class="table-cell">Details</div>
+        <div class="table-cell">Status</div>
+      </div> -->
+      
+      <!-- Table Rows -->
+      <!-- <div class="table-body">
+        <div class="table-row" *ngFor="let item of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]; let i = index">
+          <div class="table-cell">—</div>
+          <div class="table-cell">—</div>
+          <div class="table-cell">—</div>
+          <div class="table-cell">—</div>
+          <div class="table-cell">—</div>
+          <div class="table-cell">—</div>
+          <div class="table-cell">—</div>
+          <div class="table-cell">—</div>
+        </div>
+      </div> -->
+    </div>
+
+    <!-- Files Location Section -->
+    <div class="grid-section files-section" [class.collapsed]="filesCollapsed">
+      <div class="section-header" (click)="filesCollapsed = !filesCollapsed">
+        <span>Files Location</span>
+        <span class="material-icons-outlined collapse-icon">{{ filesCollapsed ? 'expand_more' : 'expand_less' }}</span>
+      </div>
+      <div class="section-content">
+        <div class="file-input-row">
+          <!-- <label class="file-label">Path/to/input/</label> -->
+          <input type="text" [(ngModel)]="inputFilePath" class="file-input" placeholder="Path/to/the/input/directory">
+          <button (click)="onSelectInputFile()" class="browse-btn" title="Browse">
+            <span class="material-icons-outlined">folder_open</span>
+          </button>
+        </div>
+        <div class="file-input-row">
+          <!-- <label class="file-label">Path/to/output/</label> -->
+          <input type="text" [(ngModel)]="outputDirPath" class="file-input" placeholder="Path/to/the/output/directory">
+          <button (click)="onSelectOutputDirectory()" class="browse-btn" title="Browse">
+            <span class="material-icons-outlined">folder_open</span>
+          </button>
+        </div>
+        <div class="file-input-row">
+          <!-- <label class="file-label">Path/to/the/manifests/</label> -->
+          <input type="text" [(ngModel)]="outputDirPath" class="file-input" placeholder="Path/to/the/manifests/directory">
+          <button (click)="onSelectOutputDirectory()" class="browse-btn" title="Browse">
+            <span class="material-icons-outlined">folder_open</span>
+          </button>
+        </div>
+      </div>
+      <!-- Bottom Action Bar -->
+      <div class="action-bar">
+        <button (click)="onFetchFiles()" class="fetch-btn">
+          <span class="material-icons-outlined">file_download</span>
+          Fetch Files
+        </button>
+      </div>
+    </div>
+
+    <!-- Advanced Settings Section -->
+    <div class="grid-section settings-section" [class.collapsed]="settingsCollapsed">
+      <div class="section-header" (click)="settingsCollapsed = !settingsCollapsed">
+        <span>Advanced Settings</span>
+        <span class="material-icons-outlined collapse-icon">{{ settingsCollapsed ? 'expand_more' : 'expand_less' }}</span>
+      </div>
+      <div class="section-content">
+        <div class="settings-grid">
+          <div class="setting-item">
+            <label class="setting-label">Max Connections:</label>
+            <input type="number" [(ngModel)]="maxConnections" min="1" class="setting-input">
+          </div>
+          <div class="setting-item">
+            <label class="setting-label">Max Retries:</label>
+            <input type="number" [(ngModel)]="maxRetries" min="0" class="setting-input">
+          </div>
+          <div class="setting-item">
+            <label class="setting-label">Simultaneous Downloads:</label>
+            <input type="number" [(ngModel)]="simultaneousDownloads" min="1" class="setting-input">
+          </div>
+          <div class="setting-item">
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="downloadInParallel" class="setting-checkbox">
+              Download In Parallel
+            </label>
+          </div>
+          <div class="setting-item">
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="skipExisting" class="setting-checkbox">
+              Skip Existing
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Output Section -->
+    <div class="grid-section output-section" [class.collapsed]="outputCollapsed">
+      <div class="section-header" (click)="outputCollapsed = !outputCollapsed">
+        <span>Output</span>
+        <span class="material-icons-outlined collapse-icon">{{ outputCollapsed ? 'expand_more' : 'expand_less' }}</span>
+      </div>
+      <div class="output-content">
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div><div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+        <div class="output-text">{{ status }}</div>
+      </div>
+    </div>
+
+  </div>
 </div>
