@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
+import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
 import { FetchFiles, OpenInputFileDialog, OpenOutputDirectoryDialog, RunCLIFetch } from '../../wailsjs/go/main/App';
 
 
@@ -14,6 +15,9 @@ export class AppComponent implements OnInit {
 
   // Global output logs that appear in the Output panel
   outputLogs: string[] = [];
+  @ViewChild('outputContainer') outputContainer!: ElementRef;
+
+  private unsubscribeRuntime?: () => void;
 
   // Advanced options / UI state
   showAdvanced = false;
@@ -84,6 +88,26 @@ export class AppComponent implements OnInit {
     ];
 
     this.updateOverallProgress();
+
+    // Subscribe to streaming CLI output from backend
+    this.unsubscribeRuntime = EventsOn('cli-output-line', (line: string) => {
+      // Append line to global output logs
+      this.outputLogs.push(line);
+      // Auto-scroll
+      setTimeout(() => {
+        try {
+          const el = this.outputContainer?.nativeElement as HTMLElement;
+          if (el) el.scrollTop = el.scrollHeight;
+        } catch (e) {
+          // ignore
+        }
+      }, 10);
+    });
+  }
+
+  ngOnDestroy() {
+    if (this.unsubscribeRuntime) this.unsubscribeRuntime();
+    try { EventsOff('cli-output-line'); } catch (e) { /* ignore */ }
   }
 
   toggleDarkMode() {
@@ -121,7 +145,8 @@ export class AppComponent implements OnInit {
     parts.push('--processes');
     parts.push(String(this.simultaneousDownloads));
     if (this.downloadInParallel) {
-      parts.push('--download-in-parallel');
+      // The CLI does not have a --download-in-parallel flag.
+      // We keep the frontend checkbox for UI/intent, but do not forward an unsupported flag.
     }
     if (this.skipExisting) {
       parts.push('--skip-existing');

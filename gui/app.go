@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os/exec"
+	"strings"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -53,15 +55,55 @@ func (b *App) RunCLIFetch(manifestPath string, outputDir string, maxConnections 
 	}
 
 	if downloadInParallel {
-		args = append(args, "--download-in-parallel")
+		// Note: the CLI does not expose a `--download-in-parallel` flag.
+		// This option is handled internally by the CLI via --processes/other flags.
+		// We intentionally do not pass an unsupported flag to the CLI to avoid an error.
 	}
 
 	cmd := exec.Command(cliPath, args...)
-	output, err := cmd.CombinedOutput()
+
+	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return string(output), err
+		return "", fmt.Errorf("failed to capture stdout: %w", err)
 	}
-	return string(output), nil
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return "", fmt.Errorf("failed to capture stderr: %w", err)
+	}
+
+	if err := cmd.Start(); err != nil {
+		return "", fmt.Errorf("failed to start command: %w", err)
+	}
+
+	var lines []string
+	emit := func(line string) {
+		// Emit to frontend listeners
+		runtime.EventsEmit(b.ctx, "cli-output-line", line)
+		lines = append(lines, line)
+	}
+
+	// Stream stdout
+	go func() {
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			emit(scanner.Text())
+		}
+	}()
+
+	// Stream stderr
+	go func() {
+		scanner := bufio.NewScanner(stderr)
+		for scanner.Scan() {
+			emit(scanner.Text())
+		}
+	}()
+
+	if err := cmd.Wait(); err != nil {
+		combined := strings.Join(lines, "\n")
+		return combined, fmt.Errorf("%w: %s", err, combined)
+	}
+
+	return strings.Join(lines, "\n"), nil
 }
 
 type App struct {

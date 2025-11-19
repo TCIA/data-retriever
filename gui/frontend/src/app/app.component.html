@@ -6,86 +6,15 @@
       <img [src]="isDarkMode ? 'assets/app-title-dark.svg' : 'assets/app-title.svg'" alt="TCIA" class="app-icon">
     </div>
     <div class="header-right">
-      <button class="theme-toggle" (click)="toggleDarkMode()" [title]="isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'">
+      <button class="theme-toggle" (click)="isDarkMode = !isDarkMode" title="Toggle theme">
         <span class="material-icons-outlined">{{ isDarkMode ? 'light_mode' : 'dark_mode' }}</span>
       </button>
       <div class="user-info">
-        <div class="user-name">Human</div>
-        <div class="user-role">System Admin</div>
+        <div class="user-name">User</div>
+        <div class="user-role">Developer</div>
       </div>
     </div>
   </div>
-
-  <!-- Main Grid Layout -->
-  <div class="main-grid">
-    
-    <!-- Downloads Section -->
-    <div class="grid-section downloads-section">
-      <div class="section-header">
-        <div class="downloads-header-content">
-          <span class="downloads-title">Downloads</span>
-          <span class="downloads-percentage">{{overallProgress}}%</span>
-        </div>
-        <div class="downloads-progress-bar">
-          <div class="downloads-progress-fill" [style.width.%]="overallProgress"></div>
-        </div>
-      </div>
-
-      <!-- Download Sources Cards -->
-      <div class="sources-cards">
-        <div class="source-card" *ngFor="let src of sources">
-          <div class="card-header">
-            <div class="card-title">{{ src.title }}</div>
-            <button class="icon-btn" title="Settings">
-              <span class="material-icons-outlined">settings</span>
-            </button>
-          </div>
-          <div class="card-body">
-            <div class="progress-wrap">
-              <div
-                class="ring"
-                [style.--value]="src.progress"
-                [style.--accent]="src.accent"
-                [style.--track]="'var(--ring-track)'"
-                [style.--bg]="'var(--card-bg)'"
-              >
-                <div class="ring-inner"></div>
-                <div class="ring-label">{{ src.progress }}%</div>
-              </div>
-            </div>
-            <div class="card-output">
-              <div *ngFor="let line of src.logs">{{ line }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Table Header -->
-      <!-- <div class="table-header">
-        <div class="table-cell">Collection</div>
-        <div class="table-cell">Patient ID</div>
-        <div class="table-cell">Series UID</div>
-        <div class="table-cell">Size</div>
-        <div class="table-cell">No. of Images</div>
-        <div class="table-cell">Progress</div>
-        <div class="table-cell">Details</div>
-        <div class="table-cell">Status</div>
-      </div> -->
-      
-      <!-- Table Rows -->
-      <!-- <div class="table-body">
-        <div class="table-row" *ngFor="let item of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]; let i = index">
-          <div class="table-cell">—</div>
-          <div class="table-cell">—</div>
-          <div class="table-cell">—</div>
-          <div class="table-cell">—</div>
-          <div class="table-cell">—</div>
-          <div class="table-cell">—</div>
-          <div class="table-cell">—</div>
-          <div class="table-cell">—</div>
-        </div>
-      </div> -->
-    </div>
 
     <!-- Files Location Section -->
     <div class="grid-section files-section" [class.collapsed]="filesCollapsed">
@@ -303,6 +232,4 @@
         <div class="output-text">{{ status }}</div>
       </div>
     </div>
-
-  </div>
 </div>
