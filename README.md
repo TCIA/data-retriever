@@ -1,6 +1,6 @@
-# NBIA Data Retriever CLI
+# Universal Data Retriever
 
-> A robust command-line replacement for NBIA Data Retriever with enhanced features and reliability
+> A robust replacement for NBIA Data Retriever with enhanced features and reliability
 
 [![Go Version](https://img.shields.io/badge/Go-1.24.4-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
