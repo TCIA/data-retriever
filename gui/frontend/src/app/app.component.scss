@@ -504,10 +504,13 @@
   background: white;
   border-top: 1px solid #e0e0e0;
   padding: 16px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .fetch-btn {
-  width: 100%;
+  flex: 1 1 160px;
   padding: 12px 24px;
   background: #0066cc;
   color: white;
@@ -529,6 +532,14 @@
 
 .fetch-btn:hover {
   background: #0052a3;
+}
+
+.cancel-btn {
+  background: #757575;
+}
+
+.cancel-btn:hover {
+  background: #616161;
 }
 
 /* Dark Mode Styles */

@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
 import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
-import { FetchFiles, OpenInputFileDialog, OpenOutputDirectoryDialog, RunCLIFetch } from '../../wailsjs/go/main/App';
+import { CancelDownload, FetchFiles, OpenInputFileDialog, OpenOutputDirectoryDialog, RunCLIFetch } from '../../wailsjs/go/main/App';
 
 
 @Component({
@@ -162,6 +162,18 @@ export class AppComponent implements OnInit {
       .then((result: string) => {
         this.status = result;
         this.appendLog(result);
+      })
+      .catch(err => {
+        this.status = "Error: " + err;
+        this.appendLog(this.status);
+      });
+  }
+
+  onCancelDownload() {
+    CancelDownload()
+      .then(() => {
+        this.status = "Cancellation requested";
+        this.appendLog(this.status);
       })
       .catch(err => {
         this.status = "Error: " + err;

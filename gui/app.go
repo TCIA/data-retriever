@@ -1,12 +1,15 @@
 package main
 
 import (
-	"bufio"
 	"context"
+	"errors"
 	"fmt"
-	"os/exec"
+	"os"
 	"strings"
+	"sync"
+	"time"
 
+	"github.com/GrigoryEvko/NBIA_data_retriever_CLI/core/app"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -44,70 +47,110 @@ func (b *App) OpenOutputDirectoryDialog() (string, error) {
 
 // RunCLIFetch runs the CLI tool with the given manifest and output directory and advanced options
 func (b *App) RunCLIFetch(manifestPath string, outputDir string, maxConnections int, maxRetries int, simultaneousDownloads int, skipExisting bool, downloadInParallel bool) (string, error) {
-	cliPath := "../nbia-data-retriever-cli"
-	args := []string{"-i", manifestPath, "--output", outputDir,
-		"--max-connections", fmt.Sprintf("%d", maxConnections),
-		"--max-retries", fmt.Sprintf("%d", maxRetries),
-		"--processes", fmt.Sprintf("%d", simultaneousDownloads),
-	}
-	if skipExisting {
-		args = append(args, "--skip-existing")
+	if b.ctx == nil {
+		return "", fmt.Errorf("application context not initialised")
 	}
 
-	if downloadInParallel {
-		// Note: the CLI does not expose a `--download-in-parallel` flag.
-		// This option is handled internally by the CLI via --processes/other flags.
-		// We intentionally do not pass an unsupported flag to the CLI to avoid an error.
+	_ = downloadInParallel
+
+	// Cancel any existing run before starting a new one.
+	b.mu.Lock()
+	if b.cancel != nil {
+		b.cancel()
+	}
+	b.runID++
+	currentID := b.runID
+	ctx, cancel := context.WithCancel(b.ctx)
+	b.cancel = cancel
+	b.mu.Unlock()
+
+	defer func() {
+		b.mu.Lock()
+		if b.runID == currentID {
+			b.cancel = nil
+		}
+		b.mu.Unlock()
+	}()
+
+	user := os.Getenv("NBIA_USER")
+	if user == "" {
+		user = "nbia_guest"
+	}
+	pass := os.Getenv("NBIA_PASS")
+
+	options := &app.Options{
+		Input:           manifestPath,
+		Output:          outputDir,
+		Proxy:           "",
+		Concurrent:      simultaneousDownloads,
+		Meta:            false,
+		Username:        user,
+		Password:        pass,
+		Version:         false,
+		Debug:           false,
+		Help:            false,
+		MetaUrl:         app.MetaUrl,
+		TokenUrl:        app.TokenUrl,
+		ImageUrl:        app.ImageUrl,
+		SaveLog:         false,
+		Prompt:          false,
+		Force:           false,
+		SkipExisting:    skipExisting,
+		MaxRetries:      maxRetries,
+		RetryDelay:      10 * time.Second,
+		MaxConnsPerHost: maxConnections,
+		ServerFriendly:  false,
+		RequestDelay:    500 * time.Millisecond,
+		NoMD5:           false,
+		NoDecompress:    false,
+		RefreshMetadata: false,
+		MetadataWorkers: 20,
 	}
 
-	cmd := exec.Command(cliPath, args...)
+	var (
+		lines   []string
+		linesMu sync.Mutex
+	)
 
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return "", fmt.Errorf("failed to capture stdout: %w", err)
-	}
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		return "", fmt.Errorf("failed to capture stderr: %w", err)
-	}
-
-	if err := cmd.Start(); err != nil {
-		return "", fmt.Errorf("failed to start command: %w", err)
-	}
-
-	var lines []string
 	emit := func(line string) {
-		// Emit to frontend listeners
-		runtime.EventsEmit(b.ctx, "cli-output-line", line)
+		linesMu.Lock()
 		lines = append(lines, line)
+		linesMu.Unlock()
+		runtime.EventsEmit(b.ctx, "cli-output-line", line)
 	}
 
-	// Stream stdout
-	go func() {
-		scanner := bufio.NewScanner(stdout)
-		for scanner.Scan() {
-			emit(scanner.Text())
-		}
-	}()
-
-	// Stream stderr
-	go func() {
-		scanner := bufio.NewScanner(stderr)
-		for scanner.Scan() {
-			emit(scanner.Text())
-		}
-	}()
-
-	if err := cmd.Wait(); err != nil {
-		combined := strings.Join(lines, "\n")
-		return combined, fmt.Errorf("%w: %s", err, combined)
+	callbacks := app.Callbacks{
+		Stdout: emit,
+		Stderr: emit,
 	}
 
-	return strings.Join(lines, "\n"), nil
+	summary, err := app.Run(ctx, options, callbacks)
+	combined := strings.Join(lines, "\n")
+	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return combined, nil
+		}
+		return combined, fmt.Errorf("download failed: %w", err)
+	}
+
+	_ = summary
+	return combined, nil
+}
+
+func (b *App) CancelDownload() {
+	b.mu.Lock()
+	if b.cancel != nil {
+		b.cancel()
+		b.cancel = nil
+	}
+	b.mu.Unlock()
 }
 
 type App struct {
-	ctx context.Context
+	ctx    context.Context
+	cancel context.CancelFunc
+	runID  uint64
+	mu     sync.Mutex
 }
 
 func NewApp() *App {

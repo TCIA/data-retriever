@@ -1,0 +1,153 @@
+package app
+
+import (
+	"encoding/csv"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/tealeg/xlsx"
+)
+
+// SpreadSheetDecoder defines behaviour for decoding spreadsheet files.
+type SpreadSheetDecoder interface {
+	Decode(file *os.File) ([]string, error)
+}
+
+// CSVDecoder decodes CSV files.
+type CSVDecoder struct{}
+
+// TSVDecoder decodes TSV files.
+type TSVDecoder struct{}
+
+// XLSXDecoder decodes XLSX files.
+type XLSXDecoder struct{}
+
+func (d *CSVDecoder) Decode(file *os.File) ([]string, error) {
+	return decodesv(file, ',')
+}
+
+func (d *TSVDecoder) Decode(file *os.File) ([]string, error) {
+	return decodesv(file, '\t')
+}
+
+func decodesv(file *os.File, separator rune) ([]string, error) {
+	reader := csv.NewReader(file)
+	reader.Comma = separator
+	records, err := reader.ReadAll()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(records) == 0 {
+		return []string{}, nil
+	}
+
+	header := records[0]
+	imageURLIndex := -1
+	for i, col := range header {
+		if col == "imageUrl" {
+			imageURLIndex = i
+			break
+		}
+	}
+
+	if imageURLIndex == -1 {
+		return nil, fmt.Errorf("no 'imageUrl' column found in %s", file.Name())
+	}
+
+	var imageURLs []string
+	for _, record := range records[1:] {
+		if len(record) > imageURLIndex {
+			imageURLs = append(imageURLs, record[imageURLIndex])
+		}
+	}
+	return imageURLs, nil
+}
+
+func (d *XLSXDecoder) Decode(file *os.File) ([]string, error) {
+	stat, err := file.Stat()
+	if err != nil {
+		return nil, fmt.Errorf("could not get file stats: %w", err)
+	}
+	size := stat.Size()
+	xlFile, err := xlsx.OpenReaderAt(file, size)
+	if err != nil {
+		return nil, err
+	}
+
+	var imageURLs []string
+	for _, sheet := range xlFile.Sheets {
+		if len(sheet.Rows) == 0 {
+			continue
+		}
+
+		header := sheet.Rows[0]
+		imageURLIndex := -1
+		for i, cell := range header.Cells {
+			if cell.String() == "imageUrl" {
+				imageURLIndex = i
+				break
+			}
+		}
+
+		if imageURLIndex == -1 {
+			continue
+		}
+
+		for _, row := range sheet.Rows[1:] {
+			if len(row.Cells) > imageURLIndex {
+				imageURLs = append(imageURLs, row.Cells[imageURLIndex].String())
+			}
+		}
+	}
+
+	if len(imageURLs) == 0 {
+		return nil, fmt.Errorf("no 'imageUrl' column found in any sheet of %s", file.Name())
+	}
+
+	return imageURLs, nil
+}
+
+func getSpreadsheetDecoder(filename string) (SpreadSheetDecoder, error) {
+	ext := strings.ToLower(filepath.Ext(filename))
+	switch ext {
+	case ".csv":
+		return &CSVDecoder{}, nil
+	case ".tsv":
+		return &TSVDecoder{}, nil
+	case ".xlsx":
+		return &XLSXDecoder{}, nil
+	default:
+		return nil, fmt.Errorf("unsupported spreadsheet format: %s", ext)
+	}
+}
+
+func decodeSpreadsheet(filePath string) ([]*FileInfo, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	decoder, err := getSpreadsheetDecoder(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	imageURLs, err := decoder.Decode(file)
+	if err != nil {
+		return nil, err
+	}
+
+	var fileInfos []*FileInfo
+	for _, url := range imageURLs {
+		fileInfos = append(fileInfos, &FileInfo{
+			DownloadURL: url,
+			SeriesUID:   filepath.Base(url),
+		})
+	}
+
+	return fileInfos, nil
+}
