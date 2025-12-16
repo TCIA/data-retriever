@@ -33,7 +33,8 @@ export class AppComponent implements OnInit, OnDestroy {
 
   // Collapse state
   settingsCollapsed = true;
-  outputCollapsed = true;
+  outputCollapsed = false;  // Output visible on startup
+  downloadsCollapsed = true;  // Collapsed until downloads start
 
   // Dark mode
   isDarkMode = false;
@@ -59,6 +60,10 @@ export class AppComponent implements OnInit, OnDestroy {
 
     this.overviewSubscription = this.overview$.subscribe((snapshot: DownloadOverviewSnapshot) => {
       this.overallProgress = snapshot.progressPercent;
+      // Auto-expand downloads section when downloads start
+      if (snapshot.total > 0 && this.downloadsCollapsed) {
+        this.downloadsCollapsed = false;
+      }
     });
 
     // Subscribe to streaming CLI output from backend

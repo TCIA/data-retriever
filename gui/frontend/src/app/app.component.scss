@@ -1,7 +1,7 @@
 /* App Container */
 .app-container {
   height: 100vh;
-  min-height: 800px;
+  min-height: 600px;  /* Match Wails MinHeight constraint */
   min-width: 530px;
   display: flex;
   flex-direction: column;
@@ -82,15 +82,16 @@
   color: #666;
 }
 
-/* Main Grid */
+/* Main Grid - Flex container for natural section distribution */
 .main-grid {
   flex: 1;
-  display: grid;
-  grid-template-rows: 2fr auto auto auto;
+  display: flex;
+  flex-direction: column;
   gap: 16px;
   padding: 16px;
   /* Allow page to scroll when content exceeds viewport */
   overflow: auto;
+  min-height: 0; /* Allow flex children to shrink below content size */
 }
 
 /* Grid Sections */
@@ -140,15 +141,31 @@
   }
 }
 
-/* Downloads section header (non-clickable) */
+/* Downloads section header (clickable to collapse/expand) */
 .downloads-section .section-header {
-  cursor: default;
+  cursor: pointer;
   flex-direction: column;
   align-items: stretch;
   gap: 8px;
   
   &:hover {
-    background: #f8f9fa;
+    background: #e9ecef;
+  }
+}
+
+/* Downloads section collapsed state */
+.downloads-section.collapsed .section-header {
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  
+  .downloads-header-content {
+    flex: 1;
+  }
+  
+  .downloads-progress-bar,
+  .downloads-meta {
+    display: none;
   }
 }
 
@@ -156,6 +173,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
+  
+  .collapse-icon {
+    margin-left: auto;
+  }
 }
 
 .downloads-title {
@@ -232,9 +254,15 @@
   flex: 1;
 }
 
-/* Downloads Table */
+/* Downloads Section - Grows to fill available space when expanded */
 .downloads-section {
-  min-height: 100px;
+  flex: 1 1 auto;
+  min-height: clamp(100px, 20vh, 200px);
+  
+  &.collapsed {
+    flex: 0 0 auto;
+    min-height: auto;
+  }
 }
 
 /* Download Sources Cards */
@@ -520,9 +548,15 @@
   margin: 0;
 }
 
-/* Output Section */
+/* Output Section - Flexible height with reasonable constraints */
 .output-section {
-  min-height: 220px;
+  flex: 0 1 auto;
+  min-height: clamp(150px, 25vh, 300px);
+  
+  &.collapsed {
+    flex: 0 0 auto;
+    min-height: auto;
+  }
 }
 
 .output-content {
@@ -695,7 +729,11 @@
   }
   
   .downloads-section .section-header:hover {
-    background: #252525;
+    background: #333;
+  }
+  
+  .downloads-section.collapsed .section-header:hover {
+    background: #333;
   }
   
   .table-header {

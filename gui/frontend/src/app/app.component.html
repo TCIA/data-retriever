@@ -85,12 +85,15 @@
       </div>
     </div>
 
-    <div class="grid-section downloads-section">
+    <div class="grid-section downloads-section" [class.collapsed]="downloadsCollapsed">
       <ng-container *ngIf="overview$ | async as overview">
-        <div class="section-header downloads-header">
+        <div class="section-header downloads-header" (click)="downloadsCollapsed = !downloadsCollapsed">
           <div class="downloads-header-content">
             <span class="downloads-title">Active Downloads</span>
             <span class="downloads-percentage">{{ overview.progressPercent }}%</span>
+            <span class="material-icons-outlined collapse-icon">
+              {{ downloadsCollapsed ? 'expand_more' : 'expand_less' }}
+            </span>
           </div>
           <div class="downloads-progress-bar">
             <div class="downloads-progress-fill" [style.width.%]="overview.progressPercent"></div>

@@ -129,6 +129,24 @@
   display: grid;
   place-items: center;
   position: relative;
+  
+  /* 0% state - show full track with subtle pulse to indicate pending */
+  &[style*="--value: 0"],
+  &[style*="--value:0"] {
+    animation: ring-pulse 2s ease-in-out infinite;
+  }
+}
+
+/* Subtle pulse animation for 0% progress state */
+@keyframes ring-pulse {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(33, 150, 243, 0);
+  }
+  50% {
+    opacity: 0.85;
+    box-shadow: 0 0 0 4px rgba(33, 150, 243, 0.15);
+  }
 }
 
 .progress-ring__inner {

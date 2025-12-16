@@ -22,6 +22,8 @@ func main() {
 		Title:             "TCIA Retriever",
 		Width:             530,
 		Height:            800,
+		MinWidth:          530,
+		MinHeight:         600,
 		DisableResize:     false,
 		Fullscreen:        false,
 		Frameless:         false,
