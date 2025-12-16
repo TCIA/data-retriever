@@ -10,6 +10,25 @@ import { SeriesDownloadSnapshot } from '../../models/download-series.model';
 export class DownloadCardComponent {
   @Input() series!: SeriesDownloadSnapshot;
 
+  get title(): string {
+    const fallback = this.series?.seriesUID ?? 'Series';
+    const description = this.series?.seriesDescription?.trim();
+    return description && description.length > 0 ? description : fallback;
+  }
+
+  get subtitle(): string | null {
+    if (!this.series) {
+      return null;
+    }
+    const pieces = [this.series.subjectID, this.series.studyUID]
+      .filter((value, index, self): value is string => !!value && self.indexOf(value) === index);
+    if (pieces.length > 0) {
+      return pieces.join(' • ');
+    }
+    const uid = this.series.seriesUID ?? null;
+    return uid && uid !== this.title ? uid : null;
+  }
+
   get statusLabel(): string {
     const status = this.series?.status ?? 'queued';
     switch (status) {
@@ -33,11 +52,31 @@ export class DownloadCardComponent {
   }
 
   get progressValue(): number {
-    return this.series?.progress ?? 0;
+    const value = this.series?.progress ?? 0;
+    return Math.max(0, Math.min(100, Math.round(value)));
   }
 
   get progressLabel(): string {
     return `${this.progressValue}%`;
+  }
+
+  get accentColor(): string {
+    const status = this.series?.status;
+    switch (status) {
+      case 'succeeded':
+        return '#4caf50';
+      case 'failed':
+        return '#f44336';
+      case 'skipped':
+      case 'cancelled':
+        return '#9e9e9e';
+      default:
+        return '#2196f3';
+    }
+  }
+
+  get showPauseIcon(): boolean {
+    return this.series?.status === 'downloading';
   }
 
   get hasLogs(): boolean {
