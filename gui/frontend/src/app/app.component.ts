@@ -1,6 +1,9 @@
 import { Component, OnInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
-import { CancelDownload, FetchFiles, OpenInputFileDialog, OpenOutputDirectoryDialog, RunCLIFetch } from '../../wailsjs/go/main/App';
+import { CancelDownload, OpenInputFileDialog, OpenOutputDirectoryDialog, RunCLIFetch } from '../../wailsjs/go/main/App';
+import { DownloadStatusService } from './services/download-status.service';
+import { DownloadOverviewSnapshot } from './models/download-series.model';
 
 
 @Component({
@@ -8,7 +11,7 @@ import { CancelDownload, FetchFiles, OpenInputFileDialog, OpenOutputDirectoryDia
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, OnDestroy {
   status = 'Ready';
   inputFilePath = '';
   outputDirPath = '';
@@ -18,6 +21,7 @@ export class AppComponent implements OnInit {
   @ViewChild('outputContainer') outputContainer!: ElementRef;
 
   private unsubscribeRuntime?: () => void;
+  private overviewSubscription?: Subscription;
 
   // Advanced options / UI state
   showAdvanced = false;
@@ -28,7 +32,6 @@ export class AppComponent implements OnInit {
   downloadInParallel = true;
 
   // Collapse state
-  filesCollapsed = false;
   settingsCollapsed = true;
   outputCollapsed = true;
 
@@ -38,15 +41,10 @@ export class AppComponent implements OnInit {
   // Overall download progress
   overallProgress = 0;
 
-  // Per-source progress model
-  sources: Array<{
-    id: string;
-    title: string;
-    progress: number;
-    accent: string;
-    logs: string[];
-    status?: string;
-  }> = [];
+  series$ = this.downloadStatus.series$;
+  overview$ = this.downloadStatus.overview$;
+
+  constructor(private readonly downloadStatus: DownloadStatusService) {}
 
   ngOnInit() {
     // Detect system theme preference
@@ -59,35 +57,9 @@ export class AppComponent implements OnInit {
       this.isDarkMode = e.matches;
     });
 
-    // Example sources
-    this.sources = [
-      {
-        id: 'src-1',
-        title: 'Source 1',
-        progress: 100,
-        accent: '#4caf50',
-        logs: ['Connecting…', 'Downloading series 1/5', 'Chunk 32/120', 'Writing file 00000001.dcm', 'Writing file 00000002.dcm', 'Rate 12.5 MB/s', 'ETA 01:45', 'Rate 12.5 MB/s', 'ETA 01:45','Rate 12.5 MB/s', 'ETA 01:45','Rate 12.5 MB/s', 'ETA 01:45','Rate 12.5 MB/s', 'ETA 01:45','Rate 12.5 MB/s', 'ETA 01:45','Rate 12.5 MB/s', 'ETA 01:45','Rate 12.5 MB/s', 'ETA 01:45','Rate 12.5 MB/s', 'ETA 01:45','Rate 12.5 MB/s', 'ETA 01:45','Rate 12.5 MB/s', 'ETA 01:45','Rate 12.5 MB/s', 'ETA 01:45','Rate 12.5 MB/s', 'ETA 01:45'],
-        status: 'downloading'
-      },
-      {
-        id: 'src-2',
-        title: 'Source 2',
-        progress: 20,
-        accent: '#ff9800',
-        logs: ['Queued…', 'Preparing download', 'Resolving metadata', 'Starting…'],
-        status: 'queued'
-      },
-      {
-        id: 'src-3',
-        title: 'Source 3',
-        progress: 60,
-        accent: '#3f51b5',
-        logs: ['Downloading…', 'File 10/200', 'Rate 8.3 MB/s', 'ETA 02:14'],
-        status: 'downloading'
-      }
-    ];
-
-    this.updateOverallProgress();
+    this.overviewSubscription = this.overview$.subscribe((snapshot: DownloadOverviewSnapshot) => {
+      this.overallProgress = snapshot.progressPercent;
+    });
 
     // Subscribe to streaming CLI output from backend
     this.unsubscribeRuntime = EventsOn('cli-output-line', (line: string) => {
@@ -108,6 +80,7 @@ export class AppComponent implements OnInit {
   ngOnDestroy() {
     if (this.unsubscribeRuntime) this.unsubscribeRuntime();
     try { EventsOff('cli-output-line'); } catch (e) { /* ignore */ }
+    this.overviewSubscription?.unsubscribe();
   }
 
   toggleDarkMode() {
@@ -126,9 +99,13 @@ export class AppComponent implements OnInit {
 
   onFetchFiles() {
     if (!this.inputFilePath || !this.outputDirPath) {
-      this.status = "Please select an input TCIA file, an output directory, and a Manifests directory.";
+      this.status = "Please select both an input TCIA file and an output directory.";
       return;
     }
+
+    this.downloadStatus.beginRun();
+    this.outputLogs = [];
+    this.overallProgress = 0;
 
     // Reconstruct the exact CLI command for display (quote paths to handle spaces)
     const cliPath = '../nbia-data-retriever-cli';
@@ -191,39 +168,8 @@ export class AppComponent implements OnInit {
     });
   }
 
-  // Helpers for backend integration
-  setSources(sources: Array<{ id: string; title: string; progress: number; accent: string; logs: string[]; status?: string; }>) {
-    this.sources = sources || [];
-    this.updateOverallProgress();
-  }
-
-  // Update progress for a single source by id
-  updateSourceProgress(id: string, progress: number) {
-    const s = this.sources.find(x => x.id === id);
-    if (s) {
-      s.progress = Math.max(0, Math.min(100, Math.round(progress)));
-      this.updateOverallProgress();
-    }
-  }
-
-  // Append a log line to a specific source
-  appendSourceLog(id: string, line: string) {
-    const s = this.sources.find(x => x.id === id);
-    if (s) {
-      s.logs.push(line);
-    }
-  }
-
   // Append to the global output panel
   appendLog(line: string) {
     this.outputLogs.push(line);
-  }
-
-  // Calculate Overall Progress
-  updateOverallProgress() {
-    const list = this.sources ?? [];
-    let sum = 0;
-    for (const s of list) sum += (s.progress ?? 0);
-    this.overallProgress = list.length ? Math.round(sum / list.length) : 0;
   }
 }

@@ -1,0 +1,42 @@
+<div class="source-card" [attr.data-status]="series.status">
+  <div class="card-header">
+    <div class="card-title" [title]="series.seriesDescription || series.seriesUID">
+      {{ series.seriesDescription || series.seriesUID }}
+    </div>
+    <span class="status-chip" [ngClass]="'status-' + series.status">
+      {{ statusLabel }}
+    </span>
+  </div>
+
+  <div class="card-meta">
+    <span *ngIf="series.subjectID" class="meta-item" [title]="series.subjectID">
+      <span class="material-icons-outlined meta-icon">person</span>
+      {{ series.subjectID }}
+    </span>
+    <span *ngIf="series.seriesUID" class="meta-item" [title]="series.seriesUID">
+      <span class="material-icons-outlined meta-icon">qr_code_2</span>
+      {{ series.seriesUID }}
+    </span>
+    <span *ngIf="series.modality" class="meta-item" [title]="series.modality">
+      <span class="material-icons-outlined meta-icon">biotech</span>
+      {{ series.modality }}
+    </span>
+  </div>
+
+  <div class="progress-row">
+    <div class="progress-bar">
+      <div class="progress-fill" [style.width.%]="progressValue"></div>
+    </div>
+    <div class="progress-label">{{ progressLabel }}</div>
+  </div>
+
+  <div class="log-container" *ngIf="hasLogs; else emptyState">
+    <div class="log-line" *ngFor="let line of logLines">{{ line }}</div>
+    <div *ngIf="series.errorMessage" class="log-line error" [title]="series.errorMessage">
+      {{ series.errorMessage }}
+    </div>
+  </div>
+  <ng-template #emptyState>
+    <div class="log-placeholder">Waiting for updates…</div>
+  </ng-template>
+</div>

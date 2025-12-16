@@ -185,6 +185,48 @@
   transition: width 0.3s ease;
 }
 
+.downloads-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 12px;
+  color: #666;
+  margin-top: 8px;
+}
+
+.downloads-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.empty-state {
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 32px 16px;
+  border: 1px dashed #d0d0d0;
+  border-radius: 12px;
+  color: #777;
+  background: rgba(245, 245, 245, 0.6);
+
+  .material-icons-outlined {
+    font-size: 28px;
+    color: #9e9e9e;
+    margin-bottom: 8px;
+  }
+
+  p {
+    margin: 4px 0;
+    font-weight: 600;
+    color: #555;
+  }
+
+  small {
+    color: #777;
+  }
+}
+
 .section-content {
   padding: 16px;
   flex: 1;
@@ -386,8 +428,8 @@
   white-space: nowrap;
 }
 
-/* Files Location */
-.files-section {
+/* Manifest & Destination */
+.manifest-section {
   flex-shrink: 0;
 }
 
@@ -480,23 +522,73 @@
 
 /* Output Section */
 .output-section {
-  max-height: 200px;
+  min-height: 220px;
 }
 
 .output-content {
-  flex: 1;
-  overflow-y: auto;
-  background: #1e1e1e;
-  border-radius: 4px;
-  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
 }
 
-.output-text {
+.output-summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.output-status {
+  font-weight: 600;
+  color: #333;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.overall-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.overall-progress .progress-bar {
+  width: 180px;
+  height: 8px;
+  border-radius: 999px;
+  background: #e0e0e0;
+  overflow: hidden;
+}
+
+.overall-progress .progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4caf50 0%, #81c784 100%);
+  transition: width 0.3s ease;
+}
+
+.overall-progress .progress-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+}
+
+.output-scroll {
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  background: #fafafa;
+  padding: 12px;
   font-family: 'Fira Mono', 'Consolas', 'Menlo', monospace;
   font-size: 12px;
-  color: #d4d4d4;
-  white-space: pre-wrap;
-  line-height: 1.4;
+  color: #444;
+}
+
+.output-line + .output-line {
+  margin-top: 4px;
 }
 
 /* Action Bar */
@@ -676,11 +768,25 @@
     }
   }
   
-  .output-content {
-    background: #0d0d0d;
+  .output-status {
+    color: #e0e0e0;
   }
-  
-  .output-text {
+
+  .overall-progress .progress-bar {
+    background: #404040;
+  }
+
+  .overall-progress .progress-fill {
+    background: linear-gradient(90deg, #4caf50 0%, #66bb6a 100%);
+  }
+
+  .overall-progress .progress-label {
+    color: #cccccc;
+  }
+
+  .output-scroll {
+    background: #111;
+    border-color: #333;
     color: #d4d4d4;
   }
 
@@ -690,9 +796,31 @@
     --ring-track: #3a3a3a;
   }
   
+  .downloads-meta {
+    color: #b0b0b0;
+  }
+  
   .source-card {
     border-color: #404040;
     box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+  }
+  
+  .empty-state {
+    border-color: #444;
+    background: rgba(34, 34, 34, 0.6);
+    color: #bbb;
+
+    .material-icons-outlined {
+      color: #777;
+    }
+
+    p {
+      color: #ddd;
+    }
+
+    small {
+      color: #999;
+    }
   }
   
   .card-title { color: #e0e0e0; }

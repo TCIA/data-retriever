@@ -16,36 +16,26 @@
     </div>
   </div>
 
-    <!-- Files Location Section -->
-    <div class="grid-section files-section" [class.collapsed]="filesCollapsed">
-      <div class="section-header" (click)="filesCollapsed = !filesCollapsed">
-        <span>Files Location</span>
-        <span class="material-icons-outlined collapse-icon">{{ filesCollapsed ? 'expand_more' : 'expand_less' }}</span>
+  <div class="main-grid">
+
+    <div class="grid-section manifest-section">
+      <div class="section-header">
+        <span>Manifest & Destination</span>
       </div>
       <div class="section-content">
         <div class="file-input-row">
-          <!-- <label class="file-label">Path/to/input/</label> -->
-          <input type="text" [(ngModel)]="inputFilePath" class="file-input" placeholder="Path/to/the/input/directory">
+          <input type="text" [(ngModel)]="inputFilePath" class="file-input" placeholder="Path/to/the/input/manifest">
           <button (click)="onSelectInputFile()" class="browse-btn" title="Browse">
             <span class="material-icons-outlined">folder_open</span>
           </button>
         </div>
         <div class="file-input-row">
-          <!-- <label class="file-label">Path/to/output/</label> -->
           <input type="text" [(ngModel)]="outputDirPath" class="file-input" placeholder="Path/to/the/output/directory">
           <button (click)="onSelectOutputDirectory()" class="browse-btn" title="Browse">
             <span class="material-icons-outlined">folder_open</span>
           </button>
         </div>
-        <div class="file-input-row">
-          <!-- <label class="file-label">Path/to/the/manifests/</label> -->
-          <input type="text" [(ngModel)]="outputDirPath" class="file-input" placeholder="Path/to/the/manifests/directory">
-          <button (click)="onSelectOutputDirectory()" class="browse-btn" title="Browse">
-            <span class="material-icons-outlined">folder_open</span>
-          </button>
-        </div>
       </div>
-      <!-- Bottom Action Bar -->
       <div class="action-bar">
         <button (click)="onFetchFiles()" class="fetch-btn">
           <span class="material-icons-outlined">file_download</span>
@@ -58,24 +48,25 @@
       </div>
     </div>
 
-    <!-- Advanced Settings Section -->
     <div class="grid-section settings-section" [class.collapsed]="settingsCollapsed">
       <div class="section-header" (click)="settingsCollapsed = !settingsCollapsed">
         <span>Advanced Settings</span>
-        <span class="material-icons-outlined collapse-icon">{{ settingsCollapsed ? 'expand_more' : 'expand_less' }}</span>
+        <span class="material-icons-outlined collapse-icon">
+          {{ settingsCollapsed ? 'expand_more' : 'expand_less' }}
+        </span>
       </div>
       <div class="section-content">
         <div class="settings-grid">
           <div class="setting-item">
-            <label class="setting-label">Max Connections:</label>
+            <label class="setting-label">Max Connections</label>
             <input type="number" [(ngModel)]="maxConnections" min="1" class="setting-input">
           </div>
           <div class="setting-item">
-            <label class="setting-label">Max Retries:</label>
+            <label class="setting-label">Max Retries</label>
             <input type="number" [(ngModel)]="maxRetries" min="0" class="setting-input">
           </div>
           <div class="setting-item">
-            <label class="setting-label">Simultaneous Downloads:</label>
+            <label class="setting-label">Simultaneous Downloads</label>
             <input type="number" [(ngModel)]="simultaneousDownloads" min="1" class="setting-input">
           </div>
           <div class="setting-item">
@@ -94,146 +85,63 @@
       </div>
     </div>
 
-    <!-- Output Section -->
+    <div class="grid-section downloads-section">
+      <ng-container *ngIf="overview$ | async as overview">
+        <div class="section-header downloads-header">
+          <div class="downloads-header-content">
+            <span class="downloads-title">Active Downloads</span>
+            <span class="downloads-percentage">{{ overview.progressPercent }}%</span>
+          </div>
+          <div class="downloads-progress-bar">
+            <div class="downloads-progress-fill" [style.width.%]="overview.progressPercent"></div>
+          </div>
+          <div class="downloads-meta">
+            <span>{{ overview.completed }} completed</span>
+            <span>{{ overview.failed }} failed</span>
+            <span>{{ overview.skipped }} skipped</span>
+            <span>{{ overview.cancelled }} cancelled</span>
+            <span>{{ overview.active }} in progress</span>
+          </div>
+        </div>
+      </ng-container>
+      <div class="section-content downloads-content">
+        <ng-container *ngIf="series$ | async as seriesList">
+          <div *ngIf="seriesList.length; else emptyDownloads" class="sources-cards">
+            <app-download-card *ngFor="let series of seriesList" [series]="series"></app-download-card>
+          </div>
+        </ng-container>
+        <ng-template #emptyDownloads>
+          <div class="empty-state">
+            <span class="material-icons-outlined">hourglass_empty</span>
+            <p>No series queued.</p>
+            <small>Select a manifest and start a download to see progress cards.</small>
+          </div>
+        </ng-template>
+      </div>
+    </div>
+
     <div class="grid-section output-section" [class.collapsed]="outputCollapsed">
       <div class="section-header" (click)="outputCollapsed = !outputCollapsed">
         <span>Output</span>
-        <span class="material-icons-outlined collapse-icon">{{ outputCollapsed ? 'expand_more' : 'expand_less' }}</span>
+        <span class="material-icons-outlined collapse-icon">
+          {{ outputCollapsed ? 'expand_more' : 'expand_less' }}
+        </span>
       </div>
       <div class="output-content">
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div><div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
-        <div class="output-text">{{ status }}</div>
+        <div class="output-summary">
+          <div class="output-status" [title]="status">{{ status }}</div>
+          <div class="overall-progress">
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width.%]="overallProgress"></div>
+            </div>
+            <div class="progress-label">{{ overallProgress }}%</div>
+          </div>
+        </div>
+        <div class="output-scroll" #outputContainer>
+          <div class="output-line" *ngFor="let line of outputLogs">{{ line }}</div>
+        </div>
       </div>
     </div>
+
+  </div>
 </div>

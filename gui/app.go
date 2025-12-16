@@ -122,6 +122,9 @@ func (b *App) RunCLIFetch(manifestPath string, outputDir string, maxConnections 
 	callbacks := app.Callbacks{
 		Stdout: emit,
 		Stderr: emit,
+		Series: func(evt app.SeriesEvent) {
+			runtime.EventsEmit(b.ctx, "download-series-event", evt)
+		},
 	}
 
 	summary, err := app.Run(ctx, options, callbacks)

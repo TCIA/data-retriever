@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -26,6 +27,7 @@ type Summary struct {
 type Callbacks struct {
 	Stdout func(string)
 	Stderr func(string)
+	Series func(SeriesEvent)
 }
 
 func (cb Callbacks) emitStdout(msg string) {
@@ -42,6 +44,62 @@ func (cb Callbacks) emitStderr(msg string) {
 		return
 	}
 	fmt.Fprint(os.Stderr, msg)
+}
+
+func (cb Callbacks) emitSeries(evt SeriesEvent) {
+	if cb.Series != nil {
+		cb.Series(evt)
+	}
+}
+
+// SeriesEvent represents a lifecycle update for a series download.
+type SeriesEvent struct {
+	SeriesUID         string    `json:"seriesUID"`
+	StudyUID          string    `json:"studyUID,omitempty"`
+	SubjectID         string    `json:"subjectID,omitempty"`
+	SeriesDescription string    `json:"seriesDescription,omitempty"`
+	Modality          string    `json:"modality,omitempty"`
+	Status            string    `json:"status"`
+	Progress          float64   `json:"progress,omitempty"`
+	Message           string    `json:"message,omitempty"`
+	Timestamp         time.Time `json:"timestamp"`
+}
+
+func newSeriesEvent(file *FileInfo, status, message string, progress float64) SeriesEvent {
+	progress = clampProgress(progress)
+	if file == nil {
+		return SeriesEvent{
+			Status:    status,
+			Message:   message,
+			Progress:  progress,
+			Timestamp: time.Now(),
+		}
+	}
+
+	return SeriesEvent{
+		SeriesUID:         file.SeriesUID,
+		StudyUID:          file.StudyUID,
+		SubjectID:         file.SubjectID,
+		SeriesDescription: file.SeriesDescription,
+		Modality:          file.Modality,
+		Status:            status,
+		Progress:          progress,
+		Message:           message,
+		Timestamp:         time.Now(),
+	}
+}
+
+func clampProgress(value float64) float64 {
+	if math.IsNaN(value) || math.IsInf(value, 0) {
+		return 0
+	}
+	if value < 0 {
+		return 0
+	}
+	if value > 100 {
+		return 100
+	}
+	return value
 }
 
 // DownloadStats tracks download statistics across workers.
@@ -104,6 +162,18 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 	files, err := decodeInputFile(ctx, options.Input, client, token, options, callbacks)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode input file: %w", err)
+	}
+
+	seenQueued := make(map[string]struct{})
+	for _, f := range files {
+		if f == nil || f.SeriesUID == "" {
+			continue
+		}
+		if _, ok := seenQueued[f.SeriesUID]; ok {
+			continue
+		}
+		seenQueued[f.SeriesUID] = struct{}{}
+		callbacks.emitSeries(newSeriesEvent(f, "queued", "Queued for download", 0))
 	}
 
 	ext := strings.ToLower(filepath.Ext(options.Input))
@@ -211,20 +281,28 @@ func (wc *WorkerContext) processFiles(input <-chan *FileInfo) {
 	}
 }
 
+func (wc *WorkerContext) emitSeriesEvent(fileInfo *FileInfo, status, message string, progress float64) {
+	wc.Callbacks.emitSeries(newSeriesEvent(fileInfo, status, message, progress))
+}
+
 func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 	updateProgress(wc.Stats, fileInfo.SeriesUID, wc.Options.Debug, wc.Callbacks)
 
 	isSpreadsheetInput := fileInfo.DownloadURL != ""
 
 	if wc.Options.Meta {
+		wc.emitSeriesEvent(fileInfo, "metadata", fmt.Sprintf("[Worker %d] Fetching metadata", wc.WorkerID), 25)
 		wc.handleMetadataOnly(fileInfo, isSpreadsheetInput)
 		return
 	}
+
+	wc.emitSeriesEvent(fileInfo, "downloading", fmt.Sprintf("[Worker %d] Preparing download", wc.WorkerID), 25)
 
 	if wc.Options.SkipExisting && !fileInfo.NeedsDownload(wc.Options.Output, false, wc.Options.NoDecompress) {
 		Logger.Debugf("[Worker %d] Skip existing %s", wc.WorkerID, fileInfo.SeriesUID)
 		atomic.AddInt32(&wc.Stats.Skipped, 1)
 		updateProgress(wc.Stats, fileInfo.SeriesUID, wc.Options.Debug, wc.Callbacks)
+		wc.emitSeriesEvent(fileInfo, "skipped", "Series already present (skip existing)", 100)
 		return
 	}
 
@@ -232,18 +310,22 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 		Logger.Debugf("[Worker %d] Skip %s (already exists with correct size/checksum)", wc.WorkerID, fileInfo.SeriesUID)
 		atomic.AddInt32(&wc.Stats.Skipped, 1)
 		updateProgress(wc.Stats, fileInfo.SeriesUID, wc.Options.Debug, wc.Callbacks)
+		wc.emitSeriesEvent(fileInfo, "skipped", "Series already present with expected size", 100)
 		return
 	}
 
 	if wc.Context.Err() != nil {
+		wc.emitSeriesEvent(fileInfo, "cancelled", "Download cancelled", 100)
 		return
 	}
 
+	wc.emitSeriesEvent(fileInfo, "downloading", fmt.Sprintf("[Worker %d] Download started", wc.WorkerID), 50)
 	err := fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.AuthToken, wc.Options)
 	if err != nil {
 		Logger.Warnf("[Worker %d] Download %s failed - %s", wc.WorkerID, fileInfo.SeriesUID, err)
 		atomic.AddInt32(&wc.Stats.Failed, 1)
 		updateProgress(wc.Stats, fileInfo.SeriesUID, wc.Options.Debug, wc.Callbacks)
+		wc.emitSeriesEvent(fileInfo, "failed", err.Error(), 100)
 		return
 	}
 
@@ -255,6 +337,7 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 
 	atomic.AddInt32(&wc.Stats.Downloaded, 1)
 	updateProgress(wc.Stats, fileInfo.SeriesUID, wc.Options.Debug, wc.Callbacks)
+	wc.emitSeriesEvent(fileInfo, "succeeded", "Download completed", 100)
 }
 
 func (wc *WorkerContext) handleMetadataOnly(fileInfo *FileInfo, isSpreadsheetInput bool) {
@@ -262,14 +345,18 @@ func (wc *WorkerContext) handleMetadataOnly(fileInfo *FileInfo, isSpreadsheetInp
 		Logger.Debugf("[Worker %d] Skipping metadata for spreadsheet entry %s", wc.WorkerID, fileInfo.SeriesUID)
 		atomic.AddInt32(&wc.Stats.Skipped, 1)
 		updateProgress(wc.Stats, fileInfo.SeriesUID, wc.Options.Debug, wc.Callbacks)
+		wc.emitSeriesEvent(fileInfo, "skipped", "Spreadsheet inputs do not expose metadata", 100)
 		return
 	}
 
+	wc.emitSeriesEvent(fileInfo, "metadata", fmt.Sprintf("[Worker %d] Saving metadata", wc.WorkerID), 60)
 	if err := fileInfo.GetMeta(wc.Context, wc.Options.Output); err != nil {
 		Logger.Warnf("[Worker %d] Save meta info %s failed - %s", wc.WorkerID, fileInfo.SeriesUID, err)
 		atomic.AddInt32(&wc.Stats.Failed, 1)
+		wc.emitSeriesEvent(fileInfo, "failed", err.Error(), 100)
 	} else {
 		atomic.AddInt32(&wc.Stats.Downloaded, 1)
+		wc.emitSeriesEvent(fileInfo, "succeeded", "Metadata saved", 100)
 	}
 	updateProgress(wc.Stats, fileInfo.SeriesUID, wc.Options.Debug, wc.Callbacks)
 }
