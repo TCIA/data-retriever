@@ -20,6 +20,48 @@ import (
 	"time"
 )
 
+// ProgressFunc is a callback for reporting download progress (0-100)
+type ProgressFunc func(percent float64)
+
+// progressReader wraps an io.Reader to report progress
+type progressReader struct {
+	reader       io.Reader
+	total        int64
+	read         int64
+	onProgress   ProgressFunc
+	lastReported float64
+	lastTime     time.Time
+}
+
+func newProgressReader(r io.Reader, total int64, onProgress ProgressFunc) *progressReader {
+	return &progressReader{
+		reader:     r,
+		total:      total,
+		onProgress: onProgress,
+		lastTime:   time.Now(),
+	}
+}
+
+func (pr *progressReader) Read(p []byte) (int, error) {
+	n, err := pr.reader.Read(p)
+	if n > 0 && pr.onProgress != nil && pr.total > 0 {
+		pr.read += int64(n)
+		percent := float64(pr.read) / float64(pr.total) * 100
+		// Cap at 99% until actually complete (in case estimate was too low)
+		if percent > 99 && err != io.EOF {
+			percent = 99
+		}
+		// Report progress at most every 200ms or when complete, and only if changed by at least 1%
+		now := time.Now()
+		if (now.Sub(pr.lastTime) >= 200*time.Millisecond && percent-pr.lastReported >= 1) || (err == io.EOF && percent >= 99) {
+			pr.onProgress(percent)
+			pr.lastReported = percent
+			pr.lastTime = now
+		}
+	}
+	return n, err
+}
+
 // MetadataStats tracks metadata fetching progress
 type MetadataStats struct {
 	Total         int
@@ -634,7 +676,7 @@ func (info *FileInfo) GetMeta(ctx context.Context, output string) error {
 }
 
 // Download is real function to download file with retry logic
-func (info *FileInfo) Download(ctx context.Context, output string, httpClient *http.Client, authToken *Token, options *Options) error {
+func (info *FileInfo) Download(ctx context.Context, output string, httpClient *http.Client, authToken *Token, options *Options, onProgress ProgressFunc) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -642,11 +684,11 @@ func (info *FileInfo) Download(ctx context.Context, output string, httpClient *h
 	if options.RequestDelay > 0 {
 		time.Sleep(options.RequestDelay)
 	}
-	return info.DownloadWithRetry(ctx, output, httpClient, authToken, options)
+	return info.DownloadWithRetry(ctx, output, httpClient, authToken, options, onProgress)
 }
 
 // DownloadWithRetry downloads file with retry logic and exponential backoff
-func (info *FileInfo) DownloadWithRetry(ctx context.Context, output string, httpClient *http.Client, authToken *Token, options *Options) error {
+func (info *FileInfo) DownloadWithRetry(ctx context.Context, output string, httpClient *http.Client, authToken *Token, options *Options, onProgress ProgressFunc) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -664,7 +706,7 @@ func (info *FileInfo) DownloadWithRetry(ctx context.Context, output string, http
 			return ctx.Err()
 		}
 
-		err := info.doDownload(ctx, output, httpClient, authToken, options)
+		err := info.doDownload(ctx, output, httpClient, authToken, options, onProgress)
 		if err == nil {
 			return nil
 		}
@@ -701,18 +743,18 @@ func isRetryableError(err error) bool {
 }
 
 // doDownload is a dispatcher for different download types
-func (info *FileInfo) doDownload(ctx context.Context, output string, httpClient *http.Client, authToken *Token, options *Options) error {
+func (info *FileInfo) doDownload(ctx context.Context, output string, httpClient *http.Client, authToken *Token, options *Options, onProgress ProgressFunc) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	if info.DownloadURL != "" {
-		return info.downloadDirect(ctx, output, httpClient, options)
+		return info.downloadDirect(ctx, output, httpClient, options, onProgress)
 	}
-	return info.downloadFromTCIA(ctx, output, httpClient, authToken, options)
+	return info.downloadFromTCIA(ctx, output, httpClient, authToken, options, onProgress)
 }
 
 // downloadDirect downloads a file from a direct URL without decompression
-func (info *FileInfo) downloadDirect(ctx context.Context, output string, httpClient *http.Client, options *Options) error {
+func (info *FileInfo) downloadDirect(ctx context.Context, output string, httpClient *http.Client, options *Options, onProgress ProgressFunc) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -758,7 +800,13 @@ func (info *FileInfo) downloadDirect(ctx context.Context, output string, httpCli
 		}
 	}()
 
-	written, err := io.Copy(f, resp.Body)
+	// Wrap with progress reader if callback provided and content length known
+	var reader io.Reader = resp.Body
+	if onProgress != nil && resp.ContentLength > 0 {
+		reader = newProgressReader(resp.Body, resp.ContentLength, onProgress)
+	}
+
+	written, err := io.Copy(f, reader)
 	if err != nil {
 		return fmt.Errorf("failed to write data after %d bytes: %v", written, err)
 	}
@@ -779,7 +827,7 @@ func (info *FileInfo) downloadDirect(ctx context.Context, output string, httpCli
 }
 
 // downloadFromTCIA performs the actual download from TCIA, with decompression
-func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpClient *http.Client, authToken *Token, options *Options) error {
+func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpClient *http.Client, authToken *Token, options *Options, onProgress ProgressFunc) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -892,8 +940,26 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 	// Buffer the response body for better handling of chunked transfers
 	bufferedReader := bufio.NewReaderSize(resp.Body, 64*1024) // 64KB buffer
 
-	// Download without progress bar
-	written, err := io.Copy(f, bufferedReader)
+	// Determine total size for progress tracking
+	// Prefer Content-Length from response, fall back to estimated compressed size from metadata
+	totalSize := resp.ContentLength
+	if totalSize <= 0 && info.FileSize != "" {
+		if uncompressedSize, err := strconv.ParseInt(info.FileSize, 10, 64); err == nil && uncompressedSize > 0 {
+			// Estimate compressed size as ~35% of uncompressed
+			// Based on testing: 50% estimate reached 70% progress, so actual is ~35% of uncompressed
+			totalSize = (uncompressedSize * 35) / 100
+			logger.Debugf("Using estimated compressed size %d (35%% of uncompressed %d) for progress", totalSize, uncompressedSize)
+		}
+	}
+
+	// Wrap with progress reader if callback provided and we have a size estimate
+	var reader io.Reader = bufferedReader
+	if onProgress != nil && totalSize > 0 {
+		reader = newProgressReader(bufferedReader, totalSize, onProgress)
+	}
+
+	// Download with progress tracking
+	written, err := io.Copy(f, reader)
 	if err != nil {
 		// Log detailed error information
 		logger.Errorf("Download error for %s: %v (written=%d bytes)", info.SeriesUID, err, written)

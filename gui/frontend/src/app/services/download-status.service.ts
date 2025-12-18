@@ -133,7 +133,7 @@ export class DownloadStatusService implements OnDestroy {
     const statusDefaults: Record<SeriesDownloadSnapshot['status'], number> = {
       queued: 0,
       metadata: 10,
-      downloading: 50,
+      downloading: 0,
       skipped: 100,
       succeeded: 100,
       failed: 100,

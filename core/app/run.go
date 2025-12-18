@@ -319,8 +319,16 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 		return
 	}
 
-	wc.emitSeriesEvent(fileInfo, "downloading", fmt.Sprintf("[Worker %d] Download started", wc.WorkerID), 50)
-	err := fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.AuthToken, wc.Options)
+	wc.emitSeriesEvent(fileInfo, "downloading", fmt.Sprintf("[Worker %d] Download started", wc.WorkerID), 0)
+
+	// Create progress callback that emits series events
+	onProgress := func(percent float64) {
+		// Map download progress (0-100) directly to UI progress
+		// Progress will go from 0% to ~99% during download, then 100% on completion
+		wc.emitSeriesEvent(fileInfo, "downloading", fmt.Sprintf("[Worker %d] Downloading %.0f%%", wc.WorkerID, percent), percent)
+	}
+
+	err := fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.AuthToken, wc.Options, onProgress)
 	if err != nil {
 		Logger.Warnf("[Worker %d] Download %s failed - %s", wc.WorkerID, fileInfo.SeriesUID, err)
 		atomic.AddInt32(&wc.Stats.Failed, 1)
