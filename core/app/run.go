@@ -323,9 +323,8 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 
 	// Create progress callback that emits series events
 	onProgress := func(percent float64) {
-		// Map download progress (0-100) directly to UI progress
-		// Progress will go from 0% to ~99% during download, then 100% on completion
-		wc.emitSeriesEvent(fileInfo, "downloading", fmt.Sprintf("[Worker %d] Downloading %.0f%%", wc.WorkerID, percent), percent)
+		// Update progress without spamming logs; omit message so UI doesn't append lines
+		wc.emitSeriesEvent(fileInfo, "downloading", "", percent)
 	}
 
 	err := fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.AuthToken, wc.Options, onProgress)

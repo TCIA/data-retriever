@@ -33,7 +33,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   // Collapse state
   settingsCollapsed = true;
-  outputCollapsed = false;  // Output visible on startup
+  outputCollapsed = true;  // Output collapsed on startup
   downloadsCollapsed = true;  // Collapsed until downloads start
 
   // Dark mode
