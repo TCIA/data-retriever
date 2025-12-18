@@ -220,6 +220,9 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  overflow-y: auto;
+  max-height: 50vh;
+  min-height: 0;
 }
 
 .empty-state {
@@ -277,9 +280,10 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
-  /* Allow horizontal scroll on narrow screens */
-  overflow-x: auto;
+  /* Allow scrolling when content overflows */
+  overflow: auto;
   -webkit-overflow-scrolling: touch;
+  max-height: 100%;
 }
 
 .source-card {

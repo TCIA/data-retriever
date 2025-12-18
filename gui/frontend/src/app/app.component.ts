@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ElementRef, ViewChild, NgZone } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
 import { CancelDownload, OpenInputFileDialog, OpenOutputDirectoryDialog, RunCLIFetch } from '../../wailsjs/go/main/App';
@@ -45,7 +45,10 @@ export class AppComponent implements OnInit, OnDestroy {
   series$ = this.downloadStatus.series$;
   overview$ = this.downloadStatus.overview$;
 
-  constructor(private readonly downloadStatus: DownloadStatusService) {}
+  constructor(
+    private readonly downloadStatus: DownloadStatusService,
+    private ngZone: NgZone
+  ) {}
 
   ngOnInit() {
     // Detect system theme preference
@@ -68,17 +71,19 @@ export class AppComponent implements OnInit, OnDestroy {
 
     // Subscribe to streaming CLI output from backend
     this.unsubscribeRuntime = EventsOn('cli-output-line', (line: string) => {
-      // Append line to global output logs
-      this.outputLogs.push(line);
-      // Auto-scroll
-      setTimeout(() => {
-        try {
-          const el = this.outputContainer?.nativeElement as HTMLElement;
-          if (el) el.scrollTop = el.scrollHeight;
-        } catch (e) {
-          // ignore
-        }
-      }, 10);
+      this.ngZone.run(() => {
+        // Append line to global output logs
+        this.outputLogs.push(line);
+        // Auto-scroll
+        setTimeout(() => {
+          try {
+            const el = this.outputContainer?.nativeElement as HTMLElement;
+            if (el) el.scrollTop = el.scrollHeight;
+          } catch (e) {
+            // ignore
+          }
+        }, 10);
+      });
     });
   }
 

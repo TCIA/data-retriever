@@ -1,4 +1,4 @@
-import { Injectable, OnDestroy } from '@angular/core';
+import { Injectable, NgZone, OnDestroy } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { EventsOn, EventsOff } from '../../../wailsjs/runtime/runtime';
 import {
@@ -39,14 +39,16 @@ export class DownloadStatusService implements OnDestroy {
   readonly series$ = this.seriesSubject.asObservable();
   readonly overview$ = this.overviewSubject.asObservable();
 
-  constructor() {
+  constructor(private ngZone: NgZone) {
     if (typeof window !== 'undefined') {
       this.unsubscribeRuntime = EventsOn('download-series-event', (payload: SeriesDownloadEventPayload) => {
-        try {
-          this.applyEvent(payload);
-        } catch (error) {
-          console.error('Failed to process download-series-event', error);
-        }
+        this.ngZone.run(() => {
+          try {
+            this.applyEvent(payload);
+          } catch (error) {
+            console.error('Failed to process download-series-event', error);
+          }
+        });
       });
     }
   }
@@ -67,10 +69,18 @@ export class DownloadStatusService implements OnDestroy {
       return;
     }
 
-    const snapshot = this.seriesMap.get(payload.seriesUID) ?? this.createInitialSnapshot(payload);
+    const existing = this.seriesMap.get(payload.seriesUID);
+    // Clone the existing snapshot or create a new one to ensure reference changes for OnPush detection
+    const snapshot: SeriesDownloadSnapshot = existing
+      ? { ...existing, logs: [...existing.logs] }
+      : this.createInitialSnapshot(payload);
 
     snapshot.status = payload.status;
     snapshot.progress = this.resolveProgress(snapshot.progress, payload.progress, payload.status);
+    // Ensure terminal states always show 100% progress
+    if (TERMINAL_STATUSES.has(payload.status)) {
+      snapshot.progress = 100;
+    }
     snapshot.seriesDescription = payload.seriesDescription ?? snapshot.seriesDescription;
     snapshot.subjectID = payload.subjectID ?? snapshot.subjectID;
     snapshot.studyUID = payload.studyUID ?? snapshot.studyUID;
