@@ -43,24 +43,30 @@ func newProgressReader(r io.Reader, total int64, onProgress ProgressFunc) *progr
 }
 
 func (pr *progressReader) Read(p []byte) (int, error) {
-	n, err := pr.reader.Read(p)
-	if n > 0 && pr.onProgress != nil && pr.total > 0 {
-		pr.read += int64(n)
-		percent := float64(pr.read) / float64(pr.total) * 100
-		// Cap at 99% until actually complete (in case estimate was too low)
-		if percent > 99 && err != io.EOF {
-			percent = 99
-		}
-		// Report progress at most every 200ms or when complete, and only if changed by at least 1%
-		now := time.Now()
-		if (now.Sub(pr.lastTime) >= 200*time.Millisecond && percent-pr.lastReported >= 1) || (err == io.EOF && percent >= 99) {
-			pr.onProgress(percent)
-			pr.lastReported = percent
-			pr.lastTime = now
-		}
-	}
-	return n, err
+    n, err := pr.reader.Read(p)
+    if n > 0 && pr.onProgress != nil && pr.total > 0 {
+        pr.read += int64(n)
+        percent := float64(pr.read) / float64(pr.total) * 100
+
+        // Cap at 99% until actually complete to avoid overshoot
+        if percent > 99 && err != io.EOF {
+            percent = 99
+        }
+
+        now := time.Now()
+
+        // Report progress at least every 50ms OR if changed by >= 0.5%
+        if (now.Sub(pr.lastTime) >= 50*time.Millisecond && percent-pr.lastReported >= 0.5) || err == io.EOF {
+            // Emit progress to frontend
+            pr.onProgress(percent)
+
+            pr.lastReported = percent
+            pr.lastTime = now
+        }
+    }
+    return n, err
 }
+
 
 // MetadataStats tracks metadata fetching progress
 type MetadataStats struct {

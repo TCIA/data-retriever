@@ -21,6 +21,9 @@ export class AppComponent implements OnInit, OnDestroy {
   @ViewChild('outputContainer') outputContainer!: ElementRef;
 
   private unsubscribeRuntime?: () => void;
+  private unsubscribeCliError?: () => void;
+  private unsubscribeCliFinished?: () => void;
+
   private overviewSubscription?: Subscription;
 
   // Advanced options / UI state
@@ -72,24 +75,40 @@ export class AppComponent implements OnInit, OnDestroy {
     // Subscribe to streaming CLI output from backend
     this.unsubscribeRuntime = EventsOn('cli-output-line', (line: string) => {
       this.ngZone.run(() => {
-        // Append line to global output logs
         this.outputLogs.push(line);
-        // Auto-scroll
-        setTimeout(() => {
-          try {
-            const el = this.outputContainer?.nativeElement as HTMLElement;
-            if (el) el.scrollTop = el.scrollHeight;
-          } catch (e) {
-            // ignore
-          }
-        }, 10);
+
+        const el = this.outputContainer?.nativeElement as HTMLElement;
+        if (el) {
+          el.scrollTop = el.scrollHeight;
+        }
+      });
+    });
+
+    // Subscribe to CLI error events
+    this.unsubscribeCliError = EventsOn('cli-error', (err: string) => {
+      this.ngZone.run(() => {
+        this.status = 'Error';
+        //this.isDownloading = false;
+        this.outputLogs.push(`ERROR: ${err}`);
+      });
+    });
+
+    // Subscribe to CLI finished event
+    this.unsubscribeCliFinished = EventsOn('cli-finished', (summary: string) => {
+      this.ngZone.run(() => {
+        this.status = 'Finished';
+        //this.isDownloading = false;
+        if (summary) {
+          this.outputLogs.push(summary);
+        }
       });
     });
   }
 
   ngOnDestroy() {
-    if (this.unsubscribeRuntime) this.unsubscribeRuntime();
-    try { EventsOff('cli-output-line'); } catch (e) { /* ignore */ }
+    this.unsubscribeRuntime?.();
+    this.unsubscribeCliError?.();
+    this.unsubscribeCliFinished?.();
     this.overviewSubscription?.unsubscribe();
   }
 
@@ -145,15 +164,9 @@ export class AppComponent implements OnInit, OnDestroy {
     this.appendLog(this.status);
 
     // Call backend to run the CLI
-    RunCLIFetch(this.inputFilePath, this.outputDirPath, this.maxConnections, this.maxRetries, this.simultaneousDownloads, this.skipExisting, this.downloadInParallel)
-      .then((result: string) => {
-        this.status = result;
-        this.appendLog(result);
-      })
-      .catch(err => {
-        this.status = "Error: " + err;
-        this.appendLog(this.status);
-      });
+    RunCLIFetch(this.inputFilePath, this.outputDirPath, this.maxConnections, this.maxRetries, this.simultaneousDownloads,
+this.skipExisting, this.downloadInParallel);
+    this.status = "Started";
   }
 
   onCancelDownload() {

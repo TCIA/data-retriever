@@ -45,100 +45,123 @@ func (b *App) OpenOutputDirectoryDialog() (string, error) {
 	return result, nil
 }
 
-// RunCLIFetch runs the CLI tool with the given manifest and output directory and advanced options
-func (b *App) RunCLIFetch(manifestPath string, outputDir string, maxConnections int, maxRetries int, simultaneousDownloads int, skipExisting bool, downloadInParallel bool) (string, error) {
-	if b.ctx == nil {
-		return "", fmt.Errorf("application context not initialised")
-	}
+// RunCLIFetch runs the CLI tool asynchronously with the given manifest and output directory and advanced options.
+func (b *App) RunCLIFetch(
+    manifestPath string,
+    outputDir string,
+    maxConnections int,
+    maxRetries int,
+    simultaneousDownloads int,
+    skipExisting bool,
+    downloadInParallel bool,
+) (string, error) {
 
-	_ = downloadInParallel
+    if b.ctx == nil {
+        return "", fmt.Errorf("application context not initialised")
+    }
 
-	// Cancel any existing run before starting a new one.
-	b.mu.Lock()
-	if b.cancel != nil {
-		b.cancel()
-	}
-	b.runID++
-	currentID := b.runID
-	ctx, cancel := context.WithCancel(b.ctx)
-	b.cancel = cancel
-	b.mu.Unlock()
+    _ = downloadInParallel // currently unused
 
-	defer func() {
-		b.mu.Lock()
-		if b.runID == currentID {
-			b.cancel = nil
-		}
-		b.mu.Unlock()
-	}()
+    // Cancel any existing run before starting a new one
+    b.mu.Lock()
+    if b.cancel != nil {
+        b.cancel()
+    }
+    b.runID++
+    currentID := b.runID
+    ctx, cancel := context.WithCancel(b.ctx)
+    b.cancel = cancel
+    b.mu.Unlock()
 
-	user := os.Getenv("NBIA_USER")
-	if user == "" {
-		user = "nbia_guest"
-	}
-	pass := os.Getenv("NBIA_PASS")
+    // Clear cancel reference when done
+    go func() {
+        defer func() {
+            b.mu.Lock()
+            if b.runID == currentID {
+                b.cancel = nil
+            }
+            b.mu.Unlock()
+        }()
 
-	options := &app.Options{
-		Input:           manifestPath,
-		Output:          outputDir,
-		Proxy:           "",
-		Concurrent:      simultaneousDownloads,
-		Meta:            false,
-		Username:        user,
-		Password:        pass,
-		Version:         false,
-		Debug:           false,
-		Help:            false,
-		MetaUrl:         app.MetaUrl,
-		TokenUrl:        app.TokenUrl,
-		ImageUrl:        app.ImageUrl,
-		SaveLog:         false,
-		Prompt:          false,
-		Force:           false,
-		SkipExisting:    skipExisting,
-		MaxRetries:      maxRetries,
-		RetryDelay:      10 * time.Second,
-		MaxConnsPerHost: maxConnections,
-		ServerFriendly:  false,
-		RequestDelay:    500 * time.Millisecond,
-		NoMD5:           false,
-		NoDecompress:    false,
-		RefreshMetadata: false,
-		MetadataWorkers: 20,
-	}
+        user := os.Getenv("NBIA_USER")
+        if user == "" {
+            user = "nbia_guest"
+        }
+        pass := os.Getenv("NBIA_PASS")
 
-	var (
-		lines   []string
-		linesMu sync.Mutex
-	)
+        options := &app.Options{
+            Input:           manifestPath,
+            Output:          outputDir,
+            Proxy:           "",
+            Concurrent:      simultaneousDownloads,
+            Meta:            false,
+            Username:        user,
+            Password:        pass,
+            Version:         false,
+            Debug:           false,
+            Help:            false,
+            MetaUrl:         app.MetaUrl,
+            TokenUrl:        app.TokenUrl,
+            ImageUrl:        app.ImageUrl,
+            SaveLog:         false,
+            Prompt:          false,
+            Force:           false,
+            SkipExisting:    skipExisting,
+            MaxRetries:      maxRetries,
+            RetryDelay:      10 * time.Second,
+            MaxConnsPerHost: maxConnections,
+            ServerFriendly:  false,
+            RequestDelay:    500 * time.Millisecond,
+            NoMD5:           false,
+            NoDecompress:    false,
+            RefreshMetadata: false,
+            MetadataWorkers: 20,
+        }
 
-	emit := func(line string) {
-		linesMu.Lock()
-		lines = append(lines, line)
-		linesMu.Unlock()
-		runtime.EventsEmit(b.ctx, "cli-output-line", line)
-	}
+        var (
+            lines   []string
+            linesMu sync.Mutex
+        )
 
-	callbacks := app.Callbacks{
-		Stdout: emit,
-		Stderr: emit,
-		Series: func(evt app.SeriesEvent) {
-			runtime.EventsEmit(b.ctx, "download-series-event", evt)
-		},
-	}
+        emit := func(line string) {
+            linesMu.Lock()
+            lines = append(lines, line)
+            linesMu.Unlock()
+            runtime.EventsEmit(b.ctx, "cli-output-line", line)
+        }
 
-	summary, err := app.Run(ctx, options, callbacks)
-	combined := strings.Join(lines, "\n")
-	if err != nil {
-		if errors.Is(err, context.Canceled) {
-			return combined, nil
-		}
-		return combined, fmt.Errorf("download failed: %w", err)
-	}
+        callbacks := app.Callbacks{
+            Stdout: emit,
+            Stderr: emit,
+            Series: func(evt app.SeriesEvent) {
+                runtime.EventsEmit(b.ctx, "download-series-event", evt)
+            },
+        }
 
-	_ = summary
-	return combined, nil
+        // Run the CLI download (blocking inside goroutine)
+        summary, err := app.Run(ctx, options, callbacks)
+        linesMu.Lock()
+        combined := strings.Join(lines, "\n")
+        linesMu.Unlock()
+
+        if err != nil {
+            if errors.Is(err, context.Canceled) {
+                runtime.EventsEmit(b.ctx, "cli-finished", combined)
+                return
+            }
+            runtime.EventsEmit(b.ctx, "cli-error", fmt.Sprintf("download failed: %v", err))
+            return
+        }
+
+        _ = summary
+        runtime.EventsEmit(b.ctx, "cli-finished", combined)
+    }()
+
+    // Return immediately so frontend is free to repaint
+    return "started", nil
 }
+
+
 
 func (b *App) CancelDownload() {
 	b.mu.Lock()
