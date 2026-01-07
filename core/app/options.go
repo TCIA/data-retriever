@@ -10,9 +10,9 @@ import (
 )
 
 var (
-    TokenUrl = "https://services.cancerimagingarchive.net/nbia-api/oauth/token"
-    ImageUrl = "https://services.cancerimagingarchive.net/nbia-api/services/v2/getImage"
-    MetaUrl  = "https://services.cancerimagingarchive.net/nbia-api/services/v2/getSeriesMetaData"
+    TokenUrl = "https://nbia-stage.cancerimagingarchive.net/nbia-api/oauth/token"
+    ImageUrl = "https://nbia-stage.cancerimagingarchive.net/nbia-api/services/v4/getImage"
+    MetaUrl  = "https://nbia-stage.cancerimagingarchive.net/nbia-api/services/v4/getSeriesMetadata"
 )
 
 // Options captures command line parameters shared between CLI and GUI.

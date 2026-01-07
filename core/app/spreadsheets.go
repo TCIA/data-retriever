@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
 	"github.com/tealeg/xlsx"
 )
 
@@ -145,7 +144,7 @@ func decodeSpreadsheet(filePath string) ([]*FileInfo, error) {
 	for _, url := range imageURLs {
 		fileInfos = append(fileInfos, &FileInfo{
 			DownloadURL: url,
-			SeriesUID:   filepath.Base(url),
+			SeriesInstanceUID:   filepath.Base(url),
 		})
 	}
 

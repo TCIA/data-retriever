@@ -54,9 +54,9 @@ func (cb Callbacks) emitSeries(evt SeriesEvent) {
 
 // SeriesEvent represents a lifecycle update for a series download.
 type SeriesEvent struct {
-	SeriesUID         string    `json:"seriesUID"`
-	StudyUID          string    `json:"studyUID,omitempty"`
-	SubjectID         string    `json:"subjectID,omitempty"`
+	SeriesInstanceUID         string    `json:"seriesUID"`
+	StudyInstanceUID          string    `json:"studyUID,omitempty"`
+	PatientID         string    `json:"subjectID,omitempty"`
 	SeriesDescription string    `json:"seriesDescription,omitempty"`
 	Modality          string    `json:"modality,omitempty"`
 	Status            string    `json:"status"`
@@ -77,9 +77,9 @@ func newSeriesEvent(file *FileInfo, status, message string, progress float64) Se
 	}
 
 	return SeriesEvent{
-		SeriesUID:         file.SeriesUID,
-		StudyUID:          file.StudyUID,
-		SubjectID:         file.SubjectID,
+		SeriesInstanceUID:         file.SeriesInstanceUID,
+		StudyInstanceUID:          file.StudyInstanceUID,
+		PatientID:         file.PatientID,
 		SeriesDescription: file.SeriesDescription,
 		Modality:          file.Modality,
 		Status:            status,
@@ -166,13 +166,13 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 
 	seenQueued := make(map[string]struct{})
 	for _, f := range files {
-		if f == nil || f.SeriesUID == "" {
+		if f == nil || f.SeriesInstanceUID == "" {
 			continue
 		}
-		if _, ok := seenQueued[f.SeriesUID]; ok {
+		if _, ok := seenQueued[f.SeriesInstanceUID]; ok {
 			continue
 		}
-		seenQueued[f.SeriesUID] = struct{}{}
+		seenQueued[f.SeriesInstanceUID] = struct{}{}
 		callbacks.emitSeries(newSeriesEvent(f, "queued", "Queued for download", 0))
 	}
 
@@ -286,7 +286,7 @@ func (wc *WorkerContext) emitSeriesEvent(fileInfo *FileInfo, status, message str
 }
 
 func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
-	updateProgress(wc.Stats, fileInfo.SeriesUID, wc.Options.Debug, wc.Callbacks)
+	updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
 
 	isSpreadsheetInput := fileInfo.DownloadURL != ""
 
@@ -299,17 +299,17 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 	wc.emitSeriesEvent(fileInfo, "downloading", fmt.Sprintf("[Worker %d] Preparing download", wc.WorkerID), 25)
 
 	if wc.Options.SkipExisting && !fileInfo.NeedsDownload(wc.Options.Output, false, wc.Options.NoDecompress) {
-		Logger.Debugf("[Worker %d] Skip existing %s", wc.WorkerID, fileInfo.SeriesUID)
+		Logger.Debugf("[Worker %d] Skip existing %s", wc.WorkerID, fileInfo.SeriesInstanceUID)
 		atomic.AddInt32(&wc.Stats.Skipped, 1)
-		updateProgress(wc.Stats, fileInfo.SeriesUID, wc.Options.Debug, wc.Callbacks)
+		updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
 		wc.emitSeriesEvent(fileInfo, "skipped", "Series already present (skip existing)", 100)
 		return
 	}
 
 	if !fileInfo.NeedsDownload(wc.Options.Output, wc.Options.Force, wc.Options.NoDecompress) {
-		Logger.Debugf("[Worker %d] Skip %s (already exists with correct size/checksum)", wc.WorkerID, fileInfo.SeriesUID)
+		Logger.Debugf("[Worker %d] Skip %s (already exists with correct size/checksum)", wc.WorkerID, fileInfo.SeriesInstanceUID)
 		atomic.AddInt32(&wc.Stats.Skipped, 1)
-		updateProgress(wc.Stats, fileInfo.SeriesUID, wc.Options.Debug, wc.Callbacks)
+		updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
 		wc.emitSeriesEvent(fileInfo, "skipped", "Series already present with expected size", 100)
 		return
 	}
@@ -329,43 +329,43 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 
 	err := fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.AuthToken, wc.Options, onProgress)
 	if err != nil {
-		Logger.Warnf("[Worker %d] Download %s failed - %s", wc.WorkerID, fileInfo.SeriesUID, err)
+		Logger.Warnf("[Worker %d] Download %s failed - %s", wc.WorkerID, fileInfo.SeriesInstanceUID, err)
 		atomic.AddInt32(&wc.Stats.Failed, 1)
-		updateProgress(wc.Stats, fileInfo.SeriesUID, wc.Options.Debug, wc.Callbacks)
+		updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
 		wc.emitSeriesEvent(fileInfo, "failed", err.Error(), 100)
 		return
 	}
 
 	if !isSpreadsheetInput {
 		if err := fileInfo.GetMeta(wc.Context, wc.Options.Output); err != nil {
-			Logger.Warnf("[Worker %d] Save meta info %s failed - %s", wc.WorkerID, fileInfo.SeriesUID, err)
+			Logger.Warnf("[Worker %d] Save meta info %s failed - %s", wc.WorkerID, fileInfo.SeriesInstanceUID, err)
 		}
 	}
 
 	atomic.AddInt32(&wc.Stats.Downloaded, 1)
-	updateProgress(wc.Stats, fileInfo.SeriesUID, wc.Options.Debug, wc.Callbacks)
+	updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
 	wc.emitSeriesEvent(fileInfo, "succeeded", "Download completed", 100)
 }
 
 func (wc *WorkerContext) handleMetadataOnly(fileInfo *FileInfo, isSpreadsheetInput bool) {
 	if isSpreadsheetInput {
-		Logger.Debugf("[Worker %d] Skipping metadata for spreadsheet entry %s", wc.WorkerID, fileInfo.SeriesUID)
+		Logger.Debugf("[Worker %d] Skipping metadata for spreadsheet entry %s", wc.WorkerID, fileInfo.SeriesInstanceUID)
 		atomic.AddInt32(&wc.Stats.Skipped, 1)
-		updateProgress(wc.Stats, fileInfo.SeriesUID, wc.Options.Debug, wc.Callbacks)
+		updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
 		wc.emitSeriesEvent(fileInfo, "skipped", "Spreadsheet inputs do not expose metadata", 100)
 		return
 	}
 
 	wc.emitSeriesEvent(fileInfo, "metadata", fmt.Sprintf("[Worker %d] Saving metadata", wc.WorkerID), 60)
 	if err := fileInfo.GetMeta(wc.Context, wc.Options.Output); err != nil {
-		Logger.Warnf("[Worker %d] Save meta info %s failed - %s", wc.WorkerID, fileInfo.SeriesUID, err)
+		Logger.Warnf("[Worker %d] Save meta info %s failed - %s", wc.WorkerID, fileInfo.SeriesInstanceUID, err)
 		atomic.AddInt32(&wc.Stats.Failed, 1)
 		wc.emitSeriesEvent(fileInfo, "failed", err.Error(), 100)
 	} else {
 		atomic.AddInt32(&wc.Stats.Downloaded, 1)
 		wc.emitSeriesEvent(fileInfo, "succeeded", "Metadata saved", 100)
 	}
-	updateProgress(wc.Stats, fileInfo.SeriesUID, wc.Options.Debug, wc.Callbacks)
+	updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
 }
 
 func updateProgress(stats *DownloadStats, currentSeriesID string, debugMode bool, callbacks Callbacks) {

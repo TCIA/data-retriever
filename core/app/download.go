@@ -12,13 +12,17 @@ import (
 	"hash"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+	"bytes"
+	"reflect"
 )
+
 
 // ProgressFunc is a callback for reporting download progress (0-100)
 type ProgressFunc func(percent float64)
@@ -275,39 +279,42 @@ func decodeTCIA(ctx context.Context, path string, httpClient *http.Client, authT
 					logger.Debugf("[Meta Worker %d] Force refresh, fetching metadata for: %s", workerID, seriesID)
 				}
 
-				url_, err := makeURL(MetaUrl, map[string]interface{}{"SeriesInstanceUID": seriesID})
+				// Prepare form data for POST
+				data := url.Values{}
+				data.Set("list", seriesID)
+				data.Set("format", "csv")
+				
+				req, err := http.NewRequest("POST", MetaUrl, strings.NewReader(data.Encode()))
 				if err != nil {
-					logger.Errorf("[Meta Worker %d] Failed to make URL: %v", workerID, err)
-					metaStats.updateProgress("failed", seriesID)
-					continue
+				    logger.Errorf("[Meta Worker %d] Failed to create request: %v", workerID, err)
+				    metaStats.updateProgress("failed", seriesID)
+				    continue
 				}
-
-				req, err := http.NewRequest("GET", url_, nil)
-				if err != nil {
-					logger.Errorf("[Meta Worker %d] Failed to create request: %v", workerID, err)
-					metaStats.updateProgress("failed", seriesID)
-					continue
-				}
-
+				
+				// Set headers
+				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+				
 				// Get current access token
 				accessToken, err := authToken.GetAccessToken()
 				if err != nil {
-					logger.Errorf("[Meta Worker %d] Failed to get access token: %v", workerID, err)
-					metaStats.updateProgress("failed", seriesID)
-					continue
+				    logger.Errorf("[Meta Worker %d] Failed to get access token: %v", workerID, err)
+				    metaStats.updateProgress("failed", seriesID)
+				    continue
 				}
 				req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", accessToken))
-
+				
 				// Set timeout for metadata request
 				reqCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 				req = req.WithContext(reqCtx)
-
+				
+				// Send request
 				resp, err := doRequest(httpClient, req)
 				cancel() // Cancel context after request
+				
 				if err != nil {
-					logger.Errorf("[Meta Worker %d] Failed to do request: %v", workerID, err)
-					metaStats.updateProgress("failed", seriesID)
-					continue
+				    logger.Errorf("[Meta Worker %d] Request failed: %v", workerID, err)
+				    metaStats.updateProgress("failed", seriesID)
+				    continue
 				}
 
 				content, err := io.ReadAll(resp.Body)
@@ -319,21 +326,80 @@ func decodeTCIA(ctx context.Context, path string, httpClient *http.Client, authT
 				}
 
 				files := make([]*FileInfo, 0)
-				err = json.Unmarshal(content, &files)
+				
+				reader := csv.NewReader(bytes.NewReader(content))
+				records, err := reader.ReadAll()
 				if err != nil {
-					logger.Errorf("[Meta Worker %d] Failed to parse response data: %v", workerID, err)
-					logger.Debugf("%s", content)
-					metaStats.updateProgress("failed", seriesID)
-					continue
+				    logger.Errorf("[Meta Worker %d] Failed to parse CSV response: %v", workerID, err)
+				    logger.Debugf("%s", content)
+				    metaStats.updateProgress("failed", seriesID)
+				    continue
 				}
-
-				// Save to cache - usually one file per series
+				
+				if len(records) < 2 {
+				    logger.Errorf("[Meta Worker %d] CSV response contains no data rows", workerID)
+				    metaStats.updateProgress("failed", seriesID)
+				    continue
+				}
+				
+				headers := records[0]
+				
+				// Build header → struct field map
+				fileInfoType := reflect.TypeOf(FileInfo{})
+				fieldMap := make(map[string]int)
+				
+				for i := 0; i < fileInfoType.NumField(); i++ {
+				    field := fileInfoType.Field(i)
+				
+				    // Prefer csv tag if present
+				    name := field.Tag.Get("csv")
+				    if name == "" {
+				        name = field.Name
+				    }
+				
+				    fieldMap[name] = i
+				}
+				
+				// Populate structs
+				for _, row := range records[1:] {
+				    file := &FileInfo{}
+				    v := reflect.ValueOf(file).Elem()
+				
+				    for colIdx, colName := range headers {
+				        fieldIdx, ok := fieldMap[colName]
+				        if !ok || colIdx >= len(row) {
+				            continue
+				        }
+				
+				        field := v.Field(fieldIdx)
+				        if !field.CanSet() {
+				            continue
+				        }
+				
+				        // Only handling string fields here (safe & common)
+				        if field.Kind() == reflect.String {
+				            field.SetString(row[colIdx])
+				        }
+				    }
+				
+				    files = append(files, file)
+				}
+				
+				// Save to cache
 				for _, file := range files {
-					if file.SeriesUID != "" {
-						if err := saveMetadataToCache(file, getMetadataCachePath(options.Output, file.SeriesUID)); err != nil {
-							logger.Warnf("[Meta Worker %d] Failed to cache metadata for %s: %v", workerID, file.SeriesUID, err)
-						}
-					}
+				    if file.SeriesInstanceUID != "" {
+				        if err := saveMetadataToCache(
+				            file,
+				            getMetadataCachePath(options.Output, file.SeriesInstanceUID),
+				        ); err != nil {
+				            logger.Warnf(
+				                "[Meta Worker %d] Failed to cache metadata for %s: %v",
+				                workerID,
+				                file.SeriesInstanceUID,
+				                err,
+				            )
+				        }
+				    }
 				}
 
 				// Thread-safe append to results
@@ -355,77 +421,96 @@ func decodeTCIA(ctx context.Context, path string, httpClient *http.Client, authT
 }
 
 type FileInfo struct {
-	NumberOfImages     string `json:"Number of Images"`
-	SOPClassUID        string `json:"SOP Class UID"`
-	Manufacturer       string `json:"Manufacturer"`
-	DataDescriptionURI string `json:"Data Description URI"`
-	LicenseURL         string `json:"License URL"`
-	AnnotationSize     string `json:"Annotation Size"`
-	Collection         string `json:"Collection"`
-	StudyDescription   string `json:"Study Description"`
-	SeriesUID          string `json:"Series UID"`
-	StudyUID           string `json:"Study UID"`
-	LicenseName        string `json:"License Name"`
-	StudyDate          string `json:"Study Date"`
-	SeriesDescription  string `json:"Series Description"`
-	Modality           string `json:"Modality"`
-	RdPartyAnalysis    string `json:"3rd Party Analysis"`
-	FileSize           string `json:"File Size"`
-	SubjectID          string `json:"Subject ID"`
-	SeriesNumber       string `json:"Series Number"`
-	MD5Hash            string `json:"MD5 Hash,omitempty"`
-	DownloadURL        string `json:"downloadUrl,omitempty"`
+	PatientID                           string `csv:"PatientID"`
+	PatientName                         string `csv:"PatientName"`
+	PatientSex                          string `csv:"PatientSex"`
+	EthnicGroup                         string `csv:"EthnicGroup"`
+	Phantom                             string `csv:"Phantom"`
+	SpeciesCode                         string `csv:"SpeciesCode"`
+	SpeciesDescription                  string `csv:"SpeciesDescription"`
+	StudyInstanceUID                    string `csv:"StudyInstanceUID"`
+	StudyDate                           string `csv:"StudyDate"`
+	StudyDesc                           string `csv:"StudyDesc"`
+	AdmittingDiagnosisDescription       string `csv:"AdmittingDiagnosisDescription"`
+	StudyID                             string `csv:"StudyID"`
+	PatientAge                          string `csv:"PatientAge"`
+	LongitudinalTemporalEventType       string `csv:"LongitudinalTemporalEventType"`
+	LongitudinalTemporalOffsetFromEvent string `csv:"LongitudinalTemporalOffsetFromEvent"`
+	SeriesInstanceUID                   string `csv:"SeriesInstanceUID"`
+	Collection                          string `csv:"Collection"`
+	Site                                string `csv:"Site"`
+	Modality                            string `csv:"Modality"`
+	ProtocolName                        string `csv:"ProtocolName"`
+	SeriesDate                          string `csv:"SeriesDate"`
+	SeriesDescription                   string `csv:"SeriesDescription"`
+	BodyPartExamined                    string `csv:"BodyPartExamined"`
+	SeriesNumber                        string `csv:"SeriesNumber"`
+	AnnotationsFlag                     string `csv:"AnnotationsFlag"`
+	Manufacturer                        string `csv:"Manufacturer"`
+	ManufacturerModelName               string `csv:"ManufacturerModelName"`
+	PixelSpacingRow                     string `csv:"PixelSpacing(mm)-Row"`
+	SliceThickness                      string `csv:"SliceThickness(mm)"`
+	SoftwareVersions                    string `csv:"SoftwareVersions"`
+	ImageCount                          string `csv:"ImageCount"`
+	MaxSubmissionTimestamp              string `csv:"MaxSubmissionTimestamp"`
+	LicenseName                         string `csv:"LicenseName"`
+	LicenseURI                          string `csv:"LicenseURI"`
+	DataDescriptionURI                  string `csv:"DataDescriptionURI"`
+	FileSize                            string `csv:"FileSize"`
+	ReleasedStatus                      string `csv:"ReleasedStatus"`
+	DateReleased                        string `csv:"DateReleased"`
+	ThirdPartyAnalysis                  string `csv:"ThirdPartyAnalysis"`
+	Authorized                          string `csv:"Authorized"`
+	DownloadURL													string
 }
+
 
 // GetOutput construct the output directory (thread-safe)
 func (info *FileInfo) getOutput(output string) string {
-	outputDir := filepath.Join(output, info.SubjectID, info.StudyUID)
-
+	outputDir := filepath.Join(output, info.PatientID, info.StudyInstanceUID)
 	// Check if directory exists without lock first
 	if _, err := os.Stat(outputDir); !os.IsNotExist(err) {
 		return outputDir
 	}
-
 	// Directory doesn't exist, acquire lock to create it
 	dirMutex.Lock()
 	defer dirMutex.Unlock()
-
 	// Double-check after acquiring lock
 	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
 		if err = os.MkdirAll(outputDir, 0755); err != nil {
 			logger.Fatal(err)
 		}
 	}
-
 	return outputDir
 }
 
+
 func (info *FileInfo) MetaFile(output string) string {
-	return getMetadataCachePath(output, info.SeriesUID)
+	return getMetadataCachePath(output, info.SeriesInstanceUID)
 }
 
 func (info *FileInfo) DcimFiles(output string) string {
-	return filepath.Join(info.getOutput(output), info.SeriesUID)
+	return filepath.Join(info.getOutput(output), info.SeriesInstanceUID)
 }
 
 // NeedsDownload checks if files need to be downloaded
 func (info *FileInfo) NeedsDownload(output string, force bool, noDecompress bool) bool {
 	if force {
-		logger.Debugf("Force flag set, will re-download %s", info.SeriesUID)
+		logger.Debugf("Force flag set, will re-download %s", info.SeriesInstanceUID)
 		return true
 	}
 
 	var targetPath string
 	if info.DownloadURL != "" {
-		targetPath = filepath.Join(output, info.SeriesUID)
-		_, err := os.Stat(targetPath)
-		if os.IsNotExist(err) {
-			logger.Debugf("Target %s does not exist, need to download", targetPath)
-			return true
-		}
-		// If it exists, we assume it's downloaded. We don't have size/checksum info for these.
-		logger.Debugf("Direct download file %s exists, skipping", targetPath)
-		return false
+	        targetPath = filepath.Join(output, info.SeriesInstanceUID)
+	        _, err := os.Stat(targetPath)
+	        if os.IsNotExist(err) {
+	                logger.Debugf("Target %s does not exist, need to download", targetPath)
+	                return true
+	        }
+	        // If it exists, we assume it's downloaded. We don't have size/checksum info for these.
+	        logger.Debugf("Direct download file %s exists, skipping", targetPath)
+	        return false
 	}
 
 	if noDecompress {
@@ -703,7 +788,7 @@ func (info *FileInfo) DownloadWithRetry(ctx context.Context, output string, http
 
 	for attempt := 0; attempt <= options.MaxRetries; attempt++ {
 		if attempt > 0 {
-			logger.Infof("Retrying download %s (attempt %d/%d) after %v delay", info.SeriesUID, attempt, options.MaxRetries, delay)
+			logger.Infof("Retrying download %s (attempt %d/%d) after %v delay", info.SeriesInstanceUID, attempt, options.MaxRetries, delay)
 			time.Sleep(delay)
 			delay *= 2 // Exponential backoff
 		}
@@ -718,11 +803,11 @@ func (info *FileInfo) DownloadWithRetry(ctx context.Context, output string, http
 		}
 
 		lastErr = err
-		logger.Warnf("Download %s failed (attempt %d/%d): %v", info.SeriesUID, attempt+1, options.MaxRetries+1, err)
+		logger.Warnf("Download %s failed (attempt %d/%d): %v", info.SeriesInstanceUID, attempt+1, options.MaxRetries+1, err)
 
 		// Check if error is retryable
 		if !isRetryableError(err) {
-			logger.Errorf("Non-retryable error for %s: %v", info.SeriesUID, err)
+			logger.Errorf("Non-retryable error for %s: %v", info.SeriesInstanceUID, err)
 			return err
 		}
 	}
@@ -754,82 +839,82 @@ func (info *FileInfo) doDownload(ctx context.Context, output string, httpClient 
 		ctx = context.Background()
 	}
 	if info.DownloadURL != "" {
-		return info.downloadDirect(ctx, output, httpClient, options, onProgress)
+	        return info.downloadDirect(ctx, output, httpClient, options, onProgress)
 	}
 	return info.downloadFromTCIA(ctx, output, httpClient, authToken, options, onProgress)
 }
 
 // downloadDirect downloads a file from a direct URL without decompression
 func (info *FileInfo) downloadDirect(ctx context.Context, output string, httpClient *http.Client, options *Options, onProgress ProgressFunc) error {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	logger.Debugf("Downloading direct from URL: %s", info.DownloadURL)
+       if ctx == nil {
+               ctx = context.Background()
+       }
+       logger.Debugf("Downloading direct from URL: %s", info.DownloadURL)
 
-	finalPath := filepath.Join(output, info.SeriesUID)
-	tempPath := finalPath + ".tmp"
+       finalPath := filepath.Join(output, info.SeriesInstanceUID)
+       tempPath := finalPath + ".tmp"
 
-	// Clean up any previous temporary files
-	if _, err := os.Stat(tempPath); err == nil {
-		logger.Debugf("Removing incomplete download: %s", tempPath)
-		os.Remove(tempPath)
-	}
+       // Clean up any previous temporary files
+       if _, err := os.Stat(tempPath); err == nil {
+               logger.Debugf("Removing incomplete download: %s", tempPath)
+               os.Remove(tempPath)
+       }
 
-	req, err := http.NewRequest("GET", info.DownloadURL, nil)
-	if err != nil {
-		return fmt.Errorf("failed to create request: %v", err)
-	}
+       req, err := http.NewRequest("GET", info.DownloadURL, nil)
+       if err != nil {
+               return fmt.Errorf("failed to create request: %v", err)
+       }
 
-	// Use a reasonable timeout for direct downloads
-	reqCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
-	defer cancel()
-	req = req.WithContext(reqCtx)
+       // Use a reasonable timeout for direct downloads
+       reqCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
+       defer cancel()
+       req = req.WithContext(reqCtx)
 
-	resp, err := doRequest(httpClient, req)
-	if err != nil {
-		return fmt.Errorf("failed to do request: %v", err)
-	}
-	defer resp.Body.Close()
+       resp, err := doRequest(httpClient, req)
+       if err != nil {
+               return fmt.Errorf("failed to do request: %v", err)
+       }
+       defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("HTTP error %d: %s", resp.StatusCode, resp.Status)
-	}
+       if resp.StatusCode != http.StatusOK {
+               return fmt.Errorf("HTTP error %d: %s", resp.StatusCode, resp.Status)
+       }
 
-	f, err := os.OpenFile(tempPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-	if err != nil {
-		return fmt.Errorf("failed to open file: %v", err)
-	}
-	defer func() {
-		f.Close()
-		if err != nil {
-			os.Remove(tempPath)
-		}
-	}()
+       f, err := os.OpenFile(tempPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+       if err != nil {
+               return fmt.Errorf("failed to open file: %v", err)
+       }
+       defer func() {
+               f.Close()
+               if err != nil {
+                       os.Remove(tempPath)
+               }
+       }()
 
-	// Wrap with progress reader if callback provided and content length known
-	var reader io.Reader = resp.Body
-	if onProgress != nil && resp.ContentLength > 0 {
-		reader = newProgressReader(resp.Body, resp.ContentLength, onProgress)
-	}
+       // Wrap with progress reader if callback provided and content length known
+       var reader io.Reader = resp.Body
+       if onProgress != nil && resp.ContentLength > 0 {
+               reader = newProgressReader(resp.Body, resp.ContentLength, onProgress)
+       }
 
-	written, err := io.Copy(f, reader)
-	if err != nil {
-		return fmt.Errorf("failed to write data after %d bytes: %v", written, err)
-	}
+       written, err := io.Copy(f, reader)
+       if err != nil {
+               return fmt.Errorf("failed to write data after %d bytes: %v", written, err)
+       }
 
-	logger.Debugf("Downloaded %d bytes for %s", written, info.SeriesUID)
+       logger.Debugf("Downloaded %d bytes for %s", written, info.SeriesInstanceUID)
 
-	if err := f.Close(); err != nil {
-		return fmt.Errorf("failed to close file: %v", err)
-	}
+       if err := f.Close(); err != nil {
+               return fmt.Errorf("failed to close file: %v", err)
+       }
 
-	// Atomic rename to final location
-	if err := os.Rename(tempPath, finalPath); err != nil {
-		return fmt.Errorf("failed to move file: %v", err)
-	}
+       // Atomic rename to final location
+       if err := os.Rename(tempPath, finalPath); err != nil {
+               return fmt.Errorf("failed to move file: %v", err)
+       }
 
-	logger.Debugf("Successfully saved %s as %s", info.SeriesUID, finalPath)
-	return nil
+       logger.Debugf("Successfully saved %s as %s", info.SeriesInstanceUID, finalPath)
+       return nil
 }
 
 // downloadFromTCIA performs the actual download from TCIA, with decompression
@@ -839,7 +924,7 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 	}
 	logger.Debugf("getting image file to %s", output)
 
-	url_, err := makeURL(ImageUrl, map[string]interface{}{"SeriesInstanceUID": info.SeriesUID})
+	url_, err := makeURL(ImageUrl, map[string]interface{}{"SeriesInstanceUID": info.SeriesInstanceUID})
 	if err != nil {
 		return fmt.Errorf("failed to make URL: %v", err)
 	}
@@ -899,7 +984,7 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 		// Default timeout for unknown size
 		timeout = 30 * time.Minute
 	}
-	logger.Debugf("Setting download timeout to %v for %s", timeout, info.SeriesUID)
+	logger.Debugf("Setting download timeout to %v for %s", timeout, info.SeriesInstanceUID)
 	reqCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	req = req.WithContext(reqCtx)
@@ -912,7 +997,7 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 
 	// Log response headers for debugging
 	logger.Debugf("Response headers for %s: Status=%s, Content-Length=%d, Transfer-Encoding=%s",
-		info.SeriesUID, resp.Status, resp.ContentLength, resp.Header.Get("Transfer-Encoding"))
+		info.SeriesInstanceUID, resp.Status, resp.ContentLength, resp.Header.Get("Transfer-Encoding"))
 
 	// Check HTTP status
 	if resp.StatusCode != http.StatusOK {
@@ -938,9 +1023,9 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 
 	// Log download start
 	if resp.ContentLength > 0 {
-		logger.Debugf("Downloading %s (size: %d bytes)", info.SeriesUID, resp.ContentLength)
+		logger.Debugf("Downloading %s (size: %d bytes)", info.SeriesInstanceUID, resp.ContentLength)
 	} else {
-		logger.Debugf("Downloading %s (size: unknown)", info.SeriesUID)
+		logger.Debugf("Downloading %s (size: unknown)", info.SeriesInstanceUID)
 	}
 
 	// Buffer the response body for better handling of chunked transfers
@@ -968,15 +1053,15 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 	written, err := io.Copy(f, reader)
 	if err != nil {
 		// Log detailed error information
-		logger.Errorf("Download error for %s: %v (written=%d bytes)", info.SeriesUID, err, written)
+		logger.Errorf("Download error for %s: %v (written=%d bytes)", info.SeriesInstanceUID, err, written)
 		// Check if it's an EOF error (connection closed)
 		if err == io.EOF || err == io.ErrUnexpectedEOF {
-			logger.Errorf("Connection closed prematurely by server for %s", info.SeriesUID)
+			logger.Errorf("Connection closed prematurely by server for %s", info.SeriesInstanceUID)
 		}
 		return fmt.Errorf("failed to write data after %d bytes: %v", written, err)
 	}
 
-	logger.Debugf("Downloaded %d bytes for %s", written, info.SeriesUID)
+	logger.Debugf("Downloaded %d bytes for %s", written, info.SeriesInstanceUID)
 
 	// Note: FileSize in manifest is the uncompressed size, but we download ZIP files
 	// So we cannot validate the downloaded size against FileSize
@@ -985,7 +1070,7 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 		expectedSize, _ := strconv.ParseInt(info.FileSize, 10, 64)
 		compressionRatio := float64(written) / float64(expectedSize) * 100
 		logger.Debugf("Downloaded %s: %d bytes (%.1f%% of uncompressed size %d)",
-			info.SeriesUID, written, compressionRatio, expectedSize)
+			info.SeriesInstanceUID, written, compressionRatio, expectedSize)
 	}
 
 	// Close ZIP file before extraction
@@ -1009,7 +1094,7 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 			return fmt.Errorf("failed to move ZIP file: %v", err)
 		}
 
-		logger.Debugf("Successfully saved %s as %s", info.SeriesUID, finalPath)
+		logger.Debugf("Successfully saved %s as %s", info.SeriesInstanceUID, finalPath)
 		return nil
 	} else {
 		// Decompression mode: extract and verify
@@ -1071,7 +1156,7 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 			logger.Warnf("Failed to remove temporary ZIP file %s: %v", tempZipPath, err)
 		}
 
-		logger.Debugf("Successfully extracted %s to %s", info.SeriesUID, finalPath)
+		logger.Debugf("Successfully extracted %s to %s", info.SeriesInstanceUID, finalPath)
 		return nil
 	}
 }
