@@ -221,7 +221,7 @@
   flex-direction: column;
   gap: 16px;
   overflow-y: auto;
-  max-height: 50vh;
+  max-height: 65vh;
   min-height: 0;
 }
 
@@ -281,7 +281,7 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
   /* Allow scrolling when content overflows */
-  overflow: auto;
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   max-height: 100%;
 }
