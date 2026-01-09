@@ -17,10 +17,6 @@ import (
 func (b *App) OpenInputFileDialog() (string, error) {
 	result, err := runtime.OpenFileDialog(b.ctx, runtime.OpenDialogOptions{
 		Title: "Select TCIA Manifest File",
-		Filters: []runtime.FileFilter{
-			{DisplayName: "TCIA Manifest Files", Pattern: "*.tcia"},
-			{DisplayName: "All Files", Pattern: "*"},
-		},
 	})
 	if err != nil {
 		return "", err
