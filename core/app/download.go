@@ -24,6 +24,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/aws"
+  "net/http/httputil"
 
 )
 
@@ -470,6 +471,7 @@ func decodeTCIA(ctx context.Context, path string, httpClient *http.Client, authT
 				// Send request
 				resp, err := doRequest(httpClient, req)
 				cancel() // Cancel context after request
+
 				
 				if err != nil {
 				    logger.Errorf("[Meta Worker %d] Request failed: %v", workerID, err)
@@ -495,6 +497,7 @@ func decodeTCIA(ctx context.Context, path string, httpClient *http.Client, authT
 				    metaStats.updateProgress("failed", seriesID)
 				    continue
 				}
+
 				
 				if len(records) < 2 {
 				    logger.Errorf("[Meta Worker %d] CSV response contains no data rows", workerID)

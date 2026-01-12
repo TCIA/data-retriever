@@ -56,127 +56,161 @@ func (b *App) RunCLIFetch(
         return "", fmt.Errorf("application context not initialised")
     }
 
-    _ = downloadInParallel // currently unused
-
-    // Cancel any existing run before starting a new one
+    // Create a new batch
     b.mu.Lock()
-    if b.cancel != nil {
-        b.cancel()
-    }
     b.runID++
-    currentID := b.runID
+    id := b.runID
+
     ctx, cancel := context.WithCancel(b.ctx)
-    b.cancel = cancel
+
+    batch := &DownloadBatch{
+        ID:         id,
+        Ctx:        ctx,
+        Cancel:     cancel,
+        Manifest:   manifestPath,
+        OutputDir:  outputDir,
+        MaxConn:    maxConnections,
+        MaxRetries: maxRetries,
+        Parallel:   simultaneousDownloads,
+        SkipExist:  skipExisting,
+    }
+
+    if b.batches == nil {
+        b.batches = make(map[uint64]*DownloadBatch)
+    }
+    b.batches[id] = batch
     b.mu.Unlock()
 
-    // Clear cancel reference when done
-    go func() {
-        defer func() {
-            b.mu.Lock()
-            if b.runID == currentID {
-                b.cancel = nil
-            }
-            b.mu.Unlock()
-        }()
-
-        user := os.Getenv("NBIA_USER")
-        if user == "" {
-            user = "nbia_guest"
-        }
-        pass := os.Getenv("NBIA_PASS")
-
-        options := &app.Options{
-            Input:           manifestPath,
-            Output:          outputDir,
-            Proxy:           "",
-            Concurrent:      simultaneousDownloads,
-            Meta:            false,
-            Username:        user,
-            Password:        pass,
-            Version:         false,
-            Debug:           false,
-            Help:            false,
-            MetaUrl:         app.MetaUrl,
-            TokenUrl:        app.TokenUrl,
-            ImageUrl:        app.ImageUrl,
-            SaveLog:         false,
-            Prompt:          false,
-            Force:           false,
-            SkipExisting:    skipExisting,
-            MaxRetries:      maxRetries,
-            RetryDelay:      10 * time.Second,
-            MaxConnsPerHost: maxConnections,
-            ServerFriendly:  false,
-            RequestDelay:    500 * time.Millisecond,
-            NoMD5:           false,
-            NoDecompress:    false,
-            RefreshMetadata: false,
-            MetadataWorkers: 20,
-        }
-
-        var (
-            lines   []string
-            linesMu sync.Mutex
-        )
-
-        emit := func(line string) {
-            linesMu.Lock()
-            lines = append(lines, line)
-            linesMu.Unlock()
-            runtime.EventsEmit(b.ctx, "cli-output-line", line)
-        }
-
-        callbacks := app.Callbacks{
-            Stdout: emit,
-            Stderr: emit,
-            Series: func(evt app.SeriesEvent) {
-                runtime.EventsEmit(b.ctx, "download-series-event", evt)
-            },
-        }
-
-        // Run the CLI download (blocking inside goroutine)
-        summary, err := app.Run(ctx, options, callbacks)
-        linesMu.Lock()
-        combined := strings.Join(lines, "\n")
-        linesMu.Unlock()
-
-        if err != nil {
-            if errors.Is(err, context.Canceled) {
-                runtime.EventsEmit(b.ctx, "cli-finished", combined)
-                return
-            }
-            runtime.EventsEmit(b.ctx, "cli-error", fmt.Sprintf("download failed: %v", err))
-            return
-        }
-
-        _ = summary
-        runtime.EventsEmit(b.ctx, "cli-finished", combined)
-    }()
+    // Run the batch in its own goroutine
+    go b.runBatch(batch)
 
     // Return immediately so frontend is free to repaint
-    return "started", nil
+    return fmt.Sprintf("started batch %d", id), nil
 }
+
+func (b *App) runBatch(batch *DownloadBatch) {
+    defer func() {
+        // Remove batch from map when done
+        b.mu.Lock()
+        delete(b.batches, batch.ID)
+        b.mu.Unlock()
+    }()
+
+    user := os.Getenv("NBIA_USER")
+    if user == "" {
+        user = "nbia_guest"
+    }
+    pass := os.Getenv("NBIA_PASS")
+
+    options := &app.Options{
+        Input:           batch.Manifest,
+        Output:          batch.OutputDir,
+        Proxy:           "",
+        Concurrent:      batch.Parallel,
+        Meta:            false,
+        Username:        user,
+        Password:        pass,
+        Version:         false,
+        Debug:           false,
+        Help:            false,
+        MetaUrl:         app.MetaUrl,
+        TokenUrl:        app.TokenUrl,
+        ImageUrl:        app.ImageUrl,
+        SaveLog:         false,
+        Prompt:          false,
+        Force:           false,
+        SkipExisting:    batch.SkipExist,
+        MaxRetries:      batch.MaxRetries,
+        RetryDelay:      10 * time.Second,
+        MaxConnsPerHost: batch.MaxConn,
+        ServerFriendly:  false,
+        RequestDelay:    500 * time.Millisecond,
+        NoMD5:           false,
+        NoDecompress:    false,
+        RefreshMetadata: false,
+        MetadataWorkers: 20,
+    }
+
+    var (
+        lines   []string
+        linesMu sync.Mutex
+    )
+
+    emit := func(line string) {
+        linesMu.Lock()
+        lines = append(lines, line)
+        linesMu.Unlock()
+        runtime.EventsEmit(b.ctx, "cli-output-line", line)
+    }
+
+    callbacks := app.Callbacks{
+        Stdout: emit,
+        Stderr: emit,
+        Series: func(evt app.SeriesEvent) {
+            runtime.EventsEmit(b.ctx, "download-series-event", evt)
+        },
+    }
+
+    // Run the CLI download (blocking inside goroutine)
+    summary, err := app.Run(batch.Ctx, options, callbacks)
+
+    linesMu.Lock()
+    combined := strings.Join(lines, "\n")
+    linesMu.Unlock()
+
+    if err != nil {
+        if errors.Is(err, context.Canceled) {
+            runtime.EventsEmit(b.ctx, "cli-finished", combined)
+            return
+        }
+        runtime.EventsEmit(b.ctx, "cli-error", fmt.Sprintf("download failed: %v", err))
+        return
+    }
+
+    _ = summary
+    runtime.EventsEmit(b.ctx, "cli-finished", combined)
+}
+
 
 
 
 func (b *App) CancelDownload() {
-	b.mu.Lock()
-	if b.cancel != nil {
-		b.cancel()
-		b.cancel = nil
-	}
-	b.mu.Unlock()
+    b.mu.Lock()
+    defer b.mu.Unlock()
+
+    for id, batch := range b.batches {
+        batch.Cancel()           // cancel the batch
+        delete(b.batches, id)   // remove it from the map
+    }
 }
+
 
 type App struct {
-	ctx    context.Context
-	cancel context.CancelFunc
-	runID  uint64
-	mu     sync.Mutex
+    ctx     context.Context
+    mu      sync.Mutex
+    runID   uint64
+    batches map[uint64]*DownloadBatch  // <-- add this
 }
 
-func NewApp() *App {
-	return &App{}
+func NewApp(ctx context.Context) *App {
+    return &App{
+        ctx:     ctx,
+        batches: make(map[uint64]*DownloadBatch),
+    }
+}
+
+type DownloadBatch struct {
+    ID         uint64 
+    Ctx        context.Context
+    Cancel     context.CancelFunc
+
+    Manifest   string
+    OutputDir  string
+
+    MaxConn    int
+    MaxRetries int
+    Parallel   int
+    SkipExist  bool
 }
 
 func (a *App) FetchFiles() string {
