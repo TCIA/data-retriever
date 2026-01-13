@@ -366,7 +366,6 @@ func FetchMetadataForSeriesUIDs(ctx context.Context, seriesIDs []string, httpCli
 	return results, nil
 }
 
-// decodeTCIA is used to decode the tcia file with parallel metadata fetching
 func decodeTCIA(ctx context.Context, path string, httpClient *http.Client, authToken *Token, options *Options, callbacks Callbacks) []*FileInfo {
 	if ctx == nil {
 		ctx = context.Background()
@@ -379,7 +378,7 @@ func decodeTCIA(ctx context.Context, path string, httpClient *http.Client, authT
 	}
 	defer f.Close()
 
-	// First, collect all series IDs
+	// Collect all series IDs
 	seriesIDs := make([]string, 0)
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
@@ -391,196 +390,99 @@ func decodeTCIA(ctx context.Context, path string, httpClient *http.Client, authT
 	if err := scanner.Err(); err != nil {
 		logger.Errorf("error reading tcia file: %v", err)
 	}
-
 	callbacks.emitStdout(fmt.Sprintf("Found %d series to fetch metadata for\n", len(seriesIDs)))
 
-	// Initialize metadata stats
-	metaStats := &MetadataStats{
-		Total:     len(seriesIDs),
-		StartTime: time.Now(),
+	if len(seriesIDs) == 0 {
+		return nil
 	}
 
-	// Use parallel workers to fetch metadata
-	metadataWorkers := options.MetadataWorkers
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-	results := make([]*FileInfo, 0)
+	// Prepare POST request with all series IDs (comma-separated)
+	data := url.Values{}
+	data.Set("list", strings.Join(seriesIDs, ","))
+	data.Set("format", "csv")
 
-	// Create a channel for series IDs
-	idChan := make(chan string, len(seriesIDs))
-	for _, id := range seriesIDs {
-		idChan <- id
+	req, err := http.NewRequest("POST", MetaUrl, strings.NewReader(data.Encode()))
+	if err != nil {
+		logger.Errorf("Failed to create request: %v", err)
+		return nil
 	}
-	close(idChan)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	accessToken, err := authToken.GetAccessToken()
+	if err != nil {
+		logger.Errorf("Failed to get access token: %v", err)
+		return nil
+	}
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 
-	// Start workers
-	wg.Add(metadataWorkers)
-	for i := 0; i < metadataWorkers; i++ {
-		go func(workerID int) {
-			defer wg.Done()
+	resp, err := doRequest(httpClient, req)
+	if err != nil {
+		logger.Errorf("Request failed: %v", err)
+		return nil
+	}
+	defer resp.Body.Close()
 
-			for seriesID := range idChan {
-				// Check cache first unless refresh is requested
-				cachePath := getMetadataCachePath(options.Output, seriesID)
+	content, err := io.ReadAll(resp.Body)
+	if err != nil {
+		logger.Errorf("Failed to read response data: %v", err)
+		return nil
+	}
 
-				if !options.RefreshMetadata {
-					// Try to load from cache
-					if cachedInfo, err := loadMetadataFromCache(cachePath); err == nil {
-						logger.Debugf("[Meta Worker %d] Loaded metadata from cache for: %s", workerID, seriesID)
-						mu.Lock()
-						results = append(results, cachedInfo)
-						mu.Unlock()
-						metaStats.updateProgress("cached", seriesID)
-						continue
-					}
-					// Cache miss or error, fetch from API
-					logger.Debugf("[Meta Worker %d] Cache miss, fetching metadata for: %s", workerID, seriesID)
-				} else {
-					logger.Debugf("[Meta Worker %d] Force refresh, fetching metadata for: %s", workerID, seriesID)
-				}
+	// Parse CSV
+	reader := csv.NewReader(bytes.NewReader(content))
+	records, err := reader.ReadAll()
+	if err != nil {
+		logger.Errorf("Failed to parse CSV response: %v", err)
+		logger.Debugf("%s", content)
+		return nil
+	}
+	if len(records) < 2 {
+		logger.Errorf("CSV response contains no data rows")
+		return nil
+	}
 
-				// Prepare form data for POST
-				data := url.Values{}
-				data.Set("list", seriesID)
-				data.Set("format", "csv")
-				
-				req, err := http.NewRequest("POST", MetaUrl, strings.NewReader(data.Encode()))
-				if err != nil {
-				    logger.Errorf("[Meta Worker %d] Failed to create request: %v", workerID, err)
-				    metaStats.updateProgress("failed", seriesID)
-				    continue
-				}
-				
-				// Set headers
-				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-				
-				// Get current access token
-				accessToken, err := authToken.GetAccessToken()
-				if err != nil {
-				    logger.Errorf("[Meta Worker %d] Failed to get access token: %v", workerID, err)
-				    metaStats.updateProgress("failed", seriesID)
-				    continue
-				}
-				req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", accessToken))
-				
-				// Set timeout for metadata request
-				reqCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-				req = req.WithContext(reqCtx)
-				
-				// Send request
-				resp, err := doRequest(httpClient, req)
-				cancel() // Cancel context after request
+	headers := records[0]
 
-				
-				if err != nil {
-				    logger.Errorf("[Meta Worker %d] Request failed: %v", workerID, err)
-				    metaStats.updateProgress("failed", seriesID)
-				    continue
-				}
+	// Build header → struct field map
+	fileInfoType := reflect.TypeOf(FileInfo{})
+	fieldMap := make(map[string]int)
+	for i := 0; i < fileInfoType.NumField(); i++ {
+		field := fileInfoType.Field(i)
+		name := field.Tag.Get("csv")
+		if name == "" {
+			name = field.Name
+		}
+		fieldMap[name] = i
+	}
 
-				content, err := io.ReadAll(resp.Body)
-				_ = resp.Body.Close()
-				if err != nil {
-					logger.Errorf("[Meta Worker %d] Failed to read response data: %v", workerID, err)
-					metaStats.updateProgress("failed", seriesID)
-					continue
-				}
-
-				files := make([]*FileInfo, 0)
-				
-				reader := csv.NewReader(bytes.NewReader(content))
-				records, err := reader.ReadAll()
-				if err != nil {
-				    logger.Errorf("[Meta Worker %d] Failed to parse CSV response: %v", workerID, err)
-				    logger.Debugf("%s", content)
-				    metaStats.updateProgress("failed", seriesID)
-				    continue
-				}
-
-				
-				if len(records) < 2 {
-				    logger.Errorf("[Meta Worker %d] CSV response contains no data rows", workerID)
-				    metaStats.updateProgress("failed", seriesID)
-				    continue
-				}
-				
-				headers := records[0]
-				
-				// Build header → struct field map
-				fileInfoType := reflect.TypeOf(FileInfo{})
-				fieldMap := make(map[string]int)
-				
-				for i := 0; i < fileInfoType.NumField(); i++ {
-				    field := fileInfoType.Field(i)
-				
-				    // Prefer csv tag if present
-				    name := field.Tag.Get("csv")
-				    if name == "" {
-				        name = field.Name
-				    }
-				
-				    fieldMap[name] = i
-				}
-				
-				// Populate structs
-				for _, row := range records[1:] {
-				    file := &FileInfo{}
-				    v := reflect.ValueOf(file).Elem()
-				
-				    for colIdx, colName := range headers {
-				        fieldIdx, ok := fieldMap[colName]
-				        if !ok || colIdx >= len(row) {
-				            continue
-				        }
-				
-				        field := v.Field(fieldIdx)
-				        if !field.CanSet() {
-				            continue
-				        }
-				
-				        // Only handling string fields here (safe & common)
-				        if field.Kind() == reflect.String {
-				            field.SetString(row[colIdx])
-				        }
-				    }
-				
-				    files = append(files, file)
-				}
-				
-				// Save to cache
-				for _, file := range files {
-				    if file.SeriesInstanceUID != "" {
-				        if err := saveMetadataToCache(
-				            file,
-				            getMetadataCachePath(options.Output, file.SeriesInstanceUID),
-				        ); err != nil {
-				            logger.Warnf(
-				                "[Meta Worker %d] Failed to cache metadata for %s: %v",
-				                workerID,
-				                file.SeriesInstanceUID,
-				                err,
-				            )
-				        }
-				    }
-				}
-
-				// Thread-safe append to results
-				mu.Lock()
-				results = append(results, files...)
-				mu.Unlock()
-
-				// Mark as successfully fetched
-				metaStats.updateProgress("fetched", seriesID)
+	// Populate structs
+	files := make([]*FileInfo, 0, len(records)-1)
+	for _, row := range records[1:] {
+		file := &FileInfo{}
+		v := reflect.ValueOf(file).Elem()
+		for colIdx, colName := range headers {
+			fieldIdx, ok := fieldMap[colName]
+			if !ok || colIdx >= len(row) {
+				continue
 			}
-		}(i + 1)
+			field := v.Field(fieldIdx)
+			if field.CanSet() && field.Kind() == reflect.String {
+				field.SetString(row[colIdx])
+			}
+		}
+		files = append(files, file)
 	}
 
-	// Wait for all workers to finish
-	wg.Wait()
+	// Save all to a single CSV file
+	csvPath := filepath.Join(options.Output, "metadata.csv")
+	if err := WriteAllMetadataToCSV(files, csvPath); err != nil {
+		logger.Errorf("Failed to save combined CSV: %v", err)
+	} else {
+		callbacks.emitStdout(fmt.Sprintf("Saved metadata for %d files to %s\n", len(files), csvPath))
+	}
 
-	callbacks.emitStdout(fmt.Sprintf("Successfully fetched metadata for %d files\n", len(results)))
-	return results
+	return files
 }
+
 
 type FileInfo struct {
 	PatientID                           string `csv:"PatientID"`

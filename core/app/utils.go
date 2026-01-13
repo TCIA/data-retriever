@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 
 	"github.com/rs/zerolog/log"
 )
@@ -80,6 +81,58 @@ func copyFile(src, dst string) error {
 		return err
 	}
 	return out.Close()
+}
+
+func WriteAllMetadataToCSV(files []*FileInfo, outPath string) error {
+	if len(files) == 0 {
+		return nil
+	}
+
+	// Open file
+	f, err := os.Create(outPath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	writer := csv.NewWriter(f)
+	defer writer.Flush()
+
+	// Build header from struct tags
+	fileType := reflect.TypeOf(FileInfo{})
+	header := []string{}
+	for i := 0; i < fileType.NumField(); i++ {
+		field := fileType.Field(i)
+		name := field.Tag.Get("csv")
+		if name == "" {
+			name = field.Name
+		}
+		header = append(header, name)
+	}
+
+	// Write header
+	if err := writer.Write(header); err != nil {
+		return err
+	}
+
+	// Write data rows
+	for _, file := range files {
+		v := reflect.ValueOf(file).Elem()
+		row := []string{}
+		for i := 0; i < fileType.NumField(); i++ {
+			field := v.Field(i)
+			if field.Kind() == reflect.String {
+				row = append(row, field.String())
+			} else {
+				row = append(row, "") // skip non-string fields for now
+			}
+		}
+		if err := writer.Write(row); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // writeMetadataToCSV writes/appends a slice of FileInfo structs to a CSV file.
