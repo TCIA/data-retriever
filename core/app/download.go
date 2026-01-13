@@ -664,10 +664,6 @@ func extractAndVerifyZip(zipPath string, destDir string, expectedSize int64, md5
 
 	// Extract files
 	for _, file := range reader.File {
-		// Skip md5hashes.csv if present
-		if file.Name == "md5hashes.csv" {
-			continue
-		}
 
 		path := filepath.Join(destDir, file.Name)
 
@@ -1380,7 +1376,8 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 	}
 	logger.Debugf("getting image file to %s", output)
 
-	url_, err := makeURL(ImageUrl, map[string]interface{}{"SeriesInstanceUID": info.SeriesInstanceUID})
+	url_, err := makeURL(ImageUrl, map[string]interface{}{"SeriesInstanceUID": info.SeriesInstanceUID, 
+																												"IncludeMD5": "Yes"})
 	if err != nil {
 		return fmt.Errorf("failed to make URL: %v", err)
 	}
