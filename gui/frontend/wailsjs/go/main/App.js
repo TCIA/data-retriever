@@ -10,6 +10,10 @@ export function FetchFiles() {
   return window['go']['main']['App']['FetchFiles']();
 }
 
+export function GetDefaultOutputDirectory() {
+  return window['go']['main']['App']['GetDefaultOutputDirectory']();
+}
+
 export function Greet(arg1) {
   return window['go']['main']['App']['Greet'](arg1);
 }

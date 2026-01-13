@@ -5,6 +5,8 @@ export function CancelDownload():Promise<void>;
 
 export function FetchFiles():Promise<string>;
 
+export function GetDefaultOutputDirectory():Promise<string>;
+
 export function Greet(arg1:string):Promise<string>;
 
 export function OpenInputFileDialog():Promise<string>;

@@ -8,14 +8,88 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"path/filepath"
+	"bufio"
+	stdRuntime "runtime"
 
 	"github.com/GrigoryEvko/NBIA_data_retriever_CLI/core/app"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
+
+func dirExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.IsDir()
+}
+
+
+func linuxDownloadsDir(home string) string {
+	config := filepath.Join(home, ".config", "user-dirs.dirs")
+	file, err := os.Open(config)
+	if err != nil {
+		return ""
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if strings.HasPrefix(line, "XDG_DOWNLOAD_DIR=") {
+			value := strings.TrimPrefix(line, "XDG_DOWNLOAD_DIR=")
+			value = strings.Trim(value, `"`)
+			value = strings.Replace(value, "$HOME", home, 1)
+
+			if dirExists(value) {
+				return value
+			}
+		}
+	}
+	return ""
+}
+
+func (b *App) GetDefaultOutputDirectory() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+
+	switch stdRuntime.GOOS {
+	case "windows":
+		// Windows: %USERPROFILE%\Downloads (standard since Win 7)
+		downloads := filepath.Join(home, "Downloads")
+		if dirExists(downloads) {
+			return downloads
+		}
+		return home
+
+	case "darwin":
+		// macOS: ~/Downloads
+		downloads := filepath.Join(home, "Downloads")
+		if dirExists(downloads) {
+			return downloads
+		}
+		return home
+
+	case "linux":
+		// Linux: try XDG user-dirs first
+		if xdg := linuxDownloadsDir(home); xdg != "" {
+			return xdg
+		}
+
+		// Fallback: ~/Downloads
+		downloads := filepath.Join(home, "Downloads")
+		if dirExists(downloads) {
+			return downloads
+		}
+		return home
+
+	default:
+		return home
+	}
+}
 
 // OpenInputFileDialog opens a system file dialog and returns the selected file path
 func (b *App) OpenInputFileDialog() (string, error) {
-	result, err := runtime.OpenFileDialog(b.ctx, runtime.OpenDialogOptions{
+	result, err := wailsRuntime.OpenFileDialog(b.ctx, wailsRuntime.OpenDialogOptions{
 		Title: "Select TCIA Manifest File",
 	})
 	if err != nil {
@@ -29,7 +103,7 @@ func (b *App) OpenInputFileDialog() (string, error) {
 
 // OpenOutputDirectoryDialog opens a system directory dialog and returns the selected directory path
 func (b *App) OpenOutputDirectoryDialog() (string, error) {
-	result, err := runtime.OpenDirectoryDialog(b.ctx, runtime.OpenDialogOptions{
+	result, err := wailsRuntime.OpenDirectoryDialog(b.ctx, wailsRuntime.OpenDialogOptions{
 		Title: "Download Directory",
 	})
 	if err != nil {
@@ -140,14 +214,14 @@ func (b *App) runBatch(batch *DownloadBatch) {
         linesMu.Lock()
         lines = append(lines, line)
         linesMu.Unlock()
-        runtime.EventsEmit(b.ctx, "cli-output-line", line)
+        wailsRuntime.EventsEmit(b.ctx, "cli-output-line", line)
     }
 
     callbacks := app.Callbacks{
         Stdout: emit,
         Stderr: emit,
         Series: func(evt app.SeriesEvent) {
-            runtime.EventsEmit(b.ctx, "download-series-event", evt)
+            wailsRuntime.EventsEmit(b.ctx, "download-series-event", evt)
         },
     }
 
@@ -160,15 +234,15 @@ func (b *App) runBatch(batch *DownloadBatch) {
 
     if err != nil {
         if errors.Is(err, context.Canceled) {
-            runtime.EventsEmit(b.ctx, "cli-finished", combined)
+            wailsRuntime.EventsEmit(b.ctx, "cli-finished", combined)
             return
         }
-        runtime.EventsEmit(b.ctx, "cli-error", fmt.Sprintf("download failed: %v", err))
+        wailsRuntime.EventsEmit(b.ctx, "cli-error", fmt.Sprintf("download failed: %v", err))
         return
     }
 
     _ = summary
-    runtime.EventsEmit(b.ctx, "cli-finished", combined)
+    wailsRuntime.EventsEmit(b.ctx, "cli-finished", combined)
 }
 
 
@@ -230,8 +304,8 @@ func (b *App) Greet(name string) string {
 }
 
 func (b *App) ShowDialog() {
-	_, err := runtime.MessageDialog(b.ctx, runtime.MessageDialogOptions{
-		Type:    runtime.InfoDialog,
+	_, err := wailsRuntime.MessageDialog(b.ctx, wailsRuntime.MessageDialogOptions{
+		Type:    wailsRuntime.InfoDialog,
 		Title:   "Native Dialog from Go",
 		Message: "This is a Native Dialog send from Go.",
 	})
