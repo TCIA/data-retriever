@@ -49,3 +49,17 @@ export interface DownloadOverviewSnapshot {
   cancelled: number;
   progressPercent: number;
 }
+
+export interface ManifestDownloadSnapshot {
+  manifestPath: string;
+  total: number;
+  active: number;
+  completed: number;
+  failed: number;
+  skipped: number;
+  cancelled: number;
+  progressPercent: number;
+  startedAt?: string;
+  completedAt?: string;
+  logs: string[];
+}

@@ -108,16 +108,16 @@
         </div>
       </ng-container>
       <div class="section-content downloads-content">
-        <ng-container *ngIf="series$ | async as seriesList">
-          <div *ngIf="seriesList.length; else emptyDownloads" class="sources-cards">
-            <app-download-card *ngFor="let series of seriesList" [series]="series"></app-download-card>
+        <ng-container *ngIf="manifest$ | async as manifest">
+          <div *ngIf="manifest.total; else emptyDownloads" class="sources-cards">
+            <app-manifest-download-card [manifest]="manifest"></app-manifest-download-card>
           </div>
         </ng-container>
         <ng-template #emptyDownloads>
           <div class="empty-state">
             <span class="material-icons-outlined">hourglass_empty</span>
-            <p>No series queued.</p>
-            <small>Select a manifest and start a download to see progress cards.</small>
+            <p>No downloads queued.</p>
+            <small>Select a manifest and start a download to see progress.</small>
           </div>
         </ng-template>
       </div>

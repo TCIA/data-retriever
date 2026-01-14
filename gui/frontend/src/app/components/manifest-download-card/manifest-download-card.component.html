@@ -1,0 +1,36 @@
+<div class="download-card">
+  <div class="card-header">
+    <div class="card-title-group">
+      <div class="card-title" [title]="title">{{ title }}</div>
+      <div class="card-subtitle" [title]="subtitle">{{ subtitle }}</div>
+    </div>
+    <span class="status-chip">{{ statusLabel }}</span>
+  </div>
+
+  <div class="card-body">
+    <div class="progress-shell">
+      <div
+        class="progress-ring"
+        [style.--value]="progressValue"
+        [attr.aria-label]="progressLabel"
+        role="img"
+      >
+        <div class="progress-ring__inner">
+          <div class="progress-ring__content">
+            <span class="progress-ring__percent">{{ progressValue }}%</span>
+          </div>
+        </div>
+      </div>
+      <div class="progress-caption">{{ statusLabel }}</div>
+    </div>
+
+    <div class="card-output">
+      <ng-container *ngIf="hasLogs; else emptyState">
+        <div class="log-line" *ngFor="let line of logLines">{{ line }}</div>
+      </ng-container>
+      <ng-template #emptyState>
+        <div class="log-placeholder">Waiting for updates…</div>
+      </ng-template>
+    </div>
+  </div>
+</div>

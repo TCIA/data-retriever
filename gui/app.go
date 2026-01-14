@@ -118,6 +118,11 @@ func (b *App) RunCLIFetch(
             MetadataWorkers: 20,
         }
 
+        // Align GUI defaults with CLI behavior: use MD5 validation endpoint by default
+        if !options.NoMD5 {
+            options.ImageUrl = "https://services.cancerimagingarchive.net/nbia-api/services/v2/getImageWithMD5Hash"
+        }
+
         var (
             lines   []string
             linesMu sync.Mutex

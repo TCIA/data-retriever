@@ -47,6 +47,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   series$ = this.downloadStatus.series$;
   overview$ = this.downloadStatus.overview$;
+  manifest$ = this.downloadStatus.manifest$;
 
   constructor(
     private readonly downloadStatus: DownloadStatusService,
@@ -76,6 +77,8 @@ export class AppComponent implements OnInit, OnDestroy {
     this.unsubscribeRuntime = EventsOn('cli-output-line', (line: string) => {
       this.ngZone.run(() => {
         this.outputLogs.push(line);
+        // Also append to manifest-level logs
+        this.downloadStatus.appendManifestLog(line);
 
         const el = this.outputContainer?.nativeElement as HTMLElement;
         if (el) {
@@ -88,7 +91,6 @@ export class AppComponent implements OnInit, OnDestroy {
     this.unsubscribeCliError = EventsOn('cli-error', (err: string) => {
       this.ngZone.run(() => {
         this.status = 'Error';
-        //this.isDownloading = false;
         this.outputLogs.push(`ERROR: ${err}`);
       });
     });
@@ -97,7 +99,6 @@ export class AppComponent implements OnInit, OnDestroy {
     this.unsubscribeCliFinished = EventsOn('cli-finished', (summary: string) => {
       this.ngZone.run(() => {
         this.status = 'Finished';
-        //this.isDownloading = false;
         if (summary) {
           this.outputLogs.push(summary);
         }
@@ -132,7 +133,7 @@ export class AppComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.downloadStatus.beginRun();
+    this.downloadStatus.beginRun(this.inputFilePath);
     this.outputLogs = [];
     this.overallProgress = 0;
 
