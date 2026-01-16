@@ -61,6 +61,8 @@ type SeriesEvent struct {
 	Modality          string    `json:"modality,omitempty"`
 	Status            string    `json:"status"`
 	Progress          float64   `json:"progress,omitempty"`
+	BytesDownloaded   int64     `json:"bytesDownloaded,omitempty"`
+	BytesTotal        int64     `json:"bytesTotal,omitempty"`
 	Message           string    `json:"message,omitempty"`
 	Timestamp         time.Time `json:"timestamp"`
 }
@@ -321,10 +323,22 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 
 	wc.emitSeriesEvent(fileInfo, "downloading", fmt.Sprintf("[Worker %d] Download started", wc.WorkerID), 0)
 
-	// Create progress callback that emits series events
-	onProgress := func(percent float64) {
-		// Update progress without spamming logs; omit message so UI doesn't append lines
-		wc.emitSeriesEvent(fileInfo, "downloading", "", percent)
+	// Create progress callback that emits series events with bytes info
+	onProgress := func(percent float64, bytesDownloaded int64, bytesTotal int64) {
+		// Build event with bytes for frontend display; omit message to avoid log spam
+		evt := SeriesEvent{
+			SeriesInstanceUID:  fileInfo.SeriesInstanceUID,
+			StudyInstanceUID:   fileInfo.StudyInstanceUID,
+			PatientID:          fileInfo.PatientID,
+			SeriesDescription:  fileInfo.SeriesDescription,
+			Modality:           fileInfo.Modality,
+			Status:             "downloading",
+			Progress:           clampProgress(percent),
+			BytesDownloaded:    bytesDownloaded,
+			BytesTotal:         bytesTotal,
+			Timestamp:          time.Now(),
+		}
+		wc.Callbacks.emitSeries(evt)
 	}
 
 	err := fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.AuthToken, wc.Options, onProgress)

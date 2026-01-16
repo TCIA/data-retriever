@@ -59,6 +59,8 @@ export interface ManifestDownloadSnapshot {
   skipped: number;
   cancelled: number;
   progressPercent: number;
+  bytesDownloaded?: number;
+  bytesTotal?: number;
   startedAt?: string;
   completedAt?: string;
   logs: string[];

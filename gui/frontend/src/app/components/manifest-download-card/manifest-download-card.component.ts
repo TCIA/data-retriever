@@ -53,6 +53,12 @@ export class ManifestDownloadCardComponent {
     return 'Queued';
   }
 
+  get isCompleted(): boolean {
+    const total = this.manifest?.total ?? 0;
+    const done = (this.manifest?.completed ?? 0) + (this.manifest?.failed ?? 0) + (this.manifest?.skipped ?? 0) + (this.manifest?.cancelled ?? 0);
+    return total > 0 && done >= total;
+  }
+
   get hasLogs(): boolean {
     return (this.manifest?.logs?.length ?? 0) > 0;
   }

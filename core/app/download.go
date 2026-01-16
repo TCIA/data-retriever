@@ -24,8 +24,9 @@ import (
 )
 
 
-// ProgressFunc is a callback for reporting download progress (0-100)
-type ProgressFunc func(percent float64)
+// ProgressFunc is a callback for reporting download progress.
+// percent: 0-100, bytesDownloaded: number of bytes read so far, bytesTotal: total bytes if known (>0)
+type ProgressFunc func(percent float64, bytesDownloaded int64, bytesTotal int64)
 
 // progressReader wraps an io.Reader to report progress
 type progressReader struct {
@@ -47,10 +48,15 @@ func newProgressReader(r io.Reader, total int64, onProgress ProgressFunc) *progr
 }
 
 func (pr *progressReader) Read(p []byte) (int, error) {
-    n, err := pr.reader.Read(p)
-    if n > 0 && pr.onProgress != nil && pr.total > 0 {
-        pr.read += int64(n)
-        percent := float64(pr.read) / float64(pr.total) * 100
+	n, err := pr.reader.Read(p)
+	if n > 0 && pr.onProgress != nil {
+		pr.read += int64(n)
+		var percent float64
+		if pr.total > 0 {
+			percent = float64(pr.read) / float64(pr.total) * 100
+		} else {
+			percent = 0
+		}
 
         // Cap at 99% until actually complete to avoid overshoot
         if percent > 99 && err != io.EOF {
@@ -60,9 +66,9 @@ func (pr *progressReader) Read(p []byte) (int, error) {
         now := time.Now()
 
         // Report progress at least every 50ms OR if changed by >= 0.5%
-        if (now.Sub(pr.lastTime) >= 50*time.Millisecond && percent-pr.lastReported >= 0.5) || err == io.EOF {
-            // Emit progress to frontend
-            pr.onProgress(percent)
+		if (now.Sub(pr.lastTime) >= 50*time.Millisecond && (pr.total <= 0 || percent-pr.lastReported >= 0.5)) || err == io.EOF {
+			// Emit progress to frontend including bytes
+			pr.onProgress(percent, pr.read, pr.total)
 
             pr.lastReported = percent
             pr.lastTime = now

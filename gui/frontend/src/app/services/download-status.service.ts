@@ -189,6 +189,17 @@ export class DownloadStatusService implements OnDestroy {
   private publish(): void {
     this.seriesSubject.next(Array.from(this.seriesMap.values()));
     const overview = this.calculateOverview();
+    // Aggregate bytes for manifest: sum downloaded and totals across series
+    let bytesDownloaded = 0;
+    let bytesTotal = 0;
+    for (const s of this.seriesMap.values()) {
+      if (typeof s.bytesDownloaded === 'number') {
+        bytesDownloaded += s.bytesDownloaded;
+      }
+      if (typeof s.bytesTotal === 'number' && s.bytesTotal > 0) {
+        bytesTotal += s.bytesTotal;
+      }
+    }
     this.overviewSubject.next(overview);
     // Update manifest snapshot from overview aggregation
     const current = this.manifestSubject.value;
@@ -202,6 +213,8 @@ export class DownloadStatusService implements OnDestroy {
       skipped: overview.skipped,
       cancelled: overview.cancelled,
       progressPercent: overview.progressPercent,
+      bytesDownloaded,
+      bytesTotal: bytesTotal > 0 ? bytesTotal : undefined,
       completedAt:
         overview.total > 0 && overview.active === 0 && (overview.completed + overview.failed + overview.skipped + overview.cancelled) === overview.total
           ? new Date().toISOString()
