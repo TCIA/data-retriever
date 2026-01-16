@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, ElementRef, ViewChild, NgZone } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
-import { CancelDownload, OpenInputFileDialog, OpenOutputDirectoryDialog, RunCLIFetch } from '../../wailsjs/go/main/App';
+import { CancelDownload, OpenInputFileDialog, OpenOutputDirectoryDialog, GetDefaultOutputDirectory, RunCLIFetch } from '../../wailsjs/go/main/App';
 import { DownloadStatusService } from './services/download-status.service';
 import { DownloadOverviewSnapshot } from './models/download-series.model';
 
@@ -15,6 +15,7 @@ export class AppComponent implements OnInit, OnDestroy {
   status = 'Ready';
   inputFilePath = '';
   outputDirPath = '';
+  defaultDownloadDir = '';
 
   // Global output logs that appear in the Output panel
   outputLogs: string[] = [];
@@ -53,11 +54,14 @@ export class AppComponent implements OnInit, OnDestroy {
     private ngZone: NgZone
   ) {}
 
-  ngOnInit() {
+  async ngOnInit() {
     // Detect system theme preference
     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
       this.isDarkMode = true;
     }
+
+    this.defaultDownloadDir = await GetDefaultOutputDirectory();
+    this.outputDirPath = this.defaultDownloadDir;
 
     // Listen for system theme changes
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
@@ -181,15 +185,29 @@ this.skipExisting, this.downloadInParallel);
       });
   }
 
-  onSelectInputFile() {
-    OpenInputFileDialog().then((filePath: string) => {
-      if (filePath) {
-        this.inputFilePath = filePath;
+onSelectInputFile() {
+  OpenInputFileDialog()
+    .then((filePath: string) => {
+      if (!filePath) return;
+
+      this.inputFilePath = filePath;
+
+      const fileName = filePath.split(/[\\/]/).pop() || '';
+      const baseName = fileName.replace(/\.[^/.]+$/, '');
+
+      // Only auto-set if user hasn't manually changed it
+      if (
+        !this.outputDirPath ||
+        this.outputDirPath === this.defaultDownloadDir
+      ) {
+        this.outputDirPath = `${this.defaultDownloadDir}/${baseName}`;
       }
-    }).catch(err => {
-      this.status = "Error: " + err;
+    })
+    .catch(err => {
+      this.status = 'Error: ' + err;
     });
-  }
+}
+
 
   // Append to the global output panel
   appendLog(line: string) {

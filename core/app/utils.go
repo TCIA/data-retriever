@@ -3,9 +3,12 @@ package app
 import (
 	"archive/tar"
 	"encoding/json"
+	"encoding/csv"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 
 	"github.com/rs/zerolog/log"
 )
@@ -78,4 +81,130 @@ func copyFile(src, dst string) error {
 		return err
 	}
 	return out.Close()
+}
+
+func WriteAllMetadataToCSV(files []*FileInfo, outPath string) error {
+	if len(files) == 0 {
+		return nil
+	}
+
+	// Open file
+	f, err := os.Create(outPath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	writer := csv.NewWriter(f)
+	defer writer.Flush()
+
+	// Build header from struct tags
+	fileType := reflect.TypeOf(FileInfo{})
+	header := []string{}
+	for i := 0; i < fileType.NumField(); i++ {
+		field := fileType.Field(i)
+		name := field.Tag.Get("csv")
+		if name == "" {
+			name = field.Name
+		}
+		header = append(header, name)
+	}
+
+	// Write header
+	if err := writer.Write(header); err != nil {
+		return err
+	}
+
+	// Write data rows
+	for _, file := range files {
+		v := reflect.ValueOf(file).Elem()
+		row := []string{}
+		for i := 0; i < fileType.NumField(); i++ {
+			field := v.Field(i)
+			if field.Kind() == reflect.String {
+				row = append(row, field.String())
+			} else {
+				row = append(row, "") // skip non-string fields for now
+			}
+		}
+		if err := writer.Write(row); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// writeMetadataToCSV writes/appends a slice of FileInfo structs to a CSV file.
+func writeMetadataToCSV(filePath string, fileInfos []*FileInfo) error {
+	// Check if file exists to determine if we need to write a header
+	stat, err := os.Stat(filePath)
+	writeHeader := os.IsNotExist(err)
+
+	// Open with read/write/create permissions.
+	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		return fmt.Errorf("could not open/create CSV file: %w", err)
+	}
+	defer file.Close()
+
+	// If the file is not new and not empty, check for a trailing newline.
+	if !writeHeader && stat.Size() > 0 {
+		buf := make([]byte, 1)
+		// Read the last byte.
+		if _, err := file.ReadAt(buf, stat.Size()-1); err == nil {
+			// If it's not a newline, we need to add one.
+			if buf[0] != '\n' {
+				// Seek to the end and write a newline.
+				if _, err := file.Seek(0, io.SeekEnd); err != nil {
+					return fmt.Errorf("could not seek to end of file to add newline: %w", err)
+				}
+				if _, err := file.WriteString("\n"); err != nil {
+					return fmt.Errorf("failed to write missing newline: %w", err)
+				}
+			}
+		}
+	}
+
+	// Ensure we are at the end of the file before letting the CSV writer take over.
+	if _, err := file.Seek(0, io.SeekEnd); err != nil {
+		return fmt.Errorf("could not seek to end of file for writing: %w", err)
+	}
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	header := []string{
+		"SeriesInstanceUID", "PatientID", "Collection", "Modality",
+		"StudyInstanceUID", "SeriesDescription", "SeriesNumber",
+		"Manufacturer", "ImageCount", "FileSize", 
+		"OriginalS5cmdURI",
+	}
+
+	if writeHeader {
+		if err := writer.Write(header); err != nil {
+			return fmt.Errorf("failed to write CSV header: %w", err)
+		}
+	}
+
+	// Write rows
+	for _, info := range fileInfos {
+		record := []string{
+			info.SeriesInstanceUID,
+			info.Collection,
+			info.Modality,
+			info.StudyInstanceUID,
+			info.SeriesDescription,
+			info.SeriesNumber,
+			info.Manufacturer,
+			info.ImageCount,
+			info.FileSize,
+			info.OriginalS5cmdURI,
+		}
+		if err := writer.Write(record); err != nil {
+			return fmt.Errorf("failed to write CSV record for series %s: %w", info.SeriesInstanceUID, err)
+		}
+	}
+
+	return nil
 }

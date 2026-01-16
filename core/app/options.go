@@ -43,6 +43,7 @@ type Options struct {
     NoDecompress    bool
     RefreshMetadata bool
     MetadataWorkers int
+		Auth						string
 
     opt *getoptions.GetOpt
 }
@@ -83,6 +84,8 @@ func InitOptions() *Options {
     opt.opt.BoolVar(&opt.NoDecompress, "no-decompress", false, opt.opt.Description("keep downloaded files as ZIP archives (skip extraction)"))
     opt.opt.BoolVar(&opt.RefreshMetadata, "refresh-metadata", false, opt.opt.Description("force refresh all metadata from server (ignore cache)"))
     opt.opt.IntVar(&opt.MetadataWorkers, "metadata-workers", 20, opt.opt.Description("number of parallel metadata fetch workers"))
+		opt.opt.StringVar(&opt.Auth, "auth", "",
+			opt.opt.Description("path to JSON API key file for Gen3 authentication"))
 
     if _, err := opt.opt.Parse(os.Args[1:]); err != nil {
         Logger.Fatal(err)
