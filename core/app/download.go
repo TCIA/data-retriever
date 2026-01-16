@@ -967,7 +967,18 @@ func downloadS3Object(ctx context.Context, client *s3.Client, bucket, key, targe
 			}
 			downloaded += int64(n)
 			if onProgress != nil {
-				onProgress(float64(downloaded))
+				// Report percent, bytes downloaded, and total bytes
+				var total int64
+				if output.ContentLength != nil {
+					total = *output.ContentLength
+				}
+				var percent float64
+				if total > 0 {
+					percent = (float64(downloaded) / float64(total)) * 100.0
+				} else {
+					percent = 0
+				}
+				onProgress(percent, downloaded, total)
 			}
 		}
 		if readErr != nil {
