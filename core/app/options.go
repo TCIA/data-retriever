@@ -7,6 +7,8 @@ import (
     "time"
 
     "github.com/DavidGamba/go-getoptions"
+    "github.com/aws/aws-sdk-go-v2/service/s3"
+
 )
 
 var (
@@ -36,6 +38,7 @@ type Options struct {
     SkipExisting    bool
     MaxRetries      int
     RetryDelay      time.Duration
+		S3Client				*s3.Client
     MaxConnsPerHost int
     ServerFriendly  bool
     RequestDelay    time.Duration

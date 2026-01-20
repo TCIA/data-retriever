@@ -24,6 +24,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 
 )
 
@@ -766,7 +767,8 @@ func getDirectorySize(dirPath string) (int64, error) {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() {
+		ext := strings.ToLower(filepath.Ext(info.Name()))
+		if !info.IsDir() && ext != ".csv" && ext != "" {
 			size += info.Size()
 		}
 		return nil
@@ -944,143 +946,167 @@ func downloadS3Object(ctx context.Context, client *s3.Client, bucket, key, targe
 	defer output.Body.Close()
 
 	localPath := filepath.Join(targetDir, filepath.Base(key))
+
 	f, err := os.Create(localPath)
 	if err != nil {
-		return fmt.Errorf("failed to create file %s: %w", localPath, err)
+	    return err
 	}
 	defer f.Close()
-
-	// Copy with progress reporting
-	var downloaded int64
-	buf := make([]byte, 32*1024)
-	for {
-		n, readErr := output.Body.Read(buf)
-		if n > 0 {
-			if _, writeErr := f.Write(buf[:n]); writeErr != nil {
-				return writeErr
-			}
-			downloaded += int64(n)
-			if onProgress != nil {
-				onProgress(float64(downloaded))
-			}
-		}
-		if readErr != nil {
-			if readErr.Error() == "EOF" {
-				break
-			}
-			return readErr
-		}
+	
+	downloader := manager.NewDownloader(client, func(d *manager.Downloader) {
+	    d.PartSize = 10 * 1024 * 1024 // 10 MB parts
+	    d.Concurrency = 16             // parallel part downloads
+	})
+	
+	numBytes, err := downloader.Download(ctx, f, &s3.GetObjectInput{
+	    Bucket: &bucket,
+	    Key:    &key,
+	})
+	if err != nil {
+	    return fmt.Errorf("failed to download %s/%s: %w", bucket, key, err)
+	}
+	
+	// call onProgress once with total bytes (optional)
+	if onProgress != nil {
+	    onProgress(float64(numBytes))
 	}
 
 	return nil
 }
 
 func (info *FileInfo) downloadFromS3(
-	ctx context.Context,
-	targetDir string,
-	options *Options,
-	onProgress ProgressFunc,
+    ctx context.Context,
+    targetDir string,
+    options *Options,
+    onProgress ProgressFunc,
 ) error {
+    if ctx == nil {
+        ctx = context.Background()
+    }
 
-	if err := os.MkdirAll(targetDir, 0755); err != nil {
-		return fmt.Errorf("could not create target directory %s: %w", targetDir, err)
-	}
+    if err := os.MkdirAll(targetDir, 0755); err != nil {
+        return fmt.Errorf("could not create target directory %s: %w", targetDir, err)
+    }
 
+    bucket, key, wildcard, err := parseS3URL(info.DownloadURL)
+    if err != nil {
+        return err
+    }
 
-	bucket, key, wildcard, err := parseS3URL(info.DownloadURL)
-	if err != nil {
-		return err
-	}
-	
-	isSync := info.IsSyncJob || wildcard
+    client := options.S3Client
+    if client == nil {
+        // fallback: create anonymous client
+        cfg, err := awsConfig()
+        if err != nil {
+            return err
+        }
+        client = s3.NewFromConfig(cfg)
+    }
 
-	awsCfg, err := config.LoadDefaultConfig(
-		ctx,
-		config.WithRegion("us-east-1"),
-		config.WithCredentialsProvider(aws.AnonymousCredentials{}),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to load AWS config: %w", err)
-	}
+    isSync := info.IsSyncJob || wildcard
 
-	client := s3.NewFromConfig(awsCfg)
+    var keys []string
+    if isSync {
+        // List objects under the prefix
+        paginator := s3.NewListObjectsV2Paginator(client, &s3.ListObjectsV2Input{
+            Bucket: &bucket,
+            Prefix: &key,
+        })
 
-	// Build object list
-	var keys []string
+        for paginator.HasMorePages() {
+            page, err := paginator.NextPage(ctx)
+            if err != nil {
+                return fmt.Errorf("failed to list S3 objects: %w", err)
+            }
+            for _, obj := range page.Contents {
+                if strings.HasSuffix(*obj.Key, "/") {
+                    continue
+                }
+                keys = append(keys, *obj.Key)
+            }
+        }
+    } else {
+        keys = []string{key}
+    }
 
-	if isSync {
-		prefix := key
-		paginator := s3.NewListObjectsV2Paginator(client, &s3.ListObjectsV2Input{
-			Bucket: &bucket,
-			Prefix: &prefix,
-		})
+    // Create a shared downloader
+    downloader := manager.NewDownloader(client, func(d *manager.Downloader) {
+        d.PartSize = 10 * 1024 * 1024 // 10 MB
+        d.Concurrency = 16
+    })
 
-		for paginator.HasMorePages() {
-			page, err := paginator.NextPage(ctx)
-			if err != nil {
-				return fmt.Errorf("failed to list S3 objects: %w", err)
-			}
+    // Worker pool for sync / multiple keys
+    numWorkers := 32 // tune as needed
+    workCh := make(chan string)
+    errCh := make(chan error, 1)
+    var wg sync.WaitGroup
+    wg.Add(numWorkers)
 
-			for _, obj := range page.Contents {
-				// Skip "directory" placeholders
-				if strings.HasSuffix(*obj.Key, "/") {
-					continue
-				}
-				keys = append(keys, *obj.Key)
-			}
-		}
-	} else {
-		keys = []string{key}
-	}
+    for i := 0; i < numWorkers; i++ {
+        go func() {
+            defer wg.Done()
+            for k := range workCh {
+                localPath := filepath.Join(targetDir, filepath.Base(k))
+                if err := os.MkdirAll(filepath.Dir(localPath), 0755); err != nil {
+                    select { case errCh <- err: default: } 
+                    return
+                }
 
-	// Worker pool (s5cmd-like concurrency)
-	numWorkers := 256
-	workCh := make(chan string)
-	errCh := make(chan error, 1)
+                f, err := os.Create(localPath)
+                if err != nil {
+                    select { case errCh <- err: default: } 
+                    return
+                }
 
-	var wg sync.WaitGroup
-	wg.Add(numWorkers)
+                _, err = downloader.Download(ctx, f, &s3.GetObjectInput{
+                    Bucket: &bucket,
+                    Key:    &k,
+                })
+                f.Close()
+                if err != nil {
+                    select { case errCh <- fmt.Errorf("failed to download s3://%s/%s: %w", bucket, k, err): default: }
+                    return
+                }
 
-	for i := 0; i < numWorkers; i++ {
-		go func() {
-			defer wg.Done()
-			for k := range workCh {
-				if err := downloadS3Object(ctx, client, bucket, k, targetDir, onProgress); err != nil {
-					select {
-					case errCh <- err:
-					default:
-					}
-					return
-				}
-			}
-		}()
-	}
+                if onProgress != nil {
+                    onProgress(1) // simple per-file progress; you can refine to bytes if desired
+                }
+            }
+        }()
+    }
 
-	// Feed work
-	go func() {
-		for _, k := range keys {
-			workCh <- k
-		}
-		close(workCh)
-	}()
+    // Feed keys
+    go func() {
+        for _, k := range keys {
+            workCh <- k
+        }
+        close(workCh)
+    }()
 
-	// Wait
-	done := make(chan struct{})
-	go func() {
-		wg.Wait()
-		close(done)
-	}()
+    // Wait
+    done := make(chan struct{})
+    go func() {
+        wg.Wait()
+        close(done)
+    }()
 
-	select {
-	case err := <-errCh:
-		return err
-	case <-done:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
+    select {
+    case err := <-errCh:
+        return err
+    case <-done:
+        return nil
+    case <-ctx.Done():
+        return ctx.Err()
+    }
 }
 
+func awsConfig() (aws.Config, error) {
+    return config.LoadDefaultConfig(
+        context.Background(),
+        config.WithRegion("us-east-1"),
+        config.WithCredentialsProvider(aws.AnonymousCredentials{}),
+    )
+}
 
 func parseS3URL(s string) (bucket string, key string, isWildcard bool, err error) {
 	if !strings.HasPrefix(s, "s3://") {
@@ -1613,3 +1639,50 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 		return nil
 	}
 }
+
+
+// returns true if all files exist and match the hashes
+func SeriesUpToDate(seriesDir string) bool {
+    md5Path := filepath.Join(seriesDir, "md5hashes.csv")
+    f, err := os.Open(md5Path)
+    if err != nil {
+        // md5hashes.csv doesn't exist → need to download
+        return false
+    }
+    defer f.Close()
+
+    reader := csv.NewReader(f)
+    records, err := reader.ReadAll()
+    if err != nil || len(records) < 1 {
+        return false
+    }
+
+    for _, row := range records {
+        if len(row) < 2 {
+            continue
+        }
+        fileName := row[0]
+        expectedHash := row[1]
+
+        filePath := filepath.Join(seriesDir, fileName)
+        file, err := os.Open(filePath)
+        if err != nil {
+            return false // file missing → need download
+        }
+
+        h := md5.New()
+        _, err = io.Copy(h, file)
+        file.Close()
+        if err != nil {
+            return false
+        }
+
+        actualHash := fmt.Sprintf("%x", h.Sum(nil))
+        if actualHash != expectedHash {
+            return false // hash mismatch → need download
+        }
+    }
+
+    return true
+}
+

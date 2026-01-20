@@ -210,7 +210,7 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 	}
 
 	if options.Debug {
-		Logger.Infof("Starting download of %d %s with %d workers", len(files), itemType, options.Concurrent)
+		Logger.Warnf("Starting download of %d %s with %d workers", len(files), itemType, options.Concurrent)
 	} else {
 		callbacks.emitStderr(fmt.Sprintf("\nDownloading %d %s with %d workers...\n\n", len(files), itemType, options.Concurrent))
 	}
