@@ -1,7 +1,7 @@
 
 {
     "$schema": "https://wails.io/schemas/config.v2.json",
-    "name": "TCIA Retriever",
+    "name": "TCIA Data Retriever",
     "assetdir": "frontend/dist",
     "frontend:build": "npx ng build",
     "frontend:install": "npm install",

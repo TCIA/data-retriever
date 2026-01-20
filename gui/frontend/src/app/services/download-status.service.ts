@@ -3,6 +3,7 @@ import { BehaviorSubject } from 'rxjs';
 import { EventsOn, EventsOff } from '../../../wailsjs/runtime/runtime';
 import {
   DownloadOverviewSnapshot,
+  ManifestDownloadSnapshot,
   SeriesDownloadEventPayload,
   SeriesDownloadSnapshot,
 } from '../models/download-series.model';
@@ -33,11 +34,25 @@ export class DownloadStatusService implements OnDestroy {
     cancelled: 0,
     progressPercent: 0,
   });
+  private readonly manifestSubject = new BehaviorSubject<ManifestDownloadSnapshot>({
+    manifestPath: '',
+    total: 0,
+    active: 0,
+    completed: 0,
+    failed: 0,
+    skipped: 0,
+    cancelled: 0,
+    progressPercent: 0,
+    logs: [],
+  });
+
+  private currentManifestPath: string = '';
 
   private unsubscribeRuntime?: () => void;
 
   readonly series$ = this.seriesSubject.asObservable();
   readonly overview$ = this.overviewSubject.asObservable();
+  readonly manifest$ = this.manifestSubject.asObservable();
 
   constructor(private ngZone: NgZone) {
     if (typeof window !== 'undefined') {
@@ -59,8 +74,21 @@ export class DownloadStatusService implements OnDestroy {
     this.overviewSubject.complete();
   }
 
-  beginRun(): void {
+  beginRun(manifestPath: string): void {
+    this.currentManifestPath = manifestPath;
     this.seriesMap.clear();
+    this.manifestSubject.next({
+      manifestPath,
+      total: 0,
+      active: 0,
+      completed: 0,
+      failed: 0,
+      skipped: 0,
+      cancelled: 0,
+      progressPercent: 0,
+      logs: [],
+      startedAt: new Date().toISOString(),
+    });
     this.publish();
   }
 
@@ -160,7 +188,49 @@ export class DownloadStatusService implements OnDestroy {
 
   private publish(): void {
     this.seriesSubject.next(Array.from(this.seriesMap.values()));
-    this.overviewSubject.next(this.calculateOverview());
+    const overview = this.calculateOverview();
+    // Aggregate bytes for manifest: sum downloaded and totals across series
+    let bytesDownloaded = 0;
+    let bytesTotal = 0;
+    for (const s of this.seriesMap.values()) {
+      if (typeof s.bytesDownloaded === 'number') {
+        bytesDownloaded += s.bytesDownloaded;
+      }
+      if (typeof s.bytesTotal === 'number' && s.bytesTotal > 0) {
+        bytesTotal += s.bytesTotal;
+      }
+    }
+    this.overviewSubject.next(overview);
+    // Update manifest snapshot from overview aggregation
+    const current = this.manifestSubject.value;
+    const updated: ManifestDownloadSnapshot = {
+      ...current,
+      manifestPath: this.currentManifestPath,
+      total: overview.total,
+      active: overview.active,
+      completed: overview.completed,
+      failed: overview.failed,
+      skipped: overview.skipped,
+      cancelled: overview.cancelled,
+      progressPercent: overview.progressPercent,
+      bytesDownloaded,
+      bytesTotal: bytesTotal > 0 ? bytesTotal : undefined,
+      completedAt:
+        overview.total > 0 && overview.active === 0 && (overview.completed + overview.failed + overview.skipped + overview.cancelled) === overview.total
+          ? new Date().toISOString()
+          : current.completedAt,
+    };
+    this.manifestSubject.next(updated);
+  }
+
+  appendManifestLog(message: string): void {
+    const current = this.manifestSubject.value;
+    const formatted = message;
+    const logs = [...current.logs, formatted];
+    if (logs.length > 200) {
+      logs.splice(0, logs.length - 200);
+    }
+    this.manifestSubject.next({ ...current, logs });
   }
 
   private calculateOverview(): DownloadOverviewSnapshot {

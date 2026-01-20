@@ -221,7 +221,7 @@
   flex-direction: column;
   gap: 16px;
   overflow-y: auto;
-  max-height: 50vh;
+  max-height: 65vh;
   min-height: 0;
 }
 
@@ -281,7 +281,7 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
   /* Allow scrolling when content overflows */
-  overflow: auto;
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   max-height: 100%;
 }
@@ -664,12 +664,36 @@
   background: #0052a3;
 }
 
+/* Disabled state for Fetch button */
+.fetch-btn:disabled {
+  background: #bdbdbd;
+  color: #ffffff;
+  cursor: default;
+  opacity: 0.6;
+}
+
+.fetch-btn:disabled:hover {
+  background: #bdbdbd;
+}
+
 .cancel-btn {
   background: #757575;
 }
 
 .cancel-btn:hover {
   background: #616161;
+}
+
+/* Disabled state for Cancel button */
+.cancel-btn:disabled {
+  background: #cfcfcf;
+  color: #ffffff;
+  cursor: default;
+  opacity: 0.6;
+}
+
+.cancel-btn:disabled:hover {
+  background: #cfcfcf;
 }
 
 /* Dark Mode Styles */
@@ -807,6 +831,36 @@
     
     &:hover {
       background: #0052a3;
+    }
+
+    &:disabled {
+      background: #4a4a4a;
+      color: #e0e0e0;
+      cursor: default;
+      opacity: 0.5;
+    }
+
+    &:disabled:hover {
+      background: #4a4a4a;
+    }
+  }
+
+  .cancel-btn {
+    background: #757575;
+
+    &:hover {
+      background: #616161;
+    }
+
+    &:disabled {
+      background: #3a3a3a;
+      color: #cfcfcf;
+      cursor: default;
+      opacity: 0.5;
+    }
+
+    &:disabled:hover {
+      background: #3a3a3a;
     }
   }
   

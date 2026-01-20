@@ -21,11 +21,11 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:             "TCIA Retriever",
-		Width:             530,
-		Height:            800,
-		MinWidth:          530,
-		MinHeight:         600,
+		Title:             "TCIA Data Retriever",
+		Width:             800,
+		Height:            960,
+		MinWidth:          650,
+		MinHeight:         700,
 		DisableResize:     false,
 		Fullscreen:        false,
 		Frameless:         false,
