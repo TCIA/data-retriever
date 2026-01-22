@@ -974,7 +974,7 @@ func downloadS3Object(ctx context.Context, client *s3.Client, bucket, key, targe
 	
 	// call onProgress once with total bytes (optional)
 	if onProgress != nil {
-	    onProgress(float64(numBytes))
+	    onProgress(100.0, numBytes, numBytes)
 	}
 
 	return nil
@@ -1064,7 +1064,7 @@ func (info *FileInfo) downloadFromS3(
                     return
                 }
 
-                _, err = downloader.Download(ctx, f, &s3.GetObjectInput{
+								numBytes, err := downloader.Download(ctx, f, &s3.GetObjectInput{
                     Bucket: &bucket,
                     Key:    &k,
                 })
@@ -1075,7 +1075,7 @@ func (info *FileInfo) downloadFromS3(
                 }
 
                 if onProgress != nil {
-                    onProgress(1) // simple per-file progress; you can refine to bytes if desired
+                    onProgress(100.0, numBytes, numBytes) // simple per-file progress; you can refine to bytes if desired
                 }
             }
         }()

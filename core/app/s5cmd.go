@@ -125,7 +125,7 @@ func decodeS5cmd(filePath string, outputDir string, processedSeries map[string]s
 
 			jobsToProcess = append(jobsToProcess, &FileInfo{
 				DownloadURL:      originalURI,
-				SeriesInstanceUID:        filepath.Base(originalURI), // Temporary ID for progress
+				SeriesInstanceUID:        originalURI, // Temporary ID for progress
 				OriginalS5cmdURI: originalURI,
 				S5cmdManifestPath: tempDirPath, // The temporary directory is the target for copy
 				IsSyncJob:        false,
