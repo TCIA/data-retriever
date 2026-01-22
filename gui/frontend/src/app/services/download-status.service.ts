@@ -49,6 +49,7 @@ export class DownloadStatusService implements OnDestroy {
   private currentManifestPath: string = '';
 
   private unsubscribeRuntime?: () => void;
+  private unsubscribeManifestMetadata?: () => void;
 
   readonly series$ = this.seriesSubject.asObservable();
   readonly overview$ = this.overviewSubject.asObservable();
@@ -62,6 +63,36 @@ export class DownloadStatusService implements OnDestroy {
             this.applyEvent(payload);
           } catch (error) {
             console.error('Failed to process download-series-event', error);
+          }
+        });
+      });
+
+      // Optional manifest metadata event to preload bytesTotal for all series
+      type ManifestSeriesInfoPayload = {
+        manifestPath?: string;
+        timestamp?: string;
+        series: Array<{
+          seriesUID: string;
+          bytesTotal: number;
+          seriesDescription?: string;
+          studyUID?: string;
+          subjectID?: string;
+          modality?: string;
+        }>;
+      };
+
+      this.unsubscribeManifestMetadata = EventsOn('manifest-series-metadata', (payload: ManifestSeriesInfoPayload) => {
+        this.ngZone.run(() => {
+          try {
+            if (payload?.manifestPath) {
+              this.currentManifestPath = payload.manifestPath;
+            }
+            if (Array.isArray(payload?.series) && payload.series.length > 0) {
+              this.ingestManifestSeriesMetadata(payload.series);
+              this.appendManifestLog('Manifest metadata received');
+            }
+          } catch (error) {
+            console.error('Failed to process manifest-series-metadata', error);
           }
         });
       });
@@ -136,6 +167,43 @@ export class DownloadStatusService implements OnDestroy {
     }
 
     this.seriesMap.set(payload.seriesUID, snapshot);
+    this.publish();
+  }
+
+  /**
+   * Pre-populate seriesMap with bytesTotal for all series in the manifest.
+   * Ensures total bytes reflect the entire manifest even before workers start.
+   */
+  private ingestManifestSeriesMetadata(list: Array<{
+    seriesUID: string;
+    bytesTotal: number;
+    seriesDescription?: string;
+    studyUID?: string;
+    subjectID?: string;
+    modality?: string;
+  }>): void {
+    for (const item of list) {
+      if (!item || !item.seriesUID) continue;
+      const existing = this.seriesMap.get(item.seriesUID);
+      const snapshot: SeriesDownloadSnapshot = existing
+        ? { ...existing, logs: [...existing.logs] }
+        : {
+            seriesUID: item.seriesUID,
+            studyUID: item.studyUID,
+            subjectID: item.subjectID,
+            seriesDescription: item.seriesDescription,
+            modality: item.modality,
+            status: 'queued',
+            progress: 0,
+            logs: [],
+            bytesDownloaded: 0,
+          };
+      // Seed total bytes; keep any existing downloaded bytes
+      if (typeof item.bytesTotal === 'number' && item.bytesTotal > 0) {
+        snapshot.bytesTotal = item.bytesTotal;
+      }
+      this.seriesMap.set(item.seriesUID, snapshot);
+    }
     this.publish();
   }
 
@@ -272,8 +340,20 @@ export class DownloadStatusService implements OnDestroy {
         console.warn('Failed to unsubscribe runtime event', error);
       }
     }
+    if (this.unsubscribeManifestMetadata) {
+      try {
+        this.unsubscribeManifestMetadata();
+      } catch (error) {
+        console.warn('Failed to unsubscribe manifest metadata event', error);
+      }
+    }
     try {
       EventsOff('download-series-event');
+    } catch (error) {
+      // Ignore double-off errors
+    }
+    try {
+      EventsOff('manifest-series-metadata');
     } catch (error) {
       // Ignore double-off errors
     }
