@@ -57,7 +57,7 @@ export class DownloadCardComponent {
   }
 
   get progressLabel(): string {
-    return `${this.progressValue}%`;
+    return `${this.bytesProgressValue}%`;
   }
 
   get accentColor(): string {
@@ -73,6 +73,19 @@ export class DownloadCardComponent {
       default:
         return '#2196f3';
     }
+  }
+
+  // Bytes-based progress: downloaded / total, fallback to status progress
+  get bytesProgressValue(): number {
+    const downloaded = this.series?.bytesDownloaded ?? null;
+    const total = this.series?.bytesTotal ?? null;
+    let percent: number;
+    if (typeof downloaded === 'number' && typeof total === 'number' && total > 0) {
+      percent = Math.round((downloaded / total) * 100);
+    } else {
+      percent = this.series?.progress ?? 0;
+    }
+    return Math.max(0, Math.min(100, percent));
   }
 
   get showPauseIcon(): boolean {

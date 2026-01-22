@@ -33,7 +33,15 @@ export class ManifestDownloadCardComponent {
   }
 
   get progressValue(): number {
-    return Math.max(0, Math.min(100, Math.round(this.manifest?.progressPercent ?? 0)));
+    const downloaded = this.manifest?.bytesDownloaded ?? null;
+    const total = this.manifest?.bytesTotal ?? null;
+    let percent: number;
+    if (typeof downloaded === 'number' && typeof total === 'number' && total > 0) {
+      percent = Math.round((downloaded / total) * 100);
+    } else {
+      percent = Math.round(this.manifest?.progressPercent ?? 0);
+    }
+    return Math.max(0, Math.min(100, percent));
   }
 
   get progressLabel(): string {
