@@ -47,6 +47,8 @@ export class DownloadStatusService implements OnDestroy {
   });
 
   private currentManifestPath: string = '';
+  // Once set, this remains the stable denominator for manifest progress
+  private manifestTotalBytesFixed?: number;
 
   private unsubscribeRuntime?: () => void;
   private unsubscribeManifestMetadata?: () => void;
@@ -108,6 +110,7 @@ export class DownloadStatusService implements OnDestroy {
   beginRun(manifestPath: string): void {
     this.currentManifestPath = manifestPath;
     this.seriesMap.clear();
+    this.manifestTotalBytesFixed = undefined;
     this.manifestSubject.next({
       manifestPath,
       total: 0,
@@ -145,7 +148,10 @@ export class DownloadStatusService implements OnDestroy {
     snapshot.studyUID = payload.studyUID ?? snapshot.studyUID;
     snapshot.modality = payload.modality ?? snapshot.modality;
     snapshot.bytesDownloaded = payload.bytesDownloaded ?? snapshot.bytesDownloaded;
-    snapshot.bytesTotal = payload.bytesTotal ?? snapshot.bytesTotal;
+    // Only accept positive totals; avoid clobbering seeded totals with 0/undefined
+    if (typeof payload.bytesTotal === 'number' && payload.bytesTotal > 0) {
+      snapshot.bytesTotal = payload.bytesTotal;
+    }
     snapshot.attempts = payload.attempt ?? snapshot.attempts;
 
     const timestamp = payload.timestamp ?? new Date().toISOString();
@@ -203,6 +209,16 @@ export class DownloadStatusService implements OnDestroy {
         snapshot.bytesTotal = item.bytesTotal;
       }
       this.seriesMap.set(item.seriesUID, snapshot);
+    }
+    // Initialize fixed manifest total from metadata sum once
+    let metaSum = 0;
+    for (const s of this.seriesMap.values()) {
+      if (typeof s.bytesTotal === 'number' && s.bytesTotal > 0) {
+        metaSum += s.bytesTotal;
+      }
+    }
+    if (metaSum > 0 && this.manifestTotalBytesFixed === undefined) {
+      this.manifestTotalBytesFixed = metaSum;
     }
     this.publish();
   }
@@ -268,6 +284,10 @@ export class DownloadStatusService implements OnDestroy {
         bytesTotal += s.bytesTotal;
       }
     }
+    // If fixed denominator not set yet and we have a positive sum, set it once
+    if (this.manifestTotalBytesFixed === undefined && bytesTotal > 0) {
+      this.manifestTotalBytesFixed = bytesTotal;
+    }
     this.overviewSubject.next(overview);
     // Update manifest snapshot from overview aggregation
     const current = this.manifestSubject.value;
@@ -282,7 +302,8 @@ export class DownloadStatusService implements OnDestroy {
       cancelled: overview.cancelled,
       progressPercent: overview.progressPercent,
       bytesDownloaded,
-      bytesTotal: bytesTotal > 0 ? bytesTotal : undefined,
+      // Use fixed denominator once established; keep undefined until known
+      bytesTotal: (this.manifestTotalBytesFixed ?? bytesTotal) > 0 ? (this.manifestTotalBytesFixed ?? bytesTotal) : undefined,
       completedAt:
         overview.total > 0 && overview.active === 0 && (overview.completed + overview.failed + overview.skipped + overview.cancelled) === overview.total
           ? new Date().toISOString()
