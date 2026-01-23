@@ -10,24 +10,22 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"hash"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-	"reflect"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
-
 )
-
 
 // ProgressFunc is a callback for reporting download progress.
 // percent: 0-100, bytesDownloaded: number of bytes read so far, bytesTotal: total bytes if known (>0)
@@ -63,25 +61,24 @@ func (pr *progressReader) Read(p []byte) (int, error) {
 			percent = 0
 		}
 
-        // Cap at 99% until actually complete to avoid overshoot
-        if percent > 99 && err != io.EOF {
-            percent = 99
-        }
+		// Cap at 99% until actually complete to avoid overshoot
+		if percent > 99 && err != io.EOF {
+			percent = 99
+		}
 
-        now := time.Now()
+		now := time.Now()
 
-        // Report progress at least every 50ms OR if changed by >= 0.5%
+		// Report progress at least every 50ms OR if changed by >= 0.5%
 		if (now.Sub(pr.lastTime) >= 50*time.Millisecond && (pr.total <= 0 || percent-pr.lastReported >= 0.5)) || err == io.EOF {
 			// Emit progress to frontend including bytes
 			pr.onProgress(percent, pr.read, pr.total)
 
-            pr.lastReported = percent
-            pr.lastTime = now
-        }
-    }
-    return n, err
+			pr.lastReported = percent
+			pr.lastTime = now
+		}
+	}
+	return n, err
 }
-
 
 // MetadataStats tracks metadata fetching progress
 type MetadataStats struct {
@@ -223,7 +220,6 @@ func FetchMetadataForSeriesUIDs(ctx context.Context, seriesIDs []string, httpCli
 		ctx = context.Background()
 	}
 
-
 	// Initialize metadata stats
 	metaStats := &MetadataStats{
 		Total:     len(seriesIDs),
@@ -273,38 +269,38 @@ func FetchMetadataForSeriesUIDs(ctx context.Context, seriesIDs []string, httpCli
 				data := url.Values{}
 				data.Set("list", seriesID)
 				data.Set("format", "csv")
-				
+
 				req, err := http.NewRequest("POST", MetaUrl, strings.NewReader(data.Encode()))
 				if err != nil {
-				    logger.Errorf("[Meta Worker %d] Failed to create request: %v", workerID, err)
-				    metaStats.updateProgress("failed", seriesID)
-				    continue
+					logger.Errorf("[Meta Worker %d] Failed to create request: %v", workerID, err)
+					metaStats.updateProgress("failed", seriesID)
+					continue
 				}
-				
+
 				// Set headers
 				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-				
+
 				// Get current access token
 				accessToken, err := authToken.GetAccessToken()
 				if err != nil {
-				    logger.Errorf("[Meta Worker %d] Failed to get access token: %v", workerID, err)
-				    metaStats.updateProgress("failed", seriesID)
-				    continue
+					logger.Errorf("[Meta Worker %d] Failed to get access token: %v", workerID, err)
+					metaStats.updateProgress("failed", seriesID)
+					continue
 				}
 				req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", accessToken))
-				
+
 				// Set timeout for metadata request
 				reqCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 				req = req.WithContext(reqCtx)
-				
+
 				// Send request
 				resp, err := doRequest(httpClient, req)
 				cancel() // Cancel context after request
-				
+
 				if err != nil {
-				    logger.Errorf("[Meta Worker %d] Request failed: %v", workerID, err)
-				    metaStats.updateProgress("failed", seriesID)
-				    continue
+					logger.Errorf("[Meta Worker %d] Request failed: %v", workerID, err)
+					metaStats.updateProgress("failed", seriesID)
+					continue
 				}
 
 				// Check for authentication errors
@@ -323,7 +319,6 @@ func FetchMetadataForSeriesUIDs(ctx context.Context, seriesIDs []string, httpCli
 					continue
 				}
 
-
 				var files []*FileInfo
 				// The API sometimes returns a single object instead of an array for a single series.
 				// We need to handle both cases.
@@ -336,23 +331,22 @@ func FetchMetadataForSeriesUIDs(ctx context.Context, seriesIDs []string, httpCli
 						files = []*FileInfo{&file}
 					}
 				}
-				
-				
+
 				// Save to cache
 				for _, file := range files {
-				    if file.SeriesInstanceUID != "" {
-				        if err := saveMetadataToCache(
-				            file,
-				            getMetadataCachePath(options.Output, file.SeriesInstanceUID),
-				        ); err != nil {
-				            logger.Warnf(
-				                "[Meta Worker %d] Failed to cache metadata for %s: %v",
-				                workerID,
-				                file.SeriesInstanceUID,
-				                err,
-				            )
-				        }
-				    }
+					if file.SeriesInstanceUID != "" {
+						if err := saveMetadataToCache(
+							file,
+							getMetadataCachePath(options.Output, file.SeriesInstanceUID),
+						); err != nil {
+							logger.Warnf(
+								"[Meta Worker %d] Failed to cache metadata for %s: %v",
+								workerID,
+								file.SeriesInstanceUID,
+								err,
+							)
+						}
+					}
 				}
 
 				// Thread-safe append to results
@@ -490,7 +484,6 @@ func decodeTCIA(ctx context.Context, path string, httpClient *http.Client, authT
 	return files
 }
 
-
 type FileInfo struct {
 	PatientID                           string `csv:"PatientID"`
 	PatientName                         string `csv:"PatientName"`
@@ -532,14 +525,13 @@ type FileInfo struct {
 	DateReleased                        string `csv:"DateReleased"`
 	ThirdPartyAnalysis                  string `csv:"ThirdPartyAnalysis"`
 	Authorized                          string `csv:"Authorized"`
-	DownloadURL													string
-	DRSURI             string `json:"drs_uri,omitempty"`
-	S5cmdManifestPath  string `json:"s5cmd_manifest_path,omitempty"`
-	FileName           string `json:"file_name,omitempty"`
-	OriginalS5cmdURI   string `json:"original_s5cmd_uri,omitempty"`
-	IsSyncJob          bool   `json:"is_sync_job,omitempty"`
+	DownloadURL                         string
+	DRSURI                              string `json:"drs_uri,omitempty"`
+	S5cmdManifestPath                   string `json:"s5cmd_manifest_path,omitempty"`
+	FileName                            string `json:"file_name,omitempty"`
+	OriginalS5cmdURI                    string `json:"original_s5cmd_uri,omitempty"`
+	IsSyncJob                           bool   `json:"is_sync_job,omitempty"`
 }
-
 
 // GetOutput construct the output directory (thread-safe)
 func (info *FileInfo) getOutput(output string) string {
@@ -559,7 +551,6 @@ func (info *FileInfo) getOutput(output string) string {
 	}
 	return outputDir
 }
-
 
 func (info *FileInfo) MetaFile(output string) string {
 	return getMetadataCachePath(output, info.SeriesInstanceUID)
@@ -583,15 +574,15 @@ func (info *FileInfo) NeedsDownload(output string, force bool, noDecompress bool
 		return true
 	}
 	if info.DownloadURL != "" {
-	        targetPath = filepath.Join(output, info.SeriesInstanceUID)
-	        _, err := os.Stat(targetPath)
-	        if os.IsNotExist(err) {
-	                logger.Debugf("Target %s does not exist, need to download", targetPath)
-	                return true
-	        }
-	        // If it exists, we assume it's downloaded. We don't have size/checksum info for these.
-	        logger.Debugf("Direct download file %s exists, skipping", targetPath)
-	        return false
+		targetPath = filepath.Join(output, info.SeriesInstanceUID)
+		_, err := os.Stat(targetPath)
+		if os.IsNotExist(err) {
+			logger.Debugf("Target %s does not exist, need to download", targetPath)
+			return true
+		}
+		// If it exists, we assume it's downloaded. We don't have size/checksum info for these.
+		logger.Debugf("Direct download file %s exists, skipping", targetPath)
+		return false
 	}
 
 	if noDecompress {
@@ -651,7 +642,7 @@ func (info *FileInfo) NeedsDownload(output string, force bool, noDecompress bool
 }
 
 // extractAndVerifyZip extracts a ZIP file and verifies the total uncompressed size and optional MD5 hashes
-func extractAndVerifyZip(zipPath string, destDir string, expectedSize int64, md5Map map[string]string) error {
+func extractAndVerifyZip(zipPath string, destDir string, expectedSize int64, md5Map map[string]string, onProgress ProgressFunc) error {
 	reader, err := zip.OpenReader(zipPath)
 	if err != nil {
 		return fmt.Errorf("failed to open zip: %v", err)
@@ -670,7 +661,10 @@ func extractAndVerifyZip(zipPath string, destDir string, expectedSize int64, md5
 	md5Mode := len(md5Map) > 0
 
 	// Extract files
+	var fileCount int64
+	totalEntries := int64(len(reader.File))
 	for _, file := range reader.File {
+		fileCount++
 
 		path := filepath.Join(destDir, file.Name)
 
@@ -745,6 +739,19 @@ func extractAndVerifyZip(zipPath string, destDir string, expectedSize int64, md5
 		} else {
 			totalSize += written
 		}
+
+		if onProgress != nil {
+			var percent float64
+			if expectedSize > 0 {
+				percent = float64(totalSize) / float64(expectedSize) * 100
+			} else if totalEntries > 0 {
+				percent = float64(fileCount) / float64(totalEntries) * 100
+			}
+			if percent > 100 {
+				percent = 100
+			}
+			onProgress(percent, totalSize, expectedSize)
+		}
 	}
 
 	// Report MD5 errors if any
@@ -763,6 +770,9 @@ func extractAndVerifyZip(zipPath string, destDir string, expectedSize int64, md5
 		}
 	}
 
+	if onProgress != nil {
+		onProgress(100, totalSize, expectedSize)
+	}
 	return nil
 }
 
@@ -845,7 +855,7 @@ func (info *FileInfo) GetMeta(ctx context.Context, output string) error {
 }
 
 // Download is real function to download file with retry logic
-func (info *FileInfo) Download(ctx context.Context, output string, httpClient *http.Client, authToken *Token, options *Options, onProgress ProgressFunc, gen3Auth *Gen3AuthManager) error {
+func (info *FileInfo) Download(ctx context.Context, output string, httpClient *http.Client, authToken *Token, options *Options, onProgress ProgressFunc, onDecompress ProgressFunc, gen3Auth *Gen3AuthManager) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -853,11 +863,11 @@ func (info *FileInfo) Download(ctx context.Context, output string, httpClient *h
 	if options.RequestDelay > 0 {
 		time.Sleep(options.RequestDelay)
 	}
-	return info.DownloadWithRetry(ctx, output, httpClient, authToken, options, onProgress, gen3Auth)
+	return info.DownloadWithRetry(ctx, output, httpClient, authToken, options, onProgress, onDecompress, gen3Auth)
 }
 
 // DownloadWithRetry downloads file with retry logic and exponential backoff
-func (info *FileInfo) DownloadWithRetry(ctx context.Context, output string, httpClient *http.Client, authToken *Token, options *Options, onProgress ProgressFunc, gen3Auth *Gen3AuthManager) error {
+func (info *FileInfo) DownloadWithRetry(ctx context.Context, output string, httpClient *http.Client, authToken *Token, options *Options, onProgress ProgressFunc, onDecompress ProgressFunc, gen3Auth *Gen3AuthManager) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -875,7 +885,7 @@ func (info *FileInfo) DownloadWithRetry(ctx context.Context, output string, http
 			return ctx.Err()
 		}
 
-		err := info.doDownload(ctx, output, httpClient, authToken, options, onProgress, gen3Auth)
+		err := info.doDownload(ctx, output, httpClient, authToken, options, onProgress, onDecompress, gen3Auth)
 		if err == nil {
 			return nil
 		}
@@ -918,7 +928,7 @@ func isRetryableError(err error) bool {
 }
 
 // doDownload is a dispatcher for different download types
-func (info *FileInfo) doDownload(ctx context.Context, output string, httpClient *http.Client, authToken *Token, options *Options, onProgress ProgressFunc, gen3Auth *Gen3AuthManager) error {
+func (info *FileInfo) doDownload(ctx context.Context, output string, httpClient *http.Client, authToken *Token, options *Options, onProgress ProgressFunc, onDecompress ProgressFunc, gen3Auth *Gen3AuthManager) error {
 	// For s5cmd manifest downloads, S5cmdManifestPath is set to the temporary series directory
 	if info.S5cmdManifestPath != "" {
 		return info.downloadFromS3(ctx, info.S5cmdManifestPath, options, onProgress)
@@ -934,9 +944,9 @@ func (info *FileInfo) doDownload(ctx context.Context, output string, httpClient 
 		ctx = context.Background()
 	}
 	if info.DownloadURL != "" {
-	        return info.downloadDirect(ctx, output, httpClient, options, onProgress, gen3Auth)
+		return info.downloadDirect(ctx, output, httpClient, options, onProgress, gen3Auth)
 	}
-	return info.downloadFromTCIA(ctx, output, httpClient, authToken, options, onProgress)
+	return info.downloadFromTCIA(ctx, output, httpClient, authToken, options, onProgress, onDecompress)
 }
 
 func downloadS3Object(ctx context.Context, client *s3.Client, bucket, key, targetDir string, onProgress ProgressFunc) error {
@@ -955,163 +965,172 @@ func downloadS3Object(ctx context.Context, client *s3.Client, bucket, key, targe
 
 	f, err := os.Create(localPath)
 	if err != nil {
-	    return err
+		return err
 	}
 	defer f.Close()
-	
+
 	downloader := manager.NewDownloader(client, func(d *manager.Downloader) {
-	    d.PartSize = 10 * 1024 * 1024 // 10 MB parts
-	    d.Concurrency = 16             // parallel part downloads
+		d.PartSize = 10 * 1024 * 1024 // 10 MB parts
+		d.Concurrency = 16            // parallel part downloads
 	})
-	
+
 	numBytes, err := downloader.Download(ctx, f, &s3.GetObjectInput{
-	    Bucket: &bucket,
-	    Key:    &key,
+		Bucket: &bucket,
+		Key:    &key,
 	})
 	if err != nil {
-	    return fmt.Errorf("failed to download %s/%s: %w", bucket, key, err)
+		return fmt.Errorf("failed to download %s/%s: %w", bucket, key, err)
 	}
-	
+
 	// call onProgress once with total bytes (optional)
 	if onProgress != nil {
-	    onProgress(100.0, numBytes, numBytes)
+		onProgress(100.0, numBytes, numBytes)
 	}
 
 	return nil
 }
 
 func (info *FileInfo) downloadFromS3(
-    ctx context.Context,
-    targetDir string,
-    options *Options,
-    onProgress ProgressFunc,
+	ctx context.Context,
+	targetDir string,
+	options *Options,
+	onProgress ProgressFunc,
 ) error {
-    if ctx == nil {
-        ctx = context.Background()
-    }
+	if ctx == nil {
+		ctx = context.Background()
+	}
 
-    if err := os.MkdirAll(targetDir, 0755); err != nil {
-        return fmt.Errorf("could not create target directory %s: %w", targetDir, err)
-    }
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		return fmt.Errorf("could not create target directory %s: %w", targetDir, err)
+	}
 
-    bucket, key, wildcard, err := parseS3URL(info.DownloadURL)
-    if err != nil {
-        return err
-    }
+	bucket, key, wildcard, err := parseS3URL(info.DownloadURL)
+	if err != nil {
+		return err
+	}
 
-    client := options.S3Client
-    if client == nil {
-        // fallback: create anonymous client
-        cfg, err := awsConfig()
-        if err != nil {
-            return err
-        }
-        client = s3.NewFromConfig(cfg)
-    }
+	client := options.S3Client
+	if client == nil {
+		// fallback: create anonymous client
+		cfg, err := awsConfig()
+		if err != nil {
+			return err
+		}
+		client = s3.NewFromConfig(cfg)
+	}
 
-    isSync := info.IsSyncJob || wildcard
+	isSync := info.IsSyncJob || wildcard
 
-    var keys []string
-    if isSync {
-        // List objects under the prefix
-        paginator := s3.NewListObjectsV2Paginator(client, &s3.ListObjectsV2Input{
-            Bucket: &bucket,
-            Prefix: &key,
-        })
+	var keys []string
+	if isSync {
+		// List objects under the prefix
+		paginator := s3.NewListObjectsV2Paginator(client, &s3.ListObjectsV2Input{
+			Bucket: &bucket,
+			Prefix: &key,
+		})
 
-        for paginator.HasMorePages() {
-            page, err := paginator.NextPage(ctx)
-            if err != nil {
-                return fmt.Errorf("failed to list S3 objects: %w", err)
-            }
-            for _, obj := range page.Contents {
-                if strings.HasSuffix(*obj.Key, "/") {
-                    continue
-                }
-                keys = append(keys, *obj.Key)
-            }
-        }
-    } else {
-        keys = []string{key}
-    }
+		for paginator.HasMorePages() {
+			page, err := paginator.NextPage(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to list S3 objects: %w", err)
+			}
+			for _, obj := range page.Contents {
+				if strings.HasSuffix(*obj.Key, "/") {
+					continue
+				}
+				keys = append(keys, *obj.Key)
+			}
+		}
+	} else {
+		keys = []string{key}
+	}
 
-    // Create a shared downloader
-    downloader := manager.NewDownloader(client, func(d *manager.Downloader) {
-        d.PartSize = 10 * 1024 * 1024 // 10 MB
-        d.Concurrency = 16
-    })
+	// Create a shared downloader
+	downloader := manager.NewDownloader(client, func(d *manager.Downloader) {
+		d.PartSize = 10 * 1024 * 1024 // 10 MB
+		d.Concurrency = 16
+	})
 
-    // Worker pool for sync / multiple keys
-    numWorkers := 32 // tune as needed
-    workCh := make(chan string)
-    errCh := make(chan error, 1)
-    var wg sync.WaitGroup
-    wg.Add(numWorkers)
+	// Worker pool for sync / multiple keys
+	numWorkers := 32 // tune as needed
+	workCh := make(chan string)
+	errCh := make(chan error, 1)
+	var wg sync.WaitGroup
+	wg.Add(numWorkers)
 
-    for i := 0; i < numWorkers; i++ {
-        go func() {
-            defer wg.Done()
-            for k := range workCh {
-                localPath := filepath.Join(targetDir, filepath.Base(k))
-                if err := os.MkdirAll(filepath.Dir(localPath), 0755); err != nil {
-                    select { case errCh <- err: default: } 
-                    return
-                }
+	for i := 0; i < numWorkers; i++ {
+		go func() {
+			defer wg.Done()
+			for k := range workCh {
+				localPath := filepath.Join(targetDir, filepath.Base(k))
+				if err := os.MkdirAll(filepath.Dir(localPath), 0755); err != nil {
+					select {
+					case errCh <- err:
+					default:
+					}
+					return
+				}
 
-                f, err := os.Create(localPath)
-                if err != nil {
-                    select { case errCh <- err: default: } 
-                    return
-                }
+				f, err := os.Create(localPath)
+				if err != nil {
+					select {
+					case errCh <- err:
+					default:
+					}
+					return
+				}
 
-								numBytes, err := downloader.Download(ctx, f, &s3.GetObjectInput{
-                    Bucket: &bucket,
-                    Key:    &k,
-                })
-                f.Close()
-                if err != nil {
-                    select { case errCh <- fmt.Errorf("failed to download s3://%s/%s: %w", bucket, k, err): default: }
-                    return
-                }
+				numBytes, err := downloader.Download(ctx, f, &s3.GetObjectInput{
+					Bucket: &bucket,
+					Key:    &k,
+				})
+				f.Close()
+				if err != nil {
+					select {
+					case errCh <- fmt.Errorf("failed to download s3://%s/%s: %w", bucket, k, err):
+					default:
+					}
+					return
+				}
 
-                if onProgress != nil {
-                    onProgress(100.0, numBytes, numBytes) // simple per-file progress; you can refine to bytes if desired
-                }
-            }
-        }()
-    }
+				if onProgress != nil {
+					onProgress(100.0, numBytes, numBytes) // simple per-file progress; you can refine to bytes if desired
+				}
+			}
+		}()
+	}
 
-    // Feed keys
-    go func() {
-        for _, k := range keys {
-            workCh <- k
-        }
-        close(workCh)
-    }()
+	// Feed keys
+	go func() {
+		for _, k := range keys {
+			workCh <- k
+		}
+		close(workCh)
+	}()
 
-    // Wait
-    done := make(chan struct{})
-    go func() {
-        wg.Wait()
-        close(done)
-    }()
+	// Wait
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
 
-    select {
-    case err := <-errCh:
-        return err
-    case <-done:
-        return nil
-    case <-ctx.Done():
-        return ctx.Err()
-    }
+	select {
+	case err := <-errCh:
+		return err
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 func awsConfig() (aws.Config, error) {
-    return config.LoadDefaultConfig(
-        context.Background(),
-        config.WithRegion("us-east-1"),
-        config.WithCredentialsProvider(aws.AnonymousCredentials{}),
-    )
+	return config.LoadDefaultConfig(
+		context.Background(),
+		config.WithRegion("us-east-1"),
+		config.WithCredentialsProvider(aws.AnonymousCredentials{}),
+	)
 }
 
 func parseS3URL(s string) (bucket string, key string, isWildcard bool, err error) {
@@ -1138,8 +1157,6 @@ func parseS3URL(s string) (bucket string, key string, isWildcard bool, err error
 
 	return bucket, key, isWildcard, nil
 }
-
-
 
 // downloadFromGen3 downloads a file from a Gen3 server
 func (info *FileInfo) downloadFromGen3(ctx context.Context, output string, httpClient *http.Client, gen3Auth *Gen3AuthManager, options *Options, onProgress ProgressFunc) error {
@@ -1330,86 +1347,86 @@ func getGen3DownloadURL(client *http.Client, commonsURL, objectID string, gen3Au
 
 // downloadDirect downloads a file from a direct URL without decompression
 func (info *FileInfo) downloadDirect(ctx context.Context, output string, httpClient *http.Client, options *Options, onProgress ProgressFunc, gen3Auth *Gen3AuthManager) error {
-       if ctx == nil {
-               ctx = context.Background()
-       }
-       logger.Debugf("Downloading direct from URL: %s", info.DownloadURL)
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	logger.Debugf("Downloading direct from URL: %s", info.DownloadURL)
 
-       finalPath := filepath.Join(output, info.SeriesInstanceUID)
-       tempPath := finalPath + ".tmp"
+	finalPath := filepath.Join(output, info.SeriesInstanceUID)
+	tempPath := finalPath + ".tmp"
 
-       // Clean up any previous temporary files
-       if _, err := os.Stat(tempPath); err == nil {
-               logger.Debugf("Removing incomplete download: %s", tempPath)
-               os.Remove(tempPath)
-       }
+	// Clean up any previous temporary files
+	if _, err := os.Stat(tempPath); err == nil {
+		logger.Debugf("Removing incomplete download: %s", tempPath)
+		os.Remove(tempPath)
+	}
 
-       req, err := http.NewRequest("GET", info.DownloadURL, nil)
-       if err != nil {
-               return fmt.Errorf("failed to create request: %v", err)
-       }
+	req, err := http.NewRequest("GET", info.DownloadURL, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create request: %v", err)
+	}
 
-       // Use a reasonable timeout for direct downloads
-       reqCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
-       defer cancel()
-       req = req.WithContext(reqCtx)
+	// Use a reasonable timeout for direct downloads
+	reqCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
+	defer cancel()
+	req = req.WithContext(reqCtx)
 
-       resp, err := doRequest(httpClient, req)
-       if err != nil {
-               return fmt.Errorf("failed to do request: %v", err)
-       }
-       defer resp.Body.Close()
+	resp, err := doRequest(httpClient, req)
+	if err != nil {
+		return fmt.Errorf("failed to do request: %v", err)
+	}
+	defer resp.Body.Close()
 
-       if resp.StatusCode != http.StatusOK {
-               return fmt.Errorf("HTTP error %d: %s", resp.StatusCode, resp.Status)
-       }
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("HTTP error %d: %s", resp.StatusCode, resp.Status)
+	}
 
-       f, err := os.OpenFile(tempPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-       if err != nil {
-               return fmt.Errorf("failed to open file: %v", err)
-       }
-       defer func() {
-               f.Close()
-               if err != nil {
-                       os.Remove(tempPath)
-               }
-       }()
+	f, err := os.OpenFile(tempPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to open file: %v", err)
+	}
+	defer func() {
+		f.Close()
+		if err != nil {
+			os.Remove(tempPath)
+		}
+	}()
 
-       // Wrap with progress reader if callback provided and content length known
-       var reader io.Reader = resp.Body
-       if onProgress != nil && resp.ContentLength > 0 {
-               reader = newProgressReader(resp.Body, resp.ContentLength, onProgress)
-       }
+	// Wrap with progress reader if callback provided and content length known
+	var reader io.Reader = resp.Body
+	if onProgress != nil && resp.ContentLength > 0 {
+		reader = newProgressReader(resp.Body, resp.ContentLength, onProgress)
+	}
 
-       written, err := io.Copy(f, reader)
-       if err != nil {
-               return fmt.Errorf("failed to write data after %d bytes: %v", written, err)
-       }
+	written, err := io.Copy(f, reader)
+	if err != nil {
+		return fmt.Errorf("failed to write data after %d bytes: %v", written, err)
+	}
 
-       logger.Debugf("Downloaded %d bytes for %s", written, info.SeriesInstanceUID)
+	logger.Debugf("Downloaded %d bytes for %s", written, info.SeriesInstanceUID)
 
-       if err := f.Close(); err != nil {
-               return fmt.Errorf("failed to close file: %v", err)
-       }
+	if err := f.Close(); err != nil {
+		return fmt.Errorf("failed to close file: %v", err)
+	}
 
-       // Atomic rename to final location
-       if err := os.Rename(tempPath, finalPath); err != nil {
-               return fmt.Errorf("failed to move file: %v", err)
-       }
+	// Atomic rename to final location
+	if err := os.Rename(tempPath, finalPath); err != nil {
+		return fmt.Errorf("failed to move file: %v", err)
+	}
 
-       logger.Debugf("Successfully saved %s as %s", info.SeriesInstanceUID, finalPath)
-       return nil
+	logger.Debugf("Successfully saved %s as %s", info.SeriesInstanceUID, finalPath)
+	return nil
 }
 
 // downloadFromTCIA performs the actual download from TCIA, with decompression
-func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpClient *http.Client, authToken *Token, options *Options, onProgress ProgressFunc) error {
+func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpClient *http.Client, authToken *Token, options *Options, onProgress ProgressFunc, onDecompress ProgressFunc) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	logger.Debugf("getting image file to %s", output)
 
-	url_, err := makeURL(ImageUrl, map[string]interface{}{"SeriesInstanceUID": info.SeriesInstanceUID, 
-																												"IncludeMD5": "Yes"})
+	url_, err := makeURL(ImageUrl, map[string]interface{}{"SeriesInstanceUID": info.SeriesInstanceUID,
+		"IncludeMD5": "Yes"})
 	if err != nil {
 		return fmt.Errorf("failed to make URL: %v", err)
 	}
@@ -1603,7 +1620,10 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 		}
 
 		logger.Debugf("Extracting %s to %s", tempZipPath, tempExtractDir)
-		if err := extractAndVerifyZip(tempZipPath, tempExtractDir, expectedSize, md5Map); err != nil {
+		if onDecompress != nil {
+			onDecompress(0, 0, expectedSize)
+		}
+		if err := extractAndVerifyZip(tempZipPath, tempExtractDir, expectedSize, md5Map, onDecompress); err != nil {
 			// Clean up temp files on extraction failure
 			logger.Errorf("Extraction failed, cleaning up temporary files")
 			if removeErr := os.Remove(tempZipPath); removeErr != nil {
@@ -1646,49 +1666,47 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 	}
 }
 
-
 // returns true if all files exist and match the hashes
 func SeriesUpToDate(seriesDir string) bool {
-    md5Path := filepath.Join(seriesDir, "md5hashes.csv")
-    f, err := os.Open(md5Path)
-    if err != nil {
-        // md5hashes.csv doesn't exist → need to download
-        return false
-    }
-    defer f.Close()
+	md5Path := filepath.Join(seriesDir, "md5hashes.csv")
+	f, err := os.Open(md5Path)
+	if err != nil {
+		// md5hashes.csv doesn't exist → need to download
+		return false
+	}
+	defer f.Close()
 
-    reader := csv.NewReader(f)
-    records, err := reader.ReadAll()
-    if err != nil || len(records) < 1 {
-        return false
-    }
+	reader := csv.NewReader(f)
+	records, err := reader.ReadAll()
+	if err != nil || len(records) < 1 {
+		return false
+	}
 
-    for _, row := range records {
-        if len(row) < 2 {
-            continue
-        }
-        fileName := row[0]
-        expectedHash := row[1]
+	for _, row := range records {
+		if len(row) < 2 {
+			continue
+		}
+		fileName := row[0]
+		expectedHash := row[1]
 
-        filePath := filepath.Join(seriesDir, fileName)
-        file, err := os.Open(filePath)
-        if err != nil {
-            return false // file missing → need download
-        }
+		filePath := filepath.Join(seriesDir, fileName)
+		file, err := os.Open(filePath)
+		if err != nil {
+			return false // file missing → need download
+		}
 
-        h := md5.New()
-        _, err = io.Copy(h, file)
-        file.Close()
-        if err != nil {
-            return false
-        }
+		h := md5.New()
+		_, err = io.Copy(h, file)
+		file.Close()
+		if err != nil {
+			return false
+		}
 
-        actualHash := fmt.Sprintf("%x", h.Sum(nil))
-        if actualHash != expectedHash {
-            return false // hash mismatch → need download
-        }
-    }
+		actualHash := fmt.Sprintf("%x", h.Sum(nil))
+		if actualHash != expectedHash {
+			return false // hash mismatch → need download
+		}
+	}
 
-    return true
+	return true
 }
-

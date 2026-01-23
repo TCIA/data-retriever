@@ -223,6 +223,9 @@ func (b *App) runBatch(batch *DownloadBatch) {
         Series: func(evt app.SeriesEvent) {
             wailsRuntime.EventsEmit(b.ctx, "download-series-event", evt)
         },
+        Manifest: func(p app.ManifestPayload) {
+            wailsRuntime.EventsEmit(b.ctx, "manifest-series-metadata", p)
+        },
     }
 
     // Run the CLI download (blocking inside goroutine)
