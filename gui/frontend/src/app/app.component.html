@@ -1,5 +1,11 @@
 <div class="app-container" [class.dark-mode]="isDarkMode">
-  
+  <div class="init-overlay" *ngIf="showInitializing" role="status" aria-live="polite">
+    <div class="init-dialog">
+      <div class="init-spinner" aria-hidden="true"></div>
+      <p>Download initializing...</p>
+    </div>
+  </div>
+
   <!-- Header -->
   <div class="header">
     <div class="header-left">

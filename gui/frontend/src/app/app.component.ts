@@ -26,6 +26,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private unsubscribeCliFinished?: () => void;
 
   private overviewSubscription?: Subscription;
+  private seriesSubscription?: Subscription;
 
   // Advanced options / UI state
   showAdvanced = false;
@@ -45,6 +46,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   // Overall download progress
   overallProgress = 0;
+  showInitializing = false;
 
   series$ = this.downloadStatus.series$;
   overview$ = this.downloadStatus.overview$;
@@ -75,6 +77,15 @@ export class AppComponent implements OnInit, OnDestroy {
       if (snapshot.total > 0 && this.downloadsCollapsed) {
         this.downloadsCollapsed = false;
       }
+      if (this.showInitializing && snapshot.total > 0) {
+        this.showInitializing = false;
+      }
+    });
+
+    this.seriesSubscription = this.series$.subscribe(series => {
+      if (this.showInitializing && series.length > 0) {
+        this.showInitializing = false;
+      }
     });
 
     // Subscribe to streaming CLI output from backend
@@ -96,6 +107,7 @@ export class AppComponent implements OnInit, OnDestroy {
       this.ngZone.run(() => {
         this.status = 'Error';
         this.outputLogs.push(`ERROR: ${err}`);
+        this.showInitializing = false;
       });
     });
 
@@ -106,6 +118,7 @@ export class AppComponent implements OnInit, OnDestroy {
         if (summary) {
           this.outputLogs.push(summary);
         }
+        this.showInitializing = false;
       });
     });
   }
@@ -115,6 +128,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.unsubscribeCliError?.();
     this.unsubscribeCliFinished?.();
     this.overviewSubscription?.unsubscribe();
+    this.seriesSubscription?.unsubscribe();
   }
 
   toggleDarkMode() {
@@ -137,6 +151,7 @@ export class AppComponent implements OnInit, OnDestroy {
       return;
     }
 
+    this.showInitializing = true;
     this.downloadStatus.beginRun(this.inputFilePath);
     this.outputLogs = [];
     this.overallProgress = 0;
@@ -169,12 +184,26 @@ export class AppComponent implements OnInit, OnDestroy {
     this.appendLog(this.status);
 
     // Call backend to run the CLI
-    RunCLIFetch(this.inputFilePath, this.outputDirPath, this.maxConnections, this.maxRetries, this.simultaneousDownloads,
-this.skipExisting, this.downloadInParallel);
+    RunCLIFetch(
+      this.inputFilePath,
+      this.outputDirPath,
+      this.maxConnections,
+      this.maxRetries,
+      this.simultaneousDownloads,
+      this.skipExisting,
+      this.downloadInParallel
+    ).catch(err => {
+      this.ngZone.run(() => {
+        this.status = 'Error: ' + err;
+        this.appendLog(this.status);
+        this.showInitializing = false;
+      });
+    });
     this.status = "Started";
   }
 
   onCancelDownload() {
+    this.showInitializing = false;
     CancelDownload()
       .then(() => {
         this.status = "Cancellation requested";
@@ -183,6 +212,7 @@ this.skipExisting, this.downloadInParallel);
       .catch(err => {
         this.status = "Error: " + err;
         this.appendLog(this.status);
+        this.showInitializing = false;
       });
   }
 

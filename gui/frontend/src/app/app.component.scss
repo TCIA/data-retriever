@@ -8,6 +8,45 @@
   background-color: #f5f5f5;
 }
 
+.init-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 1200;
+}
+
+.init-dialog {
+  background: var(--card-bg, #fff);
+  border-radius: 12px;
+  padding: 24px 32px;
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.2);
+  display: grid;
+  gap: 16px;
+  justify-items: center;
+  text-align: center;
+  color: #333;
+}
+
+.init-spinner {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 4px solid rgba(33, 150, 243, 0.25);
+  border-top-color: #2196f3;
+  animation: init-spin 0.8s linear infinite;
+}
+
+@keyframes init-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Header */
 .header {
   background: white;
