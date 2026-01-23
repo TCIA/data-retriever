@@ -6,6 +6,7 @@ import {
   ManifestDownloadSnapshot,
   SeriesDownloadEventPayload,
   SeriesDownloadSnapshot,
+  SeriesDownloadPhase,
 } from '../models/download-series.model';
 
 const TERMINAL_STATUSES = new Set<SeriesDownloadSnapshot['status']>([
@@ -19,6 +20,7 @@ const ACTIVE_STATUSES = new Set<SeriesDownloadSnapshot['status']>([
   'queued',
   'metadata',
   'downloading',
+  'decompressing',
 ]);
 
 @Injectable({ providedIn: 'root' })
@@ -47,8 +49,7 @@ export class DownloadStatusService implements OnDestroy {
   });
 
   private currentManifestPath: string = '';
-  // Once set, this remains the stable denominator for manifest progress
-  private manifestTotalBytesFixed?: number;
+  private manifestInitialBytesTotal = 0;
 
   private unsubscribeRuntime?: () => void;
   private unsubscribeManifestMetadata?: () => void;
@@ -109,8 +110,8 @@ export class DownloadStatusService implements OnDestroy {
 
   beginRun(manifestPath: string): void {
     this.currentManifestPath = manifestPath;
+    this.manifestInitialBytesTotal = 0;
     this.seriesMap.clear();
-    this.manifestTotalBytesFixed = undefined;
     this.manifestSubject.next({
       manifestPath,
       total: 0,
@@ -138,19 +139,26 @@ export class DownloadStatusService implements OnDestroy {
       : this.createInitialSnapshot(payload);
 
     snapshot.status = payload.status;
-    snapshot.progress = this.resolveProgress(snapshot.progress, payload.progress, payload.status);
-    // Ensure terminal states always show 100% progress
-    if (TERMINAL_STATUSES.has(payload.status)) {
-      snapshot.progress = 100;
-    }
+    const fallbackProgress = this.resolveProgress(snapshot.progress, payload.progress, payload.status);
+    snapshot.progress = fallbackProgress;
     snapshot.seriesDescription = payload.seriesDescription ?? snapshot.seriesDescription;
     snapshot.subjectID = payload.subjectID ?? snapshot.subjectID;
     snapshot.studyUID = payload.studyUID ?? snapshot.studyUID;
     snapshot.modality = payload.modality ?? snapshot.modality;
-    snapshot.bytesDownloaded = payload.bytesDownloaded ?? snapshot.bytesDownloaded;
+    if (typeof payload.bytesDownloaded === 'number' && payload.bytesDownloaded >= 0) {
+      snapshot.bytesDownloaded = payload.bytesDownloaded;
+    } else if (typeof snapshot.bytesDownloaded !== 'number') {
+      snapshot.bytesDownloaded = 0;
+    }
     // Only accept positive totals; avoid clobbering seeded totals with 0/undefined
     if (typeof payload.bytesTotal === 'number' && payload.bytesTotal > 0) {
       snapshot.bytesTotal = payload.bytesTotal;
+    }
+    if (typeof payload.uncompressedBytes === 'number' && payload.uncompressedBytes >= 0) {
+      snapshot.uncompressedBytes = payload.uncompressedBytes;
+    }
+    if (typeof payload.uncompressedTotal === 'number' && payload.uncompressedTotal > 0) {
+      snapshot.uncompressedTotal = payload.uncompressedTotal;
     }
     snapshot.attempts = payload.attempt ?? snapshot.attempts;
 
@@ -161,16 +169,23 @@ export class DownloadStatusService implements OnDestroy {
       snapshot.startedAt = timestamp;
     }
 
+    const resolvedPhase = this.resolvePhase(payload.status, payload.phase, snapshot.phase);
+    snapshot.phase = resolvedPhase;
+    snapshot.phaseProgress = this.resolvePhaseProgress(snapshot, resolvedPhase, payload.phaseProgress, fallbackProgress);
+
     if (TERMINAL_STATUSES.has(payload.status)) {
       snapshot.completedAt = timestamp;
       if (payload.status === 'failed') {
         snapshot.errorMessage = payload.message ?? snapshot.errorMessage;
       }
+      snapshot.phaseProgress = 100;
     }
 
     if (payload.message) {
       this.appendLog(snapshot, payload.message, timestamp);
     }
+
+    snapshot.progress = this.computeBlendedProgress(snapshot, fallbackProgress);
 
     this.seriesMap.set(payload.seriesUID, snapshot);
     this.publish();
@@ -188,6 +203,7 @@ export class DownloadStatusService implements OnDestroy {
     subjectID?: string;
     modality?: string;
   }>): void {
+    let manifestSum = 0;
     for (const item of list) {
       if (!item || !item.seriesUID) continue;
       const existing = this.seriesMap.get(item.seriesUID);
@@ -201,24 +217,21 @@ export class DownloadStatusService implements OnDestroy {
             modality: item.modality,
             status: 'queued',
             progress: 0,
+            phase: 'queued',
+            phaseProgress: 0,
             logs: [],
             bytesDownloaded: 0,
           };
       // Seed total bytes; keep any existing downloaded bytes
       if (typeof item.bytesTotal === 'number' && item.bytesTotal > 0) {
         snapshot.bytesTotal = item.bytesTotal;
+          snapshot.uncompressedTotal = item.bytesTotal;
+        manifestSum += item.bytesTotal;
       }
       this.seriesMap.set(item.seriesUID, snapshot);
     }
-    // Initialize fixed manifest total from metadata sum once
-    let metaSum = 0;
-    for (const s of this.seriesMap.values()) {
-      if (typeof s.bytesTotal === 'number' && s.bytesTotal > 0) {
-        metaSum += s.bytesTotal;
-      }
-    }
-    if (metaSum > 0 && this.manifestTotalBytesFixed === undefined) {
-      this.manifestTotalBytesFixed = metaSum;
+    if (manifestSum > 0) {
+      this.manifestInitialBytesTotal = manifestSum;
     }
     this.publish();
   }
@@ -234,6 +247,8 @@ export class DownloadStatusService implements OnDestroy {
       progress: this.resolveProgress(0, payload.progress, payload.status),
       logs: [],
       lastUpdatedAt: payload.timestamp ?? new Date().toISOString(),
+      bytesDownloaded: typeof payload.bytesDownloaded === 'number' && payload.bytesDownloaded >= 0 ? payload.bytesDownloaded : 0,
+      bytesTotal: typeof payload.bytesTotal === 'number' && payload.bytesTotal > 0 ? payload.bytesTotal : undefined,
     };
   }
 
@@ -246,6 +261,7 @@ export class DownloadStatusService implements OnDestroy {
       queued: 0,
       metadata: 10,
       downloading: 0,
+      decompressing: 80,
       skipped: 100,
       succeeded: 100,
       failed: 100,
@@ -270,6 +286,141 @@ export class DownloadStatusService implements OnDestroy {
     return Math.max(0, Math.min(100, Math.round(value)));
   }
 
+  private clampFraction(value: number | undefined): number {
+    if (typeof value !== 'number' || Number.isNaN(value)) {
+      return 0;
+    }
+    if (value < 0) {
+      return 0;
+    }
+    if (value > 1) {
+      return 1;
+    }
+    return value;
+  }
+
+  private resolvePhase(
+    status: SeriesDownloadSnapshot['status'],
+    incomingPhase?: SeriesDownloadPhase,
+    currentPhase?: SeriesDownloadPhase,
+  ): SeriesDownloadPhase {
+    if (incomingPhase) {
+      return incomingPhase;
+    }
+
+    switch (status) {
+      case 'queued':
+        return 'queued';
+      case 'metadata':
+        return 'metadata';
+      case 'downloading':
+        return 'download';
+      case 'decompressing':
+        return 'decompress';
+      case 'succeeded':
+      case 'skipped':
+        return 'complete';
+      case 'failed':
+      case 'cancelled':
+        return 'failed';
+      default:
+        return currentPhase ?? 'download';
+    }
+  }
+
+  private resolvePhaseProgress(
+    snapshot: SeriesDownloadSnapshot,
+    phase: SeriesDownloadPhase,
+    incomingPhaseProgress: number | undefined,
+    fallbackProgress: number,
+  ): number | undefined {
+    if (typeof incomingPhaseProgress === 'number' && !Number.isNaN(incomingPhaseProgress)) {
+      return this.clampProgress(incomingPhaseProgress);
+    }
+
+    if (phase === 'download') {
+      const percent = this.calculatePercent(snapshot.bytesDownloaded, snapshot.bytesTotal, fallbackProgress);
+      return percent;
+    }
+
+    if (phase === 'decompress') {
+      const percent = this.calculatePercent(snapshot.uncompressedBytes, snapshot.uncompressedTotal, undefined);
+      if (typeof percent === 'number') {
+        return percent;
+      }
+      return snapshot.phaseProgress ?? 0;
+    }
+
+    if (phase === 'complete' || phase === 'failed') {
+      return 100;
+    }
+
+    return snapshot.phaseProgress;
+  }
+
+  private calculatePercent(
+    done?: number,
+    total?: number,
+    fallback?: number,
+  ): number | undefined {
+    if (typeof done === 'number' && typeof total === 'number' && total > 0) {
+      return this.clampProgress((done / total) * 100);
+    }
+    if (typeof fallback === 'number' && !Number.isNaN(fallback)) {
+      return this.clampProgress(fallback);
+    }
+    return undefined;
+  }
+
+  private computeBlendedProgress(snapshot: SeriesDownloadSnapshot, fallbackProgress: number): number {
+    if (TERMINAL_STATUSES.has(snapshot.status)) {
+      return 100;
+    }
+
+    const downloadFraction = this.computeDownloadFraction(snapshot, fallbackProgress);
+    const decompressFraction = this.computeDecompressFraction(snapshot);
+
+    const blended = downloadFraction * 0.8 + decompressFraction * 0.2;
+    return this.clampProgress(blended * 100);
+  }
+
+  private computeDownloadFraction(snapshot: SeriesDownloadSnapshot, fallbackProgress: number): number {
+    if (
+      typeof snapshot.bytesDownloaded === 'number' &&
+      typeof snapshot.bytesTotal === 'number' &&
+      snapshot.bytesTotal > 0
+    ) {
+      return this.clampFraction(snapshot.bytesDownloaded / snapshot.bytesTotal);
+    }
+
+    const percentSource = snapshot.phase === 'download'
+      ? snapshot.phaseProgress ?? fallbackProgress
+      : fallbackProgress;
+
+    return this.clampFraction((percentSource ?? 0) / 100);
+  }
+
+  private computeDecompressFraction(snapshot: SeriesDownloadSnapshot): number {
+    if (snapshot.phase === 'decompress') {
+      if (typeof snapshot.phaseProgress === 'number') {
+        return this.clampFraction(snapshot.phaseProgress / 100);
+      }
+      if (
+        typeof snapshot.uncompressedBytes === 'number' &&
+        typeof snapshot.uncompressedTotal === 'number' &&
+        snapshot.uncompressedTotal > 0
+      ) {
+        return this.clampFraction(snapshot.uncompressedBytes / snapshot.uncompressedTotal);
+      }
+    }
+
+    if (TERMINAL_STATUSES.has(snapshot.status)) {
+      return 1;
+    }
+
+    return 0;
+  }
+
   private publish(): void {
     this.seriesSubject.next(Array.from(this.seriesMap.values()));
     const overview = this.calculateOverview();
@@ -277,17 +428,29 @@ export class DownloadStatusService implements OnDestroy {
     let bytesDownloaded = 0;
     let bytesTotal = 0;
     for (const s of this.seriesMap.values()) {
-      if (typeof s.bytesDownloaded === 'number') {
-        bytesDownloaded += s.bytesDownloaded;
-      }
-      if (typeof s.bytesTotal === 'number' && s.bytesTotal > 0) {
-        bytesTotal += s.bytesTotal;
+      const total = typeof s.uncompressedTotal === 'number' && s.uncompressedTotal > 0
+        ? s.uncompressedTotal
+        : typeof s.bytesTotal === 'number' && s.bytesTotal > 0
+          ? s.bytesTotal
+          : 0;
+
+      if (total > 0) {
+        const fraction = Math.min(1, Math.max(0, (s.progress ?? 0) / 100));
+        bytesDownloaded += Math.round(total * fraction);
+        bytesTotal += total;
+      } else {
+        if (typeof s.bytesDownloaded === 'number') {
+          bytesDownloaded += s.bytesDownloaded;
+        }
+        if (typeof s.bytesTotal === 'number' && s.bytesTotal > 0) {
+          bytesTotal += s.bytesTotal;
+        }
       }
     }
-    // If fixed denominator not set yet and we have a positive sum, set it once
-    if (this.manifestTotalBytesFixed === undefined && bytesTotal > 0) {
-      this.manifestTotalBytesFixed = bytesTotal;
+    if (this.manifestInitialBytesTotal === 0 && bytesTotal > 0) {
+      this.manifestInitialBytesTotal = bytesTotal;
     }
+    const displayTotal = this.manifestInitialBytesTotal > 0 ? Math.max(this.manifestInitialBytesTotal, bytesTotal) : bytesTotal;
     this.overviewSubject.next(overview);
     // Update manifest snapshot from overview aggregation
     const current = this.manifestSubject.value;
@@ -302,8 +465,7 @@ export class DownloadStatusService implements OnDestroy {
       cancelled: overview.cancelled,
       progressPercent: overview.progressPercent,
       bytesDownloaded,
-      // Use fixed denominator once established; keep undefined until known
-      bytesTotal: (this.manifestTotalBytesFixed ?? bytesTotal) > 0 ? (this.manifestTotalBytesFixed ?? bytesTotal) : undefined,
+      bytesTotal: displayTotal > 0 ? displayTotal : undefined,
       completedAt:
         overview.total > 0 && overview.active === 0 && (overview.completed + overview.failed + overview.skipped + overview.cancelled) === overview.total
           ? new Date().toISOString()

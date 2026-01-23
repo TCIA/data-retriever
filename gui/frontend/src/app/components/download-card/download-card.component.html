@@ -31,16 +31,11 @@
         </div>
       </ng-template>
       <div class="progress-caption">
-        <ng-container *ngIf="series?.bytesDownloaded as bd">
-          <ng-container *ngIf="series?.status === 'succeeded'; else showWithTotal">
-            <span>{{ bd | bytes }}</span>
+        <ng-container *ngIf="displayBytesDownloaded as downloaded">
+          <span>{{ downloaded | bytes }}</span>
+          <ng-container *ngIf="displayBytesTotal as total">
+            <span> / {{ total | bytes }}</span>
           </ng-container>
-          <ng-template #showWithTotal>
-            <span>{{ bd | bytes }}</span>
-            <ng-container *ngIf="series?.bytesTotal as bt">
-              <span> / {{ bt | bytes }}</span>
-            </ng-container>
-          </ng-template>
         </ng-container>
       </div>
     </div>
