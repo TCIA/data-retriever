@@ -2,10 +2,19 @@ export type SeriesDownloadStatus =
   | 'queued'
   | 'metadata'
   | 'downloading'
+  | 'decompressing'
   | 'skipped'
   | 'succeeded'
   | 'failed'
   | 'cancelled';
+
+export type SeriesDownloadPhase =
+  | 'queued'
+  | 'metadata'
+  | 'download'
+  | 'decompress'
+  | 'complete'
+  | 'failed';
 
 export interface SeriesDownloadSnapshot {
   seriesUID: string;
@@ -15,9 +24,13 @@ export interface SeriesDownloadSnapshot {
   modality?: string;
   status: SeriesDownloadStatus;
   progress: number;
+  phase?: SeriesDownloadPhase;
+  phaseProgress?: number;
   logs: string[];
   bytesDownloaded?: number;
   bytesTotal?: number;
+  uncompressedBytes?: number;
+  uncompressedTotal?: number;
   attempts?: number;
   startedAt?: string;
   completedAt?: string;
@@ -33,9 +46,13 @@ export interface SeriesDownloadEventPayload {
   modality?: string;
   status: SeriesDownloadStatus;
   progress?: number;
+  phase?: SeriesDownloadPhase;
+  phaseProgress?: number;
   message?: string;
   bytesDownloaded?: number;
   bytesTotal?: number;
+  uncompressedBytes?: number;
+  uncompressedTotal?: number;
   attempt?: number;
   timestamp?: string;
 }

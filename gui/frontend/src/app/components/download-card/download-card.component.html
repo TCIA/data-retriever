@@ -9,30 +9,33 @@
 
   <div class="card-body">
     <div class="progress-shell">
-      <ng-container *ngIf="series?.status === 'succeeded'; else activeSpinner">
+      <ng-container *ngIf="series?.status === 'succeeded'; else activeProgress">
         <div class="complete-indicator" [style.--accent]="accentColor" role="img" aria-label="Completed">
           <span class="material-icons-outlined">check_circle</span>
         </div>
       </ng-container>
-      <ng-template #activeSpinner>
+      <ng-template #activeProgress>
         <div
-          class="spinner"
+          class="ring"
+          [style.--size]="'48px'"
+          [style.--thickness]="'6px'"
+          [style.--value]="bytesProgressValue"
           [style.--accent]="accentColor"
+          [style.--track]="'var(--ring-track)'"
+          [style.--bg]="'var(--card-bg)'"
           aria-live="polite"
           role="img"
-        ></div>
+        >
+          <div class="ring-inner"></div>
+          <div class="ring-label">{{ bytesProgressValue }}%</div>
+        </div>
       </ng-template>
       <div class="progress-caption">
-        <ng-container *ngIf="series?.bytesDownloaded as bd">
-          <ng-container *ngIf="series?.status === 'succeeded'; else showWithTotal">
-            <span>{{ bd | bytes }}</span>
+        <ng-container *ngIf="displayBytesDownloaded as downloaded">
+          <span>{{ downloaded | bytes }}</span>
+          <ng-container *ngIf="displayBytesTotal as total">
+            <span> / {{ total | bytes }}</span>
           </ng-container>
-          <ng-template #showWithTotal>
-            <span>{{ bd | bytes }}</span>
-            <ng-container *ngIf="series?.bytesTotal as bt">
-              <span> / {{ bt | bytes }}</span>
-            </ng-container>
-          </ng-template>
         </ng-container>
       </div>
     </div>

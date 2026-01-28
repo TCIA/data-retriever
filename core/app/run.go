@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -18,7 +19,7 @@ import (
 type Summary struct {
 	Total      int32
 	Downloaded int32
-	Synced		 int32
+	Synced     int32
 	Skipped    int32
 	Failed     int32
 	Elapsed    time.Duration
@@ -26,9 +27,10 @@ type Summary struct {
 
 // Callbacks allows callers to intercept CLI-style output.
 type Callbacks struct {
-	Stdout func(string)
-	Stderr func(string)
-	Series func(SeriesEvent)
+	Stdout   func(string)
+	Stderr   func(string)
+	Series   func(SeriesEvent)
+	Manifest func(ManifestPayload)
 }
 
 func (cb Callbacks) emitStdout(msg string) {
@@ -53,42 +55,180 @@ func (cb Callbacks) emitSeries(evt SeriesEvent) {
 	}
 }
 
+func (cb Callbacks) emitManifest(payload ManifestPayload) {
+	if cb.Manifest != nil {
+		cb.Manifest(payload)
+	}
+}
+
+type ManifestPayload struct {
+	ManifestPath string                 `json:"manifestPath,omitempty"`
+	Timestamp    string                 `json:"timestamp,omitempty"`
+	Series       []ManifestSeriesRecord `json:"series"`
+}
+
+type ManifestSeriesRecord struct {
+	SeriesUID         string `json:"seriesUID"`
+	BytesTotal        int64  `json:"bytesTotal,omitempty"`
+	SeriesDescription string `json:"seriesDescription,omitempty"`
+	StudyUID          string `json:"studyUID,omitempty"`
+	SubjectID         string `json:"subjectID,omitempty"`
+	Modality          string `json:"modality,omitempty"`
+}
+
 // SeriesEvent represents a lifecycle update for a series download.
 type SeriesEvent struct {
-	SeriesInstanceUID         string    `json:"seriesUID"`
-	StudyInstanceUID          string    `json:"studyUID,omitempty"`
+	SeriesInstanceUID string    `json:"seriesUID"`
+	StudyInstanceUID  string    `json:"studyUID,omitempty"`
 	PatientID         string    `json:"subjectID,omitempty"`
 	SeriesDescription string    `json:"seriesDescription,omitempty"`
 	Modality          string    `json:"modality,omitempty"`
 	Status            string    `json:"status"`
 	Progress          float64   `json:"progress,omitempty"`
+	Phase             string    `json:"phase,omitempty"`
+	PhaseProgress     float64   `json:"phaseProgress,omitempty"`
 	BytesDownloaded   int64     `json:"bytesDownloaded,omitempty"`
 	BytesTotal        int64     `json:"bytesTotal,omitempty"`
+	UncompressedBytes int64     `json:"uncompressedBytes,omitempty"`
+	UncompressedTotal int64     `json:"uncompressedTotal,omitempty"`
 	Message           string    `json:"message,omitempty"`
 	Timestamp         time.Time `json:"timestamp"`
+}
+
+const (
+	seriesPhaseQueued     = "queued"
+	seriesPhaseMetadata   = "metadata"
+	seriesPhaseDownload   = "download"
+	seriesPhaseDecompress = "decompress"
+	seriesPhaseComplete   = "complete"
+	seriesPhaseFailure    = "failed"
+)
+
+func emitManifestMetadata(callbacks Callbacks, manifestPath string, files []*FileInfo) {
+	if callbacks.Manifest == nil || len(files) == 0 {
+		return
+	}
+
+	payload := ManifestPayload{
+		ManifestPath: manifestPath,
+		Timestamp:    time.Now().UTC().Format(time.RFC3339),
+		Series:       make([]ManifestSeriesRecord, 0, len(files)),
+	}
+
+	seen := make(map[string]struct{})
+	for _, file := range files {
+		if file == nil {
+			continue
+		}
+
+		seriesUID := strings.TrimSpace(file.SeriesInstanceUID)
+		if seriesUID == "" {
+			continue
+		}
+		if _, duplicate := seen[seriesUID]; duplicate {
+			continue
+		}
+		seen[seriesUID] = struct{}{}
+
+		record := ManifestSeriesRecord{
+			SeriesUID:         seriesUID,
+			SeriesDescription: strings.TrimSpace(file.SeriesDescription),
+			StudyUID:          strings.TrimSpace(file.StudyInstanceUID),
+			SubjectID:         strings.TrimSpace(file.PatientID),
+			Modality:          strings.TrimSpace(file.Modality),
+		}
+
+		if bytes := parseManifestBytes(file.FileSize); bytes > 0 {
+			record.BytesTotal = bytes
+		}
+
+		payload.Series = append(payload.Series, record)
+	}
+
+	if len(payload.Series) == 0 {
+		return
+	}
+
+	callbacks.emitManifest(payload)
+}
+
+func parseManifestBytes(raw string) int64 {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return 0
+	}
+
+	clean := strings.ReplaceAll(trimmed, ",", "")
+	if value, err := strconv.ParseInt(clean, 10, 64); err == nil {
+		if value > 0 {
+			return value
+		}
+		return 0
+	}
+
+	if value, err := strconv.ParseFloat(clean, 64); err == nil {
+		if value > 0 {
+			return int64(value)
+		}
+	}
+
+	return 0
 }
 
 func newSeriesEvent(file *FileInfo, status, message string, progress float64) SeriesEvent {
 	progress = clampProgress(progress)
 	if file == nil {
 		return SeriesEvent{
-			Status:    status,
-			Message:   message,
-			Progress:  progress,
+			Status:   status,
+			Message:  message,
+			Progress: progress,
+			Phase:    resolvePhase(status),
+			PhaseProgress: func() float64 {
+				if status == "succeeded" || status == "failed" || status == "cancelled" || status == "skipped" {
+					return 100
+				}
+				return progress
+			}(),
 			Timestamp: time.Now(),
 		}
 	}
 
 	return SeriesEvent{
-		SeriesInstanceUID:         file.SeriesInstanceUID,
-		StudyInstanceUID:          file.StudyInstanceUID,
+		SeriesInstanceUID: file.SeriesInstanceUID,
+		StudyInstanceUID:  file.StudyInstanceUID,
 		PatientID:         file.PatientID,
 		SeriesDescription: file.SeriesDescription,
 		Modality:          file.Modality,
 		Status:            status,
 		Progress:          progress,
-		Message:           message,
-		Timestamp:         time.Now(),
+		Phase:             resolvePhase(status),
+		PhaseProgress: func() float64 {
+			if status == "succeeded" || status == "failed" || status == "cancelled" || status == "skipped" {
+				return 100
+			}
+			return progress
+		}(),
+		Message:   message,
+		Timestamp: time.Now(),
+	}
+}
+
+func resolvePhase(status string) string {
+	switch status {
+	case "queued":
+		return seriesPhaseQueued
+	case "metadata":
+		return seriesPhaseMetadata
+	case "downloading":
+		return seriesPhaseDownload
+	case "decompressing":
+		return seriesPhaseDecompress
+	case "succeeded", "skipped":
+		return seriesPhaseComplete
+	case "failed", "cancelled":
+		return seriesPhaseFailure
+	default:
+		return ""
 	}
 }
 
@@ -109,7 +249,7 @@ func clampProgress(value float64) float64 {
 type DownloadStats struct {
 	Total          int32
 	Downloaded     int32
-	Synced				 int32
+	Synced         int32
 	Skipped        int32
 	Failed         int32
 	StartTime      time.Time
@@ -123,7 +263,7 @@ type WorkerContext struct {
 	Context    context.Context
 	HTTPClient *http.Client
 	AuthToken  *Token
-	Gen3Auth	 *Gen3AuthManager
+	Gen3Auth   *Gen3AuthManager
 	Options    *Options
 	Stats      *DownloadStats
 	WorkerID   int
@@ -201,7 +341,6 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 
 	stats := &DownloadStats{Total: int32(len(files)), StartTime: time.Now()}
 
-
 	itemType := "items"
 	if len(files) > 0 {
 		if files[0].S5cmdManifestPath != "" {
@@ -227,7 +366,7 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 		Context:    ctx,
 		HTTPClient: client,
 		AuthToken:  token,
-		Gen3Auth:		gen3Auth,
+		Gen3Auth:   gen3Auth,
 		Options:    options,
 		Stats:      stats,
 		Callbacks:  callbacks,
@@ -237,7 +376,6 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 
 	var wg sync.WaitGroup
 	inputChan := make(chan *FileInfo, len(files))
-
 
 	for i := 0; i < options.Concurrent; i++ {
 		wc := workerCtx
@@ -343,7 +481,6 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 		}
 	}
 
-
 	callbacks.emitProgress(stats, "Complete", options.Debug)
 	if !options.Debug {
 		callbacks.emitStderr("\n")
@@ -429,25 +566,67 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 
 	wc.emitSeriesEvent(fileInfo, "downloading", fmt.Sprintf("[Worker %d] Download started", wc.WorkerID), 0)
 
-	// Create progress callback that emits series events with bytes info
+	var lastCompressedTotal int64
+	// Create progress callback that emits series events with bytes info during download phase
 	onProgress := func(percent float64, bytesDownloaded int64, bytesTotal int64) {
-		// Build event with bytes for frontend display; omit message to avoid log spam
+		if bytesTotal > 0 {
+			if bytesTotal > lastCompressedTotal {
+				lastCompressedTotal = bytesTotal
+			}
+		} else if bytesDownloaded > lastCompressedTotal {
+			lastCompressedTotal = bytesDownloaded
+		}
 		evt := SeriesEvent{
-			SeriesInstanceUID:  fileInfo.SeriesInstanceUID,
-			StudyInstanceUID:   fileInfo.StudyInstanceUID,
-			PatientID:          fileInfo.PatientID,
-			SeriesDescription:  fileInfo.SeriesDescription,
-			Modality:           fileInfo.Modality,
-			Status:             "downloading",
-			Progress:           clampProgress(percent),
-			BytesDownloaded:    bytesDownloaded,
-			BytesTotal:         bytesTotal,
-			Timestamp:          time.Now(),
+			SeriesInstanceUID: fileInfo.SeriesInstanceUID,
+			StudyInstanceUID:  fileInfo.StudyInstanceUID,
+			PatientID:         fileInfo.PatientID,
+			SeriesDescription: fileInfo.SeriesDescription,
+			Modality:          fileInfo.Modality,
+			Status:            "downloading",
+			Progress:          clampProgress(percent),
+			Phase:             seriesPhaseDownload,
+			PhaseProgress:     clampProgress(percent),
+			BytesDownloaded:   bytesDownloaded,
+			BytesTotal:        bytesTotal,
+			Timestamp:         time.Now(),
 		}
 		wc.Callbacks.emitSeries(evt)
 	}
 
-	err := fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.AuthToken, wc.Options, onProgress, wc.Gen3Auth)
+	var expectedUncompressed int64
+	if fileInfo.FileSize != "" {
+		if parsed, err := strconv.ParseInt(strings.ReplaceAll(fileInfo.FileSize, ",", ""), 10, 64); err == nil && parsed > 0 {
+			expectedUncompressed = parsed
+		}
+	}
+
+	onDecompress := func(percent float64, bytesUnpacked int64, bytesTotal int64) {
+		if bytesTotal <= 0 {
+			bytesTotal = expectedUncompressed
+		}
+		if bytesUnpacked <= 0 && bytesTotal > 0 {
+			bytesUnpacked = int64(math.Round((percent / 100.0) * float64(bytesTotal)))
+		}
+		evt := SeriesEvent{
+			SeriesInstanceUID: fileInfo.SeriesInstanceUID,
+			StudyInstanceUID:  fileInfo.StudyInstanceUID,
+			PatientID:         fileInfo.PatientID,
+			SeriesDescription: fileInfo.SeriesDescription,
+			Modality:          fileInfo.Modality,
+			Status:            "decompressing",
+			Progress:          clampProgress(percent),
+			Phase:             seriesPhaseDecompress,
+			PhaseProgress:     clampProgress(percent),
+			BytesDownloaded:   lastCompressedTotal,
+			BytesTotal:        lastCompressedTotal,
+			UncompressedBytes: bytesUnpacked,
+			UncompressedTotal: bytesTotal,
+			Timestamp:         time.Now(),
+		}
+		wc.Callbacks.emitSeries(evt)
+	}
+
+	err := fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.AuthToken, wc.Options, onProgress, onDecompress, wc.Gen3Auth)
 	if err != nil {
 		Logger.Warnf("[Worker %d] Download %s failed - %s", wc.WorkerID, fileInfo.SeriesInstanceUID, err)
 		atomic.AddInt32(&wc.Stats.Failed, 1)
@@ -461,7 +640,6 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 			Logger.Warnf("[Worker %d] Save meta info %s failed - %s", wc.WorkerID, fileInfo.SeriesInstanceUID, err)
 		}
 	}
-
 
 	if fileInfo.IsSyncJob {
 		atomic.AddInt32(&wc.Stats.Synced, 1)
@@ -546,6 +724,7 @@ func decodeInputFile(ctx context.Context, filePath string, client *http.Client, 
 	switch ext {
 	case ".tcia":
 		files := decodeTCIA(ctx, filePath, client, token, options, callbacks)
+		emitManifestMetadata(callbacks, filePath, files)
 		return files, 0, nil
 	case ".s5cmd":
 		files, newJobs := decodeS5cmd(filePath, options.Output, s5cmdMap)
@@ -556,7 +735,11 @@ func decodeInputFile(ctx context.Context, filePath string, client *http.Client, 
 		if err == nil {
 			// Success, handle like a TCIA manifest
 			files, err := FetchMetadataForSeriesUIDs(ctx, seriesUIDs, client, token, options, callbacks)
-			return files, 0, err
+			if err != nil {
+				return nil, 0, err
+			}
+			emitManifestMetadata(callbacks, filePath, files)
+			return files, 0, nil
 		} else if err != ErrSeriesInstanceUIDColumnNotFound {
 			// A real error occurred
 			return nil, 0, fmt.Errorf("could not get series UIDs from spreadsheet: %w", err)
@@ -564,7 +747,11 @@ func decodeInputFile(ctx context.Context, filePath string, client *http.Client, 
 
 		// Fallback to regular spreadsheet handling
 		files, err := decodeSpreadsheet(filePath)
-		return files, 0, err
+		if err != nil {
+			return nil, 0, err
+		}
+		emitManifestMetadata(callbacks, filePath, files)
+		return files, 0, nil
 	default:
 		return nil, 0, fmt.Errorf("unsupported input file format: %s", ext)
 	}

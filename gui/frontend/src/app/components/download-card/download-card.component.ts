@@ -38,6 +38,8 @@ export class DownloadCardComponent {
         return 'Fetching Metadata';
       case 'downloading':
         return 'Downloading';
+      case 'decompressing':
+        return 'Decompressing';
       case 'skipped':
         return 'Skipped';
       case 'succeeded':
@@ -52,12 +54,11 @@ export class DownloadCardComponent {
   }
 
   get progressValue(): number {
-    const value = this.series?.progress ?? 0;
-    return Math.max(0, Math.min(100, Math.round(value)));
+    return this.bytesProgressValue;
   }
 
   get progressLabel(): string {
-    return `${this.progressValue}%`;
+    return `${this.bytesProgressValue}%`;
   }
 
   get accentColor(): string {
@@ -73,6 +74,46 @@ export class DownloadCardComponent {
       default:
         return '#2196f3';
     }
+  }
+
+  // Bytes-based progress: downloaded / total, fallback to status progress
+  get bytesProgressValue(): number {
+    const value = this.series?.progress ?? 0;
+    return Math.max(0, Math.min(100, Math.round(value)));
+  }
+
+  private get progressFraction(): number {
+    const value = this.series?.progress ?? 0;
+    if (!Number.isFinite(value)) {
+      return 0;
+    }
+    return Math.min(1, Math.max(0, value / 100));
+  }
+
+  get displayBytesTotal(): number | null {
+    const uncompressed = this.series?.uncompressedTotal;
+    if (typeof uncompressed === 'number' && uncompressed > 0) {
+      return uncompressed;
+    }
+    const total = this.series?.bytesTotal;
+    if (typeof total === 'number' && total > 0) {
+      return total;
+    }
+    return null;
+  }
+
+  get displayBytesDownloaded(): number | null {
+    const total = this.displayBytesTotal;
+    if (typeof total === 'number' && total > 0) {
+      return Math.round(total * this.progressFraction);
+    }
+    if (typeof this.series?.uncompressedBytes === 'number' && this.series.uncompressedBytes >= 0) {
+      return this.series.uncompressedBytes;
+    }
+    if (typeof this.series?.bytesDownloaded === 'number') {
+      return this.series.bytesDownloaded;
+    }
+    return null;
   }
 
   get showPauseIcon(): boolean {

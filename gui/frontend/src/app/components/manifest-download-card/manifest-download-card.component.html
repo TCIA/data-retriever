@@ -9,13 +9,26 @@
 
   <div class="card-body">
     <div class="progress-shell">
-      <ng-container *ngIf="isCompleted; else activeSpinner">
+      <ng-container *ngIf="isCompleted; else activeProgress">
         <div class="complete-indicator" role="img" aria-label="Completed">
           <span class="material-icons-outlined">check_circle</span>
         </div>
       </ng-container>
-      <ng-template #activeSpinner>
-        <div class="spinner" aria-live="polite" role="img"></div>
+      <ng-template #activeProgress>
+        <div
+          class="ring"
+          [style.--size]="'48px'"
+          [style.--thickness]="'6px'"
+          [style.--value]="progressValue"
+          [style.--accent]="'#2196f3'"
+          [style.--track]="'var(--ring-track)'"
+          [style.--bg]="'var(--card-bg)'"
+          aria-live="polite"
+          role="img"
+        >
+          <div class="ring-inner"></div>
+          <div class="ring-label">{{ progressValue }}%</div>
+        </div>
       </ng-template>
       <div class="progress-caption">
         <span>{{ statusLabel }}</span>
