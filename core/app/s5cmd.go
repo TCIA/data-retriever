@@ -5,10 +5,131 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+  "embed"
 	"os"
 	"path/filepath"
 	"strings"
+	"context"
+  "github.com/apache/arrow/go/v14/arrow/array"
+  "github.com/apache/arrow/go/v14/arrow/memory"
+  "github.com/apache/arrow/go/v14/parquet/file"
+  pqarrow "github.com/apache/arrow/go/v14/parquet/pqarrow"
 )
+
+type SeriesMetadata struct {
+    SeriesInstanceUID   string
+		series_aws_url			string
+}
+
+//go:embed parquet/idc_index.parquet
+var parquetFS embed.FS
+
+
+func loadSeriesMetadataFromParquet() (map[string]SeriesMetadata, error) {
+		f, err := parquetFS.Open("parquet/idc_index.parquet")
+		if err != nil {
+		    return nil, fmt.Errorf("failed to open embedded parquet: %w", err)
+		}
+		defer f.Close()
+		
+		stat, err := f.Stat()
+		if err != nil {
+		    return nil, fmt.Errorf("failed to stat parquet file: %w", err)
+		}
+		
+		readerAt, ok := f.(io.ReaderAt)
+		if !ok {
+		    return nil, fmt.Errorf("embedded file does not implement ReaderAt")
+		}
+		
+		section := io.NewSectionReader(readerAt, 0, stat.Size())
+		
+		pqReader, err := file.NewParquetReader(section)
+		if err != nil {
+		    return nil, fmt.Errorf("failed to create parquet reader: %w", err)
+		}
+		defer pqReader.Close()
+
+logger.Warnf("num row groups: %d", pqReader.NumRowGroups())
+
+for i := 0; i < pqReader.NumRowGroups(); i++ {
+    rg := pqReader.RowGroup(i)
+    logger.Warnf("row group %d: num rows = %d, num columns = %d", i, rg.NumRows(), rg.NumColumns())
+}
+		
+		mem := memory.NewGoAllocator()
+	
+		props := pqarrow.ArrowReadProperties{
+		    BatchSize: 8192, // THIS is where batch size goes
+		}
+		
+		arrowReader, err := pqarrow.NewFileReader(pqReader, props, mem)
+		if err != nil {
+		    return nil, fmt.Errorf("failed to create Arrow reader: %w", err)
+		}
+		
+		recReader, err := arrowReader.GetRecordReader(
+		    context.Background(),
+		    nil, // all columns
+		    nil, // all row groups
+		)
+		
+		if err != nil {
+		    return nil, fmt.Errorf("failed to get record reader: %w", err)
+		}
+		defer recReader.Release()
+
+		logger.Warnf("record reader schema: %v", recReader.Schema())
+		schema := recReader.Schema()
+for _, f := range schema.Fields() {
+    logger.Warnf("Column: %s, Type: %v", f.Name, f.Type)
+}
+
+    meta := make(map[string]SeriesMetadata)
+
+		logger.Warnf("parquet row groups: %d", pqReader.NumRowGroups())
+    for recReader.Next() {
+        rec := recReader.Record()
+				logger.Warnf("reading record")
+
+        // Get column indices
+        uidIdxs := rec.Schema().FieldIndices("SeriesInstanceUID")
+        urlIdxs := rec.Schema().FieldIndices("series_aws_url")
+        if len(uidIdxs) == 0 || len(urlIdxs) == 0 {
+            return nil, fmt.Errorf("required columns not found in parquet")
+        }
+
+        uidCol := rec.Column(uidIdxs[0]).(*array.String)
+        urlCol := rec.Column(urlIdxs[0]).(*array.String)
+
+        rows := int(rec.NumRows())
+        for i := 0; i < rows; i++ {
+            if uidCol.IsNull(i) || urlCol.IsNull(i) {
+                continue
+            }
+            uid := uidCol.Value(i)
+            url := urlCol.Value(i)
+
+            if _, exists := meta[url]; exists {
+                continue
+            }
+
+						logger.Warnf("original url: %s", url)
+            meta[url] = SeriesMetadata{
+                SeriesInstanceUID: uid,
+                series_aws_url:    url,
+            }
+        }
+				rec.Release()
+    }
+
+		if err := recReader.Err(); err != nil && err != io.EOF {
+		    return nil, fmt.Errorf("error reading Parquet records: %w", err)
+		}
+
+    return meta, nil
+}
+
 
 // loadS5cmdSeriesMapFromCSVs scans all '*-metadata.csv' files in the metadata
 // directory to build a map of previously downloaded s5cmd series.
@@ -83,6 +204,13 @@ func decodeS5cmd(filePath string, outputDir string, processedSeries map[string]s
 	}
 	defer file.Close()
 
+
+
+  seriesMeta, err := loadSeriesMetadataFromParquet()
+  if err != nil {
+      logger.Fatalf("Failed to load parquet metadata: %v", err)
+  }
+
 	var jobsToProcess []*FileInfo
 	var newJobs int
 	scanner := bufio.NewScanner(file)
@@ -123,13 +251,22 @@ func decodeS5cmd(filePath string, outputDir string, processedSeries map[string]s
 				continue
 			}
 
-			jobsToProcess = append(jobsToProcess, &FileInfo{
+			fi := &FileInfo{
 				DownloadURL:      originalURI,
 				SeriesInstanceUID:        originalURI, // Temporary ID for progress
 				OriginalS5cmdURI: originalURI,
 				S5cmdManifestPath: tempDirPath, // The temporary directory is the target for copy
 				IsSyncJob:        false,
-			})
+			}
+			//  Attach Parquet metadata if available
+			if meta, ok := seriesMeta[originalURI]; ok {
+			    fi.SeriesInstanceUID= meta.SeriesInstanceUID
+			} else {
+			    logger.Warnf("No parquet metadata found for series %s", originalURI)
+			}
+
+			jobsToProcess = append(jobsToProcess, fi)
+
 		}
 	}
 
