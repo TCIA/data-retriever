@@ -114,7 +114,7 @@ for _, f := range schema.Fields() {
                 continue
             }
 
-						logger.Warnf("original url: %s", url)
+						//logger.Warnf("original url: %s", url)
             meta[url] = SeriesMetadata{
                 SeriesInstanceUID: uid,
                 series_aws_url:    url,
