@@ -64,6 +64,7 @@ export class DownloadStatusService implements OnDestroy {
         this.ngZone.run(() => {
           try {
             this.applyEvent(payload);
+            console.error("STARTING SERIS PAYLOAD")
           } catch (error) {
             console.error('Failed to process download-series-event', error);
           }
@@ -93,6 +94,7 @@ export class DownloadStatusService implements OnDestroy {
             if (Array.isArray(payload?.series) && payload.series.length > 0) {
               this.ingestManifestSeriesMetadata(payload.series);
               this.appendManifestLog('Manifest metadata received');
+              console.error("STARTING MANIFEST PAYLOAD")
             }
           } catch (error) {
             console.error('Failed to process manifest-series-metadata', error);

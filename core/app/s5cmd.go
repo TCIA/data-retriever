@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"strconv"
 	"context"
   "github.com/apache/arrow/go/v14/arrow/array"
   "github.com/apache/arrow/go/v14/arrow/memory"
@@ -19,6 +20,7 @@ import (
 type SeriesMetadata struct {
     SeriesInstanceUID   string
 		series_aws_url			string
+		series_size_MB			float64
 }
 
 //go:embed parquet/idc_index.parquet
@@ -90,17 +92,19 @@ for _, f := range schema.Fields() {
 		logger.Warnf("parquet row groups: %d", pqReader.NumRowGroups())
     for recReader.Next() {
         rec := recReader.Record()
-				logger.Warnf("reading record")
+				//logger.Warnf("reading record")
 
         // Get column indices
         uidIdxs := rec.Schema().FieldIndices("SeriesInstanceUID")
         urlIdxs := rec.Schema().FieldIndices("series_aws_url")
+        fileSizeIdxs := rec.Schema().FieldIndices("series_size_MB")
         if len(uidIdxs) == 0 || len(urlIdxs) == 0 {
             return nil, fmt.Errorf("required columns not found in parquet")
         }
 
         uidCol := rec.Column(uidIdxs[0]).(*array.String)
         urlCol := rec.Column(urlIdxs[0]).(*array.String)
+        fileSizeCol := rec.Column(fileSizeIdxs[0]).(*array.Float64)
 
         rows := int(rec.NumRows())
         for i := 0; i < rows; i++ {
@@ -109,6 +113,7 @@ for _, f := range schema.Fields() {
             }
             uid := uidCol.Value(i)
             url := urlCol.Value(i)
+            fileSize := fileSizeCol.Value(i)
 
             if _, exists := meta[url]; exists {
                 continue
@@ -118,6 +123,7 @@ for _, f := range schema.Fields() {
             meta[url] = SeriesMetadata{
                 SeriesInstanceUID: uid,
                 series_aws_url:    url,
+								series_size_MB:		 fileSize,
             }
         }
 				rec.Release()
@@ -261,6 +267,10 @@ func decodeS5cmd(filePath string, outputDir string, processedSeries map[string]s
 			//  Attach Parquet metadata if available
 			if meta, ok := seriesMeta[originalURI]; ok {
 			    fi.SeriesInstanceUID= meta.SeriesInstanceUID
+					fi.FileSize = strconv.FormatInt(
+											    int64(meta.series_size_MB*1024*1024),
+											    10,
+												)
 			} else {
 			    logger.Warnf("No parquet metadata found for series %s", originalURI)
 			}

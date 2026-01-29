@@ -728,6 +728,7 @@ func decodeInputFile(ctx context.Context, filePath string, client *http.Client, 
 		return files, 0, nil
 	case ".s5cmd":
 		files, newJobs := decodeS5cmd(filePath, options.Output, s5cmdMap)
+		emitManifestMetadata(callbacks, filePath, files)
 		return files, newJobs, nil
 	case ".csv", ".tsv", ".xlsx":
 		// Try to decode as a SeriesInstanceUID spreadsheet first
