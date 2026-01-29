@@ -635,11 +635,6 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 		return
 	}
 
-	if !isSpreadsheetInput {
-		if err := fileInfo.GetMeta(wc.Context, wc.Options.Output); err != nil {
-			Logger.Warnf("[Worker %d] Save meta info %s failed - %s", wc.WorkerID, fileInfo.SeriesInstanceUID, err)
-		}
-	}
 
 	if fileInfo.IsSyncJob {
 		atomic.AddInt32(&wc.Stats.Synced, 1)
