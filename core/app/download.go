@@ -215,7 +215,7 @@ func saveMetadataToCache(info *FileInfo, cachePath string) error {
 }
 
 // FetchMetadataForSeriesUIDs fetches metadata for a list of series UIDs in parallel
-func FetchMetadataForSeriesUIDs(ctx context.Context, seriesIDs []string, httpClient *http.Client, authToken *Token, options *Options, callbacks Callbacks) ([]*FileInfo, error) {
+func FetchMetadataForSeriesUIDs(ctx context.Context, seriesIDs []string, httpClient *http.Client, options *Options, callbacks Callbacks) ([]*FileInfo, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -280,14 +280,6 @@ func FetchMetadataForSeriesUIDs(ctx context.Context, seriesIDs []string, httpCli
 				// Set headers
 				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-				// Get current access token
-				accessToken, err := authToken.GetAccessToken()
-				if err != nil {
-					logger.Errorf("[Meta Worker %d] Failed to get access token: %v", workerID, err)
-					metaStats.updateProgress("failed", seriesID)
-					continue
-				}
-				req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 
 				// Set timeout for metadata request
 				reqCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
@@ -367,7 +359,7 @@ func FetchMetadataForSeriesUIDs(ctx context.Context, seriesIDs []string, httpCli
 	return results, nil
 }
 
-func decodeTCIA(ctx context.Context, path string, httpClient *http.Client, authToken *Token, options *Options, callbacks Callbacks) []*FileInfo {
+func decodeTCIA(ctx context.Context, path string, httpClient *http.Client, options *Options, callbacks Callbacks) []*FileInfo {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -408,12 +400,6 @@ func decodeTCIA(ctx context.Context, path string, httpClient *http.Client, authT
 		return nil
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	accessToken, err := authToken.GetAccessToken()
-	if err != nil {
-		logger.Errorf("Failed to get access token: %v", err)
-		return nil
-	}
-	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 
 	resp, err := doRequest(httpClient, req)
 	if err != nil {
@@ -855,7 +841,7 @@ func (info *FileInfo) GetMeta(ctx context.Context, output string) error {
 }
 
 // Download is real function to download file with retry logic
-func (info *FileInfo) Download(ctx context.Context, output string, httpClient *http.Client, authToken *Token, options *Options, onProgress ProgressFunc, onDecompress ProgressFunc, gen3Auth *Gen3AuthManager) error {
+func (info *FileInfo) Download(ctx context.Context, output string, httpClient *http.Client, options *Options, onProgress ProgressFunc, onDecompress ProgressFunc, gen3Auth *Gen3AuthManager) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -863,11 +849,11 @@ func (info *FileInfo) Download(ctx context.Context, output string, httpClient *h
 	if options.RequestDelay > 0 {
 		time.Sleep(options.RequestDelay)
 	}
-	return info.DownloadWithRetry(ctx, output, httpClient, authToken, options, onProgress, onDecompress, gen3Auth)
+	return info.DownloadWithRetry(ctx, output, httpClient, options, onProgress, onDecompress, gen3Auth)
 }
 
 // DownloadWithRetry downloads file with retry logic and exponential backoff
-func (info *FileInfo) DownloadWithRetry(ctx context.Context, output string, httpClient *http.Client, authToken *Token, options *Options, onProgress ProgressFunc, onDecompress ProgressFunc, gen3Auth *Gen3AuthManager) error {
+func (info *FileInfo) DownloadWithRetry(ctx context.Context, output string, httpClient *http.Client, options *Options, onProgress ProgressFunc, onDecompress ProgressFunc, gen3Auth *Gen3AuthManager) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -885,7 +871,7 @@ func (info *FileInfo) DownloadWithRetry(ctx context.Context, output string, http
 			return ctx.Err()
 		}
 
-		err := info.doDownload(ctx, output, httpClient, authToken, options, onProgress, onDecompress, gen3Auth)
+		err := info.doDownload(ctx, output, httpClient, options, onProgress, onDecompress, gen3Auth)
 		if err == nil {
 			return nil
 		}
@@ -928,7 +914,7 @@ func isRetryableError(err error) bool {
 }
 
 // doDownload is a dispatcher for different download types
-func (info *FileInfo) doDownload(ctx context.Context, output string, httpClient *http.Client, authToken *Token, options *Options, onProgress ProgressFunc, onDecompress ProgressFunc, gen3Auth *Gen3AuthManager) error {
+func (info *FileInfo) doDownload(ctx context.Context, output string, httpClient *http.Client, options *Options, onProgress ProgressFunc, onDecompress ProgressFunc, gen3Auth *Gen3AuthManager) error {
 	// For s5cmd manifest downloads, S5cmdManifestPath is set to the temporary series directory
 	if info.S5cmdManifestPath != "" {
 		return info.downloadFromS3(ctx, info.S5cmdManifestPath, options, onProgress)
@@ -946,7 +932,7 @@ func (info *FileInfo) doDownload(ctx context.Context, output string, httpClient 
 	if info.DownloadURL != "" {
 		return info.downloadDirect(ctx, output, httpClient, options, onProgress, gen3Auth)
 	}
-	return info.downloadFromTCIA(ctx, output, httpClient, authToken, options, onProgress, onDecompress)
+	return info.downloadFromTCIA(ctx, output, httpClient, options, onProgress, onDecompress)
 }
 
 func downloadS3Object(ctx context.Context, client *s3.Client, bucket, key, targetDir string, onProgress ProgressFunc) error {
@@ -1419,7 +1405,7 @@ func (info *FileInfo) downloadDirect(ctx context.Context, output string, httpCli
 }
 
 // downloadFromTCIA performs the actual download from TCIA, with decompression
-func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpClient *http.Client, authToken *Token, options *Options, onProgress ProgressFunc, onDecompress ProgressFunc) error {
+func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpClient *http.Client, options *Options, onProgress ProgressFunc, onDecompress ProgressFunc) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -1465,12 +1451,6 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 		return fmt.Errorf("failed to create request: %v", err)
 	}
 
-	// Get current access token
-	accessToken, err := authToken.GetAccessToken()
-	if err != nil {
-		return fmt.Errorf("failed to get access token: %v", err)
-	}
-	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 
 	// Set timeout based on file size (if known)
 	var timeout time.Duration

@@ -262,7 +262,6 @@ type DownloadStats struct {
 type WorkerContext struct {
 	Context    context.Context
 	HTTPClient *http.Client
-	AuthToken  *Token
 	Gen3Auth   *Gen3AuthManager
 	Options    *Options
 	Stats      *DownloadStats
@@ -294,11 +293,6 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 		return nil, fmt.Errorf("failed to create output directory: %w", err)
 	}
 
-	tokenPath := filepath.Join(options.Output, fmt.Sprintf("%s.json", options.Username))
-	token, err := NewToken(options.Username, options.Password, tokenPath, client)
-	if err != nil {
-		return nil, err
-	}
 
 	if err := createMetadataDir(options.Output); err != nil {
 		return nil, fmt.Errorf("failed to create metadata directory: %w", err)
@@ -310,7 +304,7 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 		return nil, fmt.Errorf("Failed to load s5cmd series map from CSVs: %v", err)
 	}
 
-	files, newS5cmdJobs, err := decodeInputFile(ctx, options.Input, client, token, options, callbacks, s5cmdMap)
+	files, newS5cmdJobs, err := decodeInputFile(ctx, options.Input, client, options, callbacks, s5cmdMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode input file: %w", err)
 	}
@@ -365,7 +359,6 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 	workerCtx := WorkerContext{
 		Context:    ctx,
 		HTTPClient: client,
-		AuthToken:  token,
 		Gen3Auth:   gen3Auth,
 		Options:    options,
 		Stats:      stats,
@@ -427,7 +420,7 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 			}
 
 			fmt.Println("\nFetching metadata for new s5cmd series...")
-			fetchedMetadata, err := FetchMetadataForSeriesUIDs(ctx, uids, client, token, options, callbacks)
+			fetchedMetadata, err := FetchMetadataForSeriesUIDs(ctx, uids, client, options, callbacks)
 			if err != nil {
 				logger.Errorf("Failed to fetch s5cmd metadata: %v", err)
 			} else {
@@ -590,7 +583,7 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 		wc.Callbacks.emitSeries(evt)
 	}
 
-	err := fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.AuthToken, wc.Options, onProgress, onDecompress, wc.Gen3Auth)
+	err := fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.Options, onProgress, onDecompress, wc.Gen3Auth)
 	if err != nil {
 		Logger.Warnf("[Worker %d] Download %s failed - %s", wc.WorkerID, fileInfo.SeriesInstanceUID, err)
 		atomic.AddInt32(&wc.Stats.Failed, 1)
@@ -678,11 +671,11 @@ func (callbacks Callbacks) emitProgress(stats *DownloadStats, currentSeriesID st
 	updateProgress(stats, currentSeriesID, debugMode, callbacks)
 }
 
-func decodeInputFile(ctx context.Context, filePath string, client *http.Client, token *Token, options *Options, callbacks Callbacks, s5cmdMap map[string]string) ([]*FileInfo, int, error) {
+func decodeInputFile(ctx context.Context, filePath string, client *http.Client, options *Options, callbacks Callbacks, s5cmdMap map[string]string) ([]*FileInfo, int, error) {
 	ext := strings.ToLower(filepath.Ext(filePath))
 	switch ext {
 	case ".tcia":
-		files := decodeTCIA(ctx, filePath, client, token, options, callbacks)
+		files := decodeTCIA(ctx, filePath, client, options, callbacks)
 		emitManifestMetadata(callbacks, filePath, files)
 		return files, 0, nil
 	case ".s5cmd":
@@ -694,7 +687,7 @@ func decodeInputFile(ctx context.Context, filePath string, client *http.Client, 
 		seriesUIDs, err := getSeriesInstanceUIDsFromSpreadsheet(filePath)
 		if err == nil {
 			// Success, handle like a TCIA manifest
-			files, err := FetchMetadataForSeriesUIDs(ctx, seriesUIDs, client, token, options, callbacks)
+			files, err := FetchMetadataForSeriesUIDs(ctx, seriesUIDs, client, options, callbacks)
 			if err != nil {
 				return nil, 0, err
 			}
