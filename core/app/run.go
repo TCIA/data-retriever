@@ -415,43 +415,7 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 				continue
 			}
 
-			tempDir := seriesInfo.S5cmdManifestPath
-			filesInDir, err := os.ReadDir(tempDir)
-			if err != nil {
-				logger.Warnf("Could not read temp directory %s: %v", tempDir, err)
-				continue
-			}
-			if len(filesInDir) == 0 {
-				logger.Warnf("No files found in temp directory %s", tempDir)
-				os.Remove(tempDir)
-				continue
-			}
-
-			firstFilePath := filepath.Join(tempDir, filesInDir[0].Name())
-			firstDicom, err := ProcessDicomFile(firstFilePath)
-			if err != nil {
-				logger.Warnf("Could not get SeriesUID from %s: %v", firstFilePath, err)
-				continue
-			}
-
-			seriesUID := firstDicom.SeriesUID
-			finalDir := filepath.Join(options.Output, seriesUID)
-
-			// If the destination directory already exists, remove it. This handles cases
-			// where a user manually deletes a metadata entry to re-download a series.
-			if _, err := os.Stat(finalDir); err == nil {
-				logger.Warnf("Destination directory %s already exists. Removing it before proceeding.", finalDir)
-				if err := os.RemoveAll(finalDir); err != nil {
-					logger.Errorf("Failed to remove existing directory %s: %v", finalDir, err)
-					continue // Skip this series if cleanup fails
-				}
-			}
-
-			if err := os.Rename(tempDir, finalDir); err != nil {
-				logger.Errorf("Could not rename temp dir %s to %s: %v", tempDir, finalDir, err)
-				continue
-			}
-			s5cmdSeriesToFetchMeta[seriesUID] = seriesInfo.OriginalS5cmdURI
+			s5cmdSeriesToFetchMeta[seriesInfo.SeriesInstanceUID] = seriesInfo.OriginalS5cmdURI
 		}
 		fmt.Println("s5cmd series organization complete.")
 
@@ -722,7 +686,7 @@ func decodeInputFile(ctx context.Context, filePath string, client *http.Client, 
 		emitManifestMetadata(callbacks, filePath, files)
 		return files, 0, nil
 	case ".s5cmd":
-		files, newJobs := decodeS5cmd(filePath, options.Output, s5cmdMap)
+		files, newJobs := decodeS5cmd(filePath, options.Output, s5cmdMap, callbacks)
 		emitManifestMetadata(callbacks, filePath, files)
 		return files, newJobs, nil
 	case ".csv", ".tsv", ".xlsx":
