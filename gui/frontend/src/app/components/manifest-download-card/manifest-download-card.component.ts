@@ -33,7 +33,15 @@ export class ManifestDownloadCardComponent {
     return `${total} series • ${segments.join(' · ')}`;
   }
 
+  /**
+   * Progress value for ring fill - resets to 0 when paused (greyed out ring)
+   */
   get progressValue(): number {
+    // When paused, reset the ring fill to 0 (greyed out)
+    if (this.isPaused) {
+      return 0;
+    }
+    
     const downloaded = this.manifest?.bytesDownloaded ?? null;
     const total = this.manifest?.bytesTotal ?? null;
     let percent: number;
@@ -43,6 +51,23 @@ export class ManifestDownloadCardComponent {
       percent = Math.round(this.manifest?.progressPercent ?? 0);
     }
     return Math.max(0, Math.min(100, percent));
+  }
+
+  /**
+   * Display value shown inside the ring - shows completed percentage when paused
+   * This reflects what percentage will be skipped on resume
+   */
+  get displayProgressValue(): number {
+    if (this.isPaused) {
+      // When paused, show the "completed" progress based on series counts
+      const total = this.manifest?.total ?? 0;
+      const done = (this.manifest?.completed ?? 0) + (this.manifest?.skipped ?? 0);
+      if (total > 0) {
+        return Math.round((done / total) * 100);
+      }
+      return 0;
+    }
+    return this.progressValue;
   }
 
   get progressLabel(): string {

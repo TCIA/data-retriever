@@ -17,8 +17,8 @@
       <ng-template #activeProgress>
         <div
           class="ring"
-          [style.--size]="'72px'"
-          [style.--thickness]="'6px'"
+          [style.--size]="'96px'"
+          [style.--thickness]="'8px'"
           [style.--value]="progressValue"
           [style.--accent]="isPaused ? 'var(--ring-paused)' : '#2196f3'"
           [style.--track]="'var(--ring-track)'"
@@ -36,7 +36,7 @@
             <span class="material-icons">{{ isPaused ? 'play_arrow' : 'pause' }}</span>
           </button>
           <div class="ring-inner"></div>
-          <div class="ring-label">{{ progressValue }}%</div>
+          <div class="ring-label">{{ displayProgressValue }}%</div>
         </div>
       </ng-template>
       <div class="progress-caption">

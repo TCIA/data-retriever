@@ -30,12 +30,12 @@ export function PauseManifest(arg1) {
   return window['go']['main']['App']['PauseManifest'](arg1);
 }
 
-export function RunCLIFetch(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
-  return window['go']['main']['App']['RunCLIFetch'](arg1, arg2, arg3, arg4, arg5, arg6, arg7);
-}
-
 export function ResumeManifest(arg1) {
   return window['go']['main']['App']['ResumeManifest'](arg1);
+}
+
+export function RunCLIFetch(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
+  return window['go']['main']['App']['RunCLIFetch'](arg1, arg2, arg3, arg4, arg5, arg6, arg7);
 }
 
 export function ShowDialog() {
