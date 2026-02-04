@@ -75,6 +75,10 @@ export class ManifestDownloadCardComponent {
   }
 
   get isCompleted(): boolean {
+    // Never show completed state when paused - keep the ring visible
+    if (this.isPaused) {
+      return false;
+    }
     const total = this.manifest?.total ?? 0;
     const done = (this.manifest?.completed ?? 0) + (this.manifest?.failed ?? 0) + (this.manifest?.skipped ?? 0) + (this.manifest?.cancelled ?? 0);
     return total > 0 && done >= total;
