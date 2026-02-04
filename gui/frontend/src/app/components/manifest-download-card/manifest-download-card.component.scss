@@ -138,14 +138,14 @@
   --card-bg: #fff;
 }
 
-/* Play/pause button inside ring */
+/* Play/pause button inside ring - positioned in upper area */
 .play-pause-btn {
   position: absolute;
   left: 50%;
-  top: 50%;
+  top: 38%;
   transform: translate(-50%, -50%);
-  width: 48px;
-  height: 48px;
+  width: 36px;
+  height: 36px;
   border: none;
   display: inline-grid;
   place-items: center;
@@ -156,8 +156,8 @@
   transition: transform 0.12s ease, background-color 0.15s ease;
 }
 
-.play-pause-btn .material-icons {
-  font-size: 28px;
+.play-pause-btn .material-icons-outlined {
+  font-size: 24px;
   color: #333;
 }
 
@@ -170,6 +170,20 @@
   transform: translate(-50%, -50%) scale(0.95);
 }
 
+/* Ring label - positioned below the button */
+.ring-label {
+  position: absolute;
+  left: 50%;
+  top: 68%;
+  transform: translate(-50%, -50%);
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  z-index: 2;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
 /* Dark mode support */
 :host-context(.dark-mode) {
   --ring-track: #3a3a3a;
@@ -177,7 +191,11 @@
   --card-bg: #2d2d2d;
 }
 
-:host-context(.dark-mode) .play-pause-btn .material-icons {
+:host-context(.dark-mode) .play-pause-btn .material-icons-outlined {
+  color: #e0e0e0;
+}
+
+:host-context(.dark-mode) .ring-label {
   color: #e0e0e0;
 }
 
