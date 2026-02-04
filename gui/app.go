@@ -263,17 +263,67 @@ func (b *App) CancelDownload() {
 
 
 type App struct {
-    ctx     context.Context
-    mu      sync.Mutex
-    runID   uint64
-    batches map[uint64]*DownloadBatch  // <-- add this
+    ctx           context.Context
+    mu            sync.Mutex
+    runID         uint64
+    batches       map[uint64]*DownloadBatch
+    pausedBatches map[string]*DownloadBatch // keyed by manifest path for resume
 }
 
 func NewApp(ctx context.Context) *App {
     return &App{
-        ctx:     ctx,
-        batches: make(map[uint64]*DownloadBatch),
+        ctx:           ctx,
+        batches:       make(map[uint64]*DownloadBatch),
+        pausedBatches: make(map[string]*DownloadBatch),
     }
+}
+
+// PauseManifest pauses a download by canceling its context and storing the batch for resume
+func (b *App) PauseManifest(manifestPath string) error {
+    b.mu.Lock()
+    defer b.mu.Unlock()
+
+    for id, batch := range b.batches {
+        if batch.Manifest == manifestPath {
+            batch.Cancel() // Cancel the context to stop downloads
+            b.pausedBatches[manifestPath] = batch
+            delete(b.batches, id)
+            wailsRuntime.EventsEmit(b.ctx, "manifest-paused", manifestPath)
+            return nil
+        }
+    }
+    return fmt.Errorf("no active download found for manifest: %s", manifestPath)
+}
+
+// ResumeManifest resumes a paused download by restarting with skip-existing enabled
+func (b *App) ResumeManifest(manifestPath string) error {
+    b.mu.Lock()
+    pausedBatch, exists := b.pausedBatches[manifestPath]
+    if exists {
+        delete(b.pausedBatches, manifestPath)
+    }
+    b.mu.Unlock()
+
+    if !exists {
+        return fmt.Errorf("no paused download found for manifest: %s", manifestPath)
+    }
+
+    // Resume by re-running with skip-existing enabled
+    _, err := b.RunCLIFetch(
+        pausedBatch.Manifest,
+        pausedBatch.OutputDir,
+        pausedBatch.MaxConn,
+        pausedBatch.MaxRetries,
+        pausedBatch.Parallel,
+        true, // skipExisting = true to resume from where we left off
+        true, // downloadInParallel
+    )
+    if err != nil {
+        return err
+    }
+
+    wailsRuntime.EventsEmit(b.ctx, "manifest-resumed", manifestPath)
+    return nil
 }
 
 type DownloadBatch struct {

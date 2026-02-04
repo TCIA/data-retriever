@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { ManifestDownloadSnapshot } from '../../models/download-series.model';
 
 @Component({
@@ -9,6 +9,7 @@ import { ManifestDownloadSnapshot } from '../../models/download-series.model';
 })
 export class ManifestDownloadCardComponent {
   @Input() manifest!: ManifestDownloadSnapshot;
+  @Output() pauseToggled = new EventEmitter<void>();
 
   get title(): string {
     const path = this.manifest?.manifestPath || '';
@@ -48,19 +49,6 @@ export class ManifestDownloadCardComponent {
     return `${this.progressValue}%`;
   }
 
-  get statusLabel(): string {
-    const active = this.manifest?.active ?? 0;
-    if (active > 0) {
-      return 'Downloading';
-    }
-    const total = this.manifest?.total ?? 0;
-    const done = (this.manifest?.completed ?? 0) + (this.manifest?.failed ?? 0) + (this.manifest?.skipped ?? 0) + (this.manifest?.cancelled ?? 0);
-    if (total > 0 && done >= total) {
-      return 'Completed';
-    }
-    return 'Queued';
-  }
-
   get isCompleted(): boolean {
     const total = this.manifest?.total ?? 0;
     const done = (this.manifest?.completed ?? 0) + (this.manifest?.failed ?? 0) + (this.manifest?.skipped ?? 0) + (this.manifest?.cancelled ?? 0);
@@ -73,5 +61,30 @@ export class ManifestDownloadCardComponent {
 
   get logLines(): string[] {
     return this.manifest?.logs ?? [];
+  }
+
+  get isPaused(): boolean {
+    return this.manifest?.isPaused ?? false;
+  }
+
+  get statusLabel(): string {
+    if (this.isPaused) {
+      return 'Paused';
+    }
+    const active = this.manifest?.active ?? 0;
+    if (active > 0) {
+      return 'Downloading';
+    }
+    const total = this.manifest?.total ?? 0;
+    const done = (this.manifest?.completed ?? 0) + (this.manifest?.failed ?? 0) + (this.manifest?.skipped ?? 0) + (this.manifest?.cancelled ?? 0);
+    if (total > 0 && done >= total) {
+      return 'Completed';
+    }
+    return 'Queued';
+  }
+
+  onTogglePause(event: MouseEvent): void {
+    event.stopPropagation();
+    this.pauseToggled.emit();
   }
 }

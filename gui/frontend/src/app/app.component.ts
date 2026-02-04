@@ -135,6 +135,10 @@ export class AppComponent implements OnInit, OnDestroy {
     this.isDarkMode = !this.isDarkMode;
   }
 
+  onPauseToggled() {
+    this.downloadStatus.togglePause();
+  }
+
   onSelectOutputDirectory() {
     OpenOutputDirectoryDialog().then((dirPath: string) => {
       if (dirPath) {

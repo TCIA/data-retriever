@@ -116,7 +116,7 @@
       <div class="section-content downloads-content">
         <ng-container *ngIf="manifest$ | async as manifest">
           <div *ngIf="manifest.total; else emptyDownloads" class="sources-cards">
-            <app-manifest-download-card [manifest]="manifest"></app-manifest-download-card>
+            <app-manifest-download-card [manifest]="manifest" (pauseToggled)="onPauseToggled()"></app-manifest-download-card>
           </div>
         </ng-container>
         <ng-template #emptyDownloads>
