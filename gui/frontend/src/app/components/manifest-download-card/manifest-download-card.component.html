@@ -33,7 +33,7 @@
             [title]="isPaused ? 'Resume download' : 'Pause download'"
             aria-label="Toggle pause"
           >
-            <span class="material-icons">{{ isPaused ? 'play_arrow' : 'pause' }}</span>
+            <span class="material-icons-outlined">{{ isPaused ? 'play_arrow' : 'pause' }}</span>
           </button>
           <div class="ring-inner"></div>
           <div class="ring-label">{{ displayProgressValue }}%</div>
@@ -41,7 +41,7 @@
       </ng-template>
       <div class="progress-caption">
         <span>{{ statusLabel }}</span>
-        <div *ngIf="manifest?.bytesDownloaded as bd" class="bytes-line">
+        <div *ngIf="!isPaused && manifest?.bytesDownloaded as bd" class="bytes-line">
           <ng-container *ngIf="isCompleted; else showWithTotal">
             <span>{{ bd | bytes }}</span>
           </ng-container>

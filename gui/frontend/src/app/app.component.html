@@ -96,7 +96,7 @@
         <div class="section-header downloads-header" (click)="downloadsCollapsed = !downloadsCollapsed">
           <div class="downloads-header-content">
             <span class="downloads-title">Active Downloads</span>
-            <span class="downloads-percentage">{{ overview.progressPercent }}%</span>
+            <span class="downloads-percentage" *ngIf="!isManifestPaused">{{ overview.progressPercent }}%</span>
             <span class="material-icons-outlined collapse-icon">
               {{ downloadsCollapsed ? 'expand_more' : 'expand_less' }}
             </span>
