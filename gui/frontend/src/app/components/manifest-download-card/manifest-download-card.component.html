@@ -17,22 +17,31 @@
       <ng-template #activeProgress>
         <div
           class="ring"
-          [style.--size]="'48px'"
-          [style.--thickness]="'6px'"
+          [style.--size]="'96px'"
+          [style.--thickness]="'8px'"
           [style.--value]="progressValue"
-          [style.--accent]="'#2196f3'"
+          [style.--accent]="isPaused ? 'var(--ring-paused)' : '#2196f3'"
           [style.--track]="'var(--ring-track)'"
           [style.--bg]="'var(--card-bg)'"
           aria-live="polite"
           role="img"
         >
+          <!-- Play/pause button overlay inside ring -->
+          <button
+            class="play-pause-btn"
+            (click)="onTogglePause($event)"
+            [title]="isPaused ? 'Resume download' : 'Pause download'"
+            aria-label="Toggle pause"
+          >
+            <span class="material-icons-outlined">{{ isPaused ? 'play_arrow' : 'pause' }}</span>
+          </button>
           <div class="ring-inner"></div>
-          <div class="ring-label">{{ progressValue }}%</div>
+          <div class="ring-label">{{ displayProgressValue }}%</div>
         </div>
       </ng-template>
       <div class="progress-caption">
         <span>{{ statusLabel }}</span>
-        <div *ngIf="manifest?.bytesDownloaded as bd" class="bytes-line">
+        <div *ngIf="!isPaused && manifest?.bytesDownloaded as bd" class="bytes-line">
           <ng-container *ngIf="isCompleted; else showWithTotal">
             <span>{{ bd | bytes }}</span>
           </ng-container>

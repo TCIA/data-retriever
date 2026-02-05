@@ -68,7 +68,7 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  min-width: 110px;
+  min-width: 120px;
 }
 
 /* Spinner replacing the progress ring */
@@ -124,4 +124,81 @@
   font-size: 12px;
   color: #444;
   line-height: 1.4;
+}
+
+/* Ring progress indicator */
+.ring {
+  position: relative;
+}
+
+/* CSS variable for paused state */
+:host {
+  --ring-track: #e9ecef;
+  --ring-paused: #9e9e9e;
+  --card-bg: #fff;
+}
+
+/* Play/pause button inside ring - positioned in upper area */
+.play-pause-btn {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  transform: translate(-50%, -50%);
+  width: 36px;
+  height: 36px;
+  border: none;
+  display: inline-grid;
+  place-items: center;
+  background: transparent;
+  cursor: pointer;
+  z-index: 3;
+  border-radius: 50%;
+  transition: transform 0.12s ease, background-color 0.15s ease;
+}
+
+.play-pause-btn .material-icons-outlined {
+  font-size: 24px;
+  color: #333;
+}
+
+.play-pause-btn:hover {
+  transform: translate(-50%, -50%) scale(1.1);
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.play-pause-btn:active {
+  transform: translate(-50%, -50%) scale(0.95);
+}
+
+/* Ring label - positioned below the button */
+.ring-label {
+  position: absolute;
+  left: 50%;
+  top: 68%;
+  transform: translate(-50%, -50%);
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  z-index: 2;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* Dark mode support */
+:host-context(.dark-mode) {
+  --ring-track: #3a3a3a;
+  --ring-paused: #6b6b6b;
+  --card-bg: #2d2d2d;
+}
+
+:host-context(.dark-mode) .play-pause-btn .material-icons-outlined {
+  color: #e0e0e0;
+}
+
+:host-context(.dark-mode) .ring-label {
+  color: #e0e0e0;
+}
+
+:host-context(.dark-mode) .play-pause-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
 }

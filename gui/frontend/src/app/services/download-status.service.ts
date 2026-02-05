@@ -1,6 +1,7 @@
 import { Injectable, NgZone, OnDestroy } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { EventsOn, EventsOff } from '../../../wailsjs/runtime/runtime';
+import { PauseManifest, ResumeManifest } from '../../../wailsjs/go/main/App';
 import {
   DownloadOverviewSnapshot,
   ManifestDownloadSnapshot,
@@ -50,9 +51,12 @@ export class DownloadStatusService implements OnDestroy {
 
   private currentManifestPath: string = '';
   private manifestInitialBytesTotal = 0;
+  private isPaused = false;
 
   private unsubscribeRuntime?: () => void;
   private unsubscribeManifestMetadata?: () => void;
+  private unsubscribePaused?: () => void;
+  private unsubscribeResumed?: () => void;
 
   readonly series$ = this.seriesSubject.asObservable();
   readonly overview$ = this.overviewSubject.asObservable();
@@ -98,6 +102,27 @@ export class DownloadStatusService implements OnDestroy {
             }
           } catch (error) {
             console.error('Failed to process manifest-series-metadata', error);
+          }
+        });
+      });
+
+      // Listen for pause/resume events from backend
+      this.unsubscribePaused = EventsOn('manifest-paused', (manifestPath: string) => {
+        this.ngZone.run(() => {
+          if (manifestPath === this.currentManifestPath) {
+            this.isPaused = true;
+            this.updateManifestPauseState();
+            this.appendManifestLog('Download paused');
+          }
+        });
+      });
+
+      this.unsubscribeResumed = EventsOn('manifest-resumed', (manifestPath: string) => {
+        this.ngZone.run(() => {
+          if (manifestPath === this.currentManifestPath) {
+            this.isPaused = false;
+            this.updateManifestPauseState();
+            this.appendManifestLog('Download resumed');
           }
         });
       });
@@ -532,6 +557,20 @@ export class DownloadStatusService implements OnDestroy {
         console.warn('Failed to unsubscribe manifest metadata event', error);
       }
     }
+    if (this.unsubscribePaused) {
+      try {
+        this.unsubscribePaused();
+      } catch (error) {
+        console.warn('Failed to unsubscribe paused event', error);
+      }
+    }
+    if (this.unsubscribeResumed) {
+      try {
+        this.unsubscribeResumed();
+      } catch (error) {
+        console.warn('Failed to unsubscribe resumed event', error);
+      }
+    }
     try {
       EventsOff('download-series-event');
     } catch (error) {
@@ -542,5 +581,53 @@ export class DownloadStatusService implements OnDestroy {
     } catch (error) {
       // Ignore double-off errors
     }
+    try {
+      EventsOff('manifest-paused');
+    } catch (error) {
+      // Ignore double-off errors
+    }
+    try {
+      EventsOff('manifest-resumed');
+    } catch (error) {
+      // Ignore double-off errors
+    }
+  }
+
+  /**
+   * Toggle pause state for the current manifest download.
+   * Returns the new isPaused state.
+   */
+  async togglePause(): Promise<boolean> {
+    if (!this.currentManifestPath) {
+      console.warn('No active manifest to pause/resume');
+      return this.isPaused;
+    }
+
+    try {
+      if (this.isPaused) {
+        await ResumeManifest(this.currentManifestPath);
+      } else {
+        await PauseManifest(this.currentManifestPath);
+      }
+    } catch (error) {
+      console.error('Failed to toggle pause state', error);
+    }
+
+    return this.isPaused;
+  }
+
+  /**
+   * Get current pause state
+   */
+  getIsPaused(): boolean {
+    return this.isPaused;
+  }
+
+  private updateManifestPauseState(): void {
+    const current = this.manifestSubject.getValue();
+    this.manifestSubject.next({
+      ...current,
+      isPaused: this.isPaused,
+    });
   }
 }

@@ -96,7 +96,7 @@
         <div class="section-header downloads-header" (click)="downloadsCollapsed = !downloadsCollapsed">
           <div class="downloads-header-content">
             <span class="downloads-title">Active Downloads</span>
-            <span class="downloads-percentage">{{ overview.progressPercent }}%</span>
+            <span class="downloads-percentage" *ngIf="!isManifestPaused">{{ overview.progressPercent }}%</span>
             <span class="material-icons-outlined collapse-icon">
               {{ downloadsCollapsed ? 'expand_more' : 'expand_less' }}
             </span>
@@ -116,7 +116,7 @@
       <div class="section-content downloads-content">
         <ng-container *ngIf="manifest$ | async as manifest">
           <div *ngIf="manifest.total; else emptyDownloads" class="sources-cards">
-            <app-manifest-download-card [manifest]="manifest"></app-manifest-download-card>
+            <app-manifest-download-card [manifest]="manifest" (pauseToggled)="onPauseToggled()"></app-manifest-download-card>
           </div>
         </ng-container>
         <ng-template #emptyDownloads>

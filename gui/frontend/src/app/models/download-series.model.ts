@@ -81,4 +81,5 @@ export interface ManifestDownloadSnapshot {
   startedAt?: string;
   completedAt?: string;
   logs: string[];
+  isPaused?: boolean;
 }
