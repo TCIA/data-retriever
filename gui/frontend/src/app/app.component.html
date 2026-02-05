@@ -6,6 +6,45 @@
     </div>
   </div>
 
+  <div class="advanced-settings-overlay" *ngIf="showAdvancedModal" (click)="closeAdvancedModal()" role="dialog" aria-modal="true" aria-label="Advanced Settings">
+    <div class="advanced-settings-modal" (click)="$event.stopPropagation()">
+      <div class="advanced-settings-header">
+        <span>Advanced Settings</span>
+        <button class="advanced-settings-close" (click)="closeAdvancedModal()" title="Close">
+          <span class="material-icons-outlined">close</span>
+        </button>
+      </div>
+      <div class="advanced-settings-body">
+        <div class="settings-grid">
+          <div class="setting-item">
+            <label class="setting-label">Max Connections</label>
+            <input type="number" [(ngModel)]="maxConnections" min="1" class="setting-input">
+          </div>
+          <div class="setting-item">
+            <label class="setting-label">Max Retries</label>
+            <input type="number" [(ngModel)]="maxRetries" min="0" class="setting-input">
+          </div>
+          <div class="setting-item">
+            <label class="setting-label">Simultaneous Downloads</label>
+            <input type="number" [(ngModel)]="simultaneousDownloads" min="1" class="setting-input">
+          </div>
+          <div class="setting-item">
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="downloadInParallel" class="setting-checkbox">
+              Download In Parallel
+            </label>
+          </div>
+          <div class="setting-item">
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="skipExisting" class="setting-checkbox">
+              Skip Existing
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Header -->
   <div class="header">
     <div class="header-left">
@@ -15,10 +54,9 @@
       <button class="theme-toggle" (click)="isDarkMode = !isDarkMode" title="Toggle theme">
         <span class="material-icons-outlined">{{ isDarkMode ? 'light_mode' : 'dark_mode' }}</span>
       </button>
-      <div class="user-info">
-        <div class="user-name">User</div>
-        <div class="user-role">Developer</div>
-      </div>
+      <button class="advanced-settings-btn" (click)="openAdvancedModal()" title="Advanced Settings">
+        <span class="material-icons-outlined">settings</span>
+      </button>
     </div>
   </div>
 
@@ -51,43 +89,6 @@
           <span class="material-icons-outlined">cancel</span>
           Cancel
         </button>
-      </div>
-    </div>
-
-    <div class="grid-section settings-section" [class.collapsed]="settingsCollapsed">
-      <div class="section-header" (click)="settingsCollapsed = !settingsCollapsed">
-        <span>Advanced Settings</span>
-        <span class="material-icons-outlined collapse-icon">
-          {{ settingsCollapsed ? 'expand_more' : 'expand_less' }}
-        </span>
-      </div>
-      <div class="section-content">
-        <div class="settings-grid">
-          <div class="setting-item">
-            <label class="setting-label">Max Connections</label>
-            <input type="number" [(ngModel)]="maxConnections" min="1" class="setting-input">
-          </div>
-          <div class="setting-item">
-            <label class="setting-label">Max Retries</label>
-            <input type="number" [(ngModel)]="maxRetries" min="0" class="setting-input">
-          </div>
-          <div class="setting-item">
-            <label class="setting-label">Simultaneous Downloads</label>
-            <input type="number" [(ngModel)]="simultaneousDownloads" min="1" class="setting-input">
-          </div>
-          <div class="setting-item">
-            <label class="checkbox-label">
-              <input type="checkbox" [(ngModel)]="downloadInParallel" class="setting-checkbox">
-              Download In Parallel
-            </label>
-          </div>
-          <div class="setting-item">
-            <label class="checkbox-label">
-              <input type="checkbox" [(ngModel)]="skipExisting" class="setting-checkbox">
-              Skip Existing
-            </label>
-          </div>
-        </div>
       </div>
     </div>
 

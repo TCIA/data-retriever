@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, NgZone } from '@angular/core';
+import { Component, OnInit, OnDestroy, NgZone, HostListener } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
 import { CancelDownload, OpenInputFileDialog, OpenOutputDirectoryDialog, GetDefaultOutputDirectory, RunCLIFetch } from '../../wailsjs/go/main/App';
@@ -23,7 +23,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private seriesSubscription?: Subscription;
 
   // Advanced options / UI state
-  showAdvanced = false;
+  showAdvancedModal = false;
   maxConnections = 8;
   maxRetries = 3;
   simultaneousDownloads = 2;
@@ -31,7 +31,6 @@ export class AppComponent implements OnInit, OnDestroy {
   downloadInParallel = true;
 
   // Collapse state
-  settingsCollapsed = true;
   downloadsCollapsed = true;  // Collapsed until downloads start
 
   // Dark mode
@@ -106,6 +105,22 @@ export class AppComponent implements OnInit, OnDestroy {
 
   toggleDarkMode() {
     this.isDarkMode = !this.isDarkMode;
+  }
+
+  openAdvancedModal() {
+    this.showAdvancedModal = true;
+  }
+
+  closeAdvancedModal() {
+    this.showAdvancedModal = false;
+  }
+
+  @HostListener('document:keydown.escape', ['$event'])
+  handleEscapeKey(event: KeyboardEvent) {
+    if (this.showAdvancedModal) {
+      event.preventDefault();
+      this.closeAdvancedModal();
+    }
   }
 
   get isManifestPaused(): boolean {
