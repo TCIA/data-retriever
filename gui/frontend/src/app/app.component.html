@@ -68,16 +68,22 @@
       </div>
       <div class="section-content">
         <div class="file-input-row">
-          <input type="text" [(ngModel)]="inputFilePath" class="file-input" placeholder="Path/to/the/input/manifest">
-          <button (click)="onSelectInputFile()" class="browse-btn" title="Browse">
-            <span class="material-icons-outlined">folder_open</span>
-          </button>
+          <label class="file-label" for="manifest-file">Manifest file</label>
+          <div class="file-input-group">
+            <input id="manifest-file" type="text" [(ngModel)]="inputFilePath" class="file-input">
+            <button (click)="onSelectInputFile()" class="browse-btn" title="Browse">
+              <span class="material-icons-outlined">folder_open</span>
+            </button>
+          </div>
         </div>
         <div class="file-input-row">
-          <input type="text" [(ngModel)]="outputDirPath" class="file-input" placeholder="Path/to/the/output/directory">
-          <button (click)="onSelectOutputDirectory()" class="browse-btn" title="Browse">
-            <span class="material-icons-outlined">folder_open</span>
-          </button>
+          <label class="file-label" for="download-directory">Download directory</label>
+          <div class="file-input-group">
+            <input id="download-directory" type="text" [(ngModel)]="outputDirPath" class="file-input">
+            <button (click)="onSelectOutputDirectory()" class="browse-btn" title="Browse">
+              <span class="material-icons-outlined">folder_open</span>
+            </button>
+          </div>
         </div>
       </div>
       <div class="action-bar">

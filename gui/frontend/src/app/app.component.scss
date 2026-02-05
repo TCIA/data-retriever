@@ -568,15 +568,23 @@
 
 .file-input-row {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
   margin-bottom: 12px;
 }
 
 .file-label {
   font-size: 13px;
   color: #666;
-  min-width: 100px;
+  font-weight: 600;
+}
+
+.file-input-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
 }
 
 .file-input {
