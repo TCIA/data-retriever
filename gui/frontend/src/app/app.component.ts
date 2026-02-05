@@ -1,6 +1,6 @@
-import { Component, OnInit, OnDestroy, ElementRef, ViewChild, NgZone } from '@angular/core';
+import { Component, OnInit, OnDestroy, NgZone } from '@angular/core';
 import { Subscription } from 'rxjs';
-import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
+import { EventsOn } from '../../wailsjs/runtime/runtime';
 import { CancelDownload, OpenInputFileDialog, OpenOutputDirectoryDialog, GetDefaultOutputDirectory, RunCLIFetch } from '../../wailsjs/go/main/App';
 import { DownloadStatusService } from './services/download-status.service';
 import { DownloadOverviewSnapshot } from './models/download-series.model';
@@ -12,16 +12,10 @@ import { DownloadOverviewSnapshot } from './models/download-series.model';
   styleUrls: ['./app.component.scss']
 })
 export class AppComponent implements OnInit, OnDestroy {
-  status = 'Ready';
   inputFilePath = '';
   outputDirPath = '';
   defaultDownloadDir = '';
 
-  // Global output logs that appear in the Output panel
-  outputLogs: string[] = [];
-  @ViewChild('outputContainer') outputContainer!: ElementRef;
-
-  private unsubscribeRuntime?: () => void;
   private unsubscribeCliError?: () => void;
   private unsubscribeCliFinished?: () => void;
 
@@ -38,14 +32,11 @@ export class AppComponent implements OnInit, OnDestroy {
 
   // Collapse state
   settingsCollapsed = true;
-  outputCollapsed = true;  // Output collapsed on startup
   downloadsCollapsed = true;  // Collapsed until downloads start
 
   // Dark mode
   isDarkMode = false;
 
-  // Overall download progress
-  overallProgress = 0;
   showInitializing = false;
 
   series$ = this.downloadStatus.series$;
@@ -72,7 +63,6 @@ export class AppComponent implements OnInit, OnDestroy {
     });
 
     this.overviewSubscription = this.overview$.subscribe((snapshot: DownloadOverviewSnapshot) => {
-      this.overallProgress = snapshot.progressPercent;
       // Auto-expand downloads section when downloads start
       if (snapshot.total > 0 && this.downloadsCollapsed) {
         this.downloadsCollapsed = false;
@@ -88,43 +78,26 @@ export class AppComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Subscribe to streaming CLI output from backend
-    this.unsubscribeRuntime = EventsOn('cli-output-line', (line: string) => {
-      this.ngZone.run(() => {
-        this.outputLogs.push(line);
-        // Also append to manifest-level logs
-        this.downloadStatus.appendManifestLog(line);
-
-        const el = this.outputContainer?.nativeElement as HTMLElement;
-        if (el) {
-          el.scrollTop = el.scrollHeight;
-        }
-      });
-    });
-
     // Subscribe to CLI error events
     this.unsubscribeCliError = EventsOn('cli-error', (err: string) => {
       this.ngZone.run(() => {
-        this.status = 'Error';
-        this.outputLogs.push(`ERROR: ${err}`);
         this.showInitializing = false;
+        this.downloadStatus.appendManifestLog(`ERROR: ${err}`);
       });
     });
 
     // Subscribe to CLI finished event
     this.unsubscribeCliFinished = EventsOn('cli-finished', (summary: string) => {
       this.ngZone.run(() => {
-        this.status = 'Finished';
-        if (summary) {
-          this.outputLogs.push(summary);
-        }
         this.showInitializing = false;
+        if (summary) {
+          this.downloadStatus.appendManifestLog(summary);
+        }
       });
     });
   }
 
   ngOnDestroy() {
-    this.unsubscribeRuntime?.();
     this.unsubscribeCliError?.();
     this.unsubscribeCliFinished?.();
     this.overviewSubscription?.unsubscribe();
@@ -149,20 +122,18 @@ export class AppComponent implements OnInit, OnDestroy {
         this.outputDirPath = dirPath;
       }
     }).catch(err => {
-      this.status = "Error: " + err;
+      this.downloadStatus.appendManifestLog("ERROR: " + err);
     });
   }
 
   onFetchFiles() {
     if (!this.inputFilePath || !this.outputDirPath) {
-      this.status = "Please select both an input TCIA file and an output directory.";
+      this.downloadStatus.appendManifestLog("ERROR: Please select both an input TCIA file and an output directory.");
       return;
     }
 
     this.showInitializing = true;
     this.downloadStatus.beginRun(this.inputFilePath);
-    this.outputLogs = [];
-    this.overallProgress = 0;
 
     // Reconstruct the exact CLI command for display (quote paths to handle spaces)
     const cliPath = '../nbia-data-retriever-cli';
@@ -187,9 +158,7 @@ export class AppComponent implements OnInit, OnDestroy {
     }
     const cmdStr = parts.join(' ');
 
-    // Show command immediately in the status window
-    this.status = 'Running: ' + cmdStr;
-    this.appendLog(this.status);
+    this.downloadStatus.appendManifestLog('Running: ' + cmdStr);
 
     // Call backend to run the CLI
     RunCLIFetch(
@@ -202,24 +171,21 @@ export class AppComponent implements OnInit, OnDestroy {
       this.downloadInParallel
     ).catch(err => {
       this.ngZone.run(() => {
-        this.status = 'Error: ' + err;
-        this.appendLog(this.status);
+        this.downloadStatus.appendManifestLog('ERROR: ' + err);
         this.showInitializing = false;
       });
     });
-    this.status = "Started";
+    this.downloadStatus.appendManifestLog('Started');
   }
 
   onCancelDownload() {
     this.showInitializing = false;
     CancelDownload()
       .then(() => {
-        this.status = "Cancellation requested";
-        this.appendLog(this.status);
+        this.downloadStatus.appendManifestLog("Cancellation requested");
       })
       .catch(err => {
-        this.status = "Error: " + err;
-        this.appendLog(this.status);
+        this.downloadStatus.appendManifestLog("ERROR: " + err);
         this.showInitializing = false;
       });
   }
@@ -243,13 +209,7 @@ onSelectInputFile() {
       }
     })
     .catch(err => {
-      this.status = 'Error: ' + err;
+      this.downloadStatus.appendManifestLog('ERROR: ' + err);
     });
 }
-
-
-  // Append to the global output panel
-  appendLog(line: string) {
-    this.outputLogs.push(line);
-  }
 }

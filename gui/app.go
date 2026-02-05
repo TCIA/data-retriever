@@ -205,16 +205,47 @@ func (b *App) runBatch(batch *DownloadBatch) {
         MetadataWorkers: 20,
     }
 
+    logDir := filepath.Join(".", "logs")
+    logTimestamp := time.Now().Format("20060102-150405")
+    logPath := filepath.Join(logDir, fmt.Sprintf("nbia-output-%s.log", logTimestamp))
+
     var (
-        lines   []string
-        linesMu sync.Mutex
+        logFile   *os.File
+        logWriter *bufio.Writer
+        logMu     sync.Mutex
     )
 
+    if err := os.MkdirAll(logDir, 0o755); err == nil {
+        if file, err := os.Create(logPath); err == nil {
+            logFile = file
+            logWriter = bufio.NewWriter(file)
+        }
+    }
+
+    defer func() {
+        if logWriter != nil {
+            _ = logWriter.Flush()
+        }
+        if logFile != nil {
+            _ = logFile.Close()
+        }
+    }()
+
+    writeLine := func(line string) {
+        if logWriter == nil {
+            return
+        }
+        logMu.Lock()
+        defer logMu.Unlock()
+        if !strings.HasSuffix(line, "\n") {
+            line += "\n"
+        }
+        _, _ = logWriter.WriteString(line)
+        _ = logWriter.Flush()
+    }
+
     emit := func(line string) {
-        linesMu.Lock()
-        lines = append(lines, line)
-        linesMu.Unlock()
-        wailsRuntime.EventsEmit(b.ctx, "cli-output-line", line)
+        writeLine(line)
     }
 
     callbacks := app.Callbacks{
@@ -231,21 +262,31 @@ func (b *App) runBatch(batch *DownloadBatch) {
     // Run the CLI download (blocking inside goroutine)
     summary, err := app.Run(batch.Ctx, options, callbacks)
 
-    linesMu.Lock()
-    combined := strings.Join(lines, "\n")
-    linesMu.Unlock()
-
     if err != nil {
         if errors.Is(err, context.Canceled) {
-            wailsRuntime.EventsEmit(b.ctx, "cli-finished", combined)
+            wailsRuntime.EventsEmit(b.ctx, "cli-finished", "")
             return
         }
         wailsRuntime.EventsEmit(b.ctx, "cli-error", fmt.Sprintf("download failed: %v", err))
         return
     }
 
-    _ = summary
-    wailsRuntime.EventsEmit(b.ctx, "cli-finished", combined)
+    summaryText := ""
+    if summary != nil {
+        summaryText = fmt.Sprintf(
+            "Download Summary: total %d, downloaded %d, synced %d, skipped %d, failed %d, elapsed %s",
+            summary.Total,
+            summary.Downloaded,
+            summary.Synced,
+            summary.Skipped,
+            summary.Failed,
+            summary.Elapsed.String(),
+        )
+    }
+    if summaryText != "" {
+        writeLine(summaryText)
+    }
+    wailsRuntime.EventsEmit(b.ctx, "cli-finished", summaryText)
 }
 
 

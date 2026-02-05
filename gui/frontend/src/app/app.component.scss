@@ -170,8 +170,7 @@
 /* Collapsible sections */
 .grid-section.collapsed {
   .section-content,
-  .action-bar,
-  .output-content {
+  .action-bar {
     display: none;
   }
   
@@ -591,82 +590,6 @@
   margin: 0;
 }
 
-/* Output Section - Flexible height with reasonable constraints */
-.output-section {
-  flex: 0 1 auto;
-  min-height: clamp(150px, 25vh, 300px);
-  
-  &.collapsed {
-    flex: 0 0 auto;
-    min-height: auto;
-  }
-}
-
-.output-content {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 16px;
-}
-
-.output-summary {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-}
-
-.output-status {
-  font-weight: 600;
-  color: #333;
-  max-width: 60%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.overall-progress {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.overall-progress .progress-bar {
-  width: 180px;
-  height: 8px;
-  border-radius: 999px;
-  background: #e0e0e0;
-  overflow: hidden;
-}
-
-.overall-progress .progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #4caf50 0%, #81c784 100%);
-  transition: width 0.3s ease;
-}
-
-.overall-progress .progress-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #555;
-}
-
-.output-scroll {
-  max-height: 260px;
-  overflow-y: auto;
-  border: 1px solid #e0e0e0;
-  border-radius: 10px;
-  background: #fafafa;
-  padding: 12px;
-  font-family: 'Fira Mono', 'Consolas', 'Menlo', monospace;
-  font-size: 12px;
-  color: #444;
-}
-
-.output-line + .output-line {
-  margin-top: 4px;
-}
 
 /* Action Bar */
 .action-bar {
@@ -903,28 +826,6 @@
     }
   }
   
-  .output-status {
-    color: #e0e0e0;
-  }
-
-  .overall-progress .progress-bar {
-    background: #404040;
-  }
-
-  .overall-progress .progress-fill {
-    background: linear-gradient(90deg, #4caf50 0%, #66bb6a 100%);
-  }
-
-  .overall-progress .progress-label {
-    color: #cccccc;
-  }
-
-  .output-scroll {
-    background: #111;
-    border-color: #333;
-    color: #d4d4d4;
-  }
-
   /* Downloads cards theming for dark mode */
   .downloads-section {
     --card-bg: #2d2d2d;

@@ -129,28 +129,5 @@
       </div>
     </div>
 
-    <div class="grid-section output-section" [class.collapsed]="outputCollapsed">
-      <div class="section-header" (click)="outputCollapsed = !outputCollapsed">
-        <span>Output</span>
-        <span class="material-icons-outlined collapse-icon">
-          {{ outputCollapsed ? 'expand_more' : 'expand_less' }}
-        </span>
-      </div>
-      <div class="output-content">
-        <div class="output-summary">
-          <div class="output-status" [title]="status">{{ status }}</div>
-          <div class="overall-progress">
-            <div class="progress-bar">
-              <div class="progress-fill" [style.width.%]="overallProgress"></div>
-            </div>
-            <div class="progress-label">{{ overallProgress }}%</div>
-          </div>
-        </div>
-        <div class="output-scroll" #outputContainer>
-          <div class="output-line" *ngFor="let line of outputLogs">{{ line }}</div>
-        </div>
-      </div>
-    </div>
-
   </div>
 </div>
