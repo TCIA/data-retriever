@@ -10,6 +10,8 @@ import { ManifestDownloadSnapshot } from '../../models/download-series.model';
 export class ManifestDownloadCardComponent {
   @Input() manifest!: ManifestDownloadSnapshot;
   @Output() pauseToggled = new EventEmitter<void>();
+  
+  showOutput = false;
 
   get title(): string {
     const path = this.manifest?.manifestPath || '';
@@ -34,14 +36,9 @@ export class ManifestDownloadCardComponent {
   }
 
   /**
-   * Progress value for ring fill - resets to 0 when paused (greyed out ring)
+   * Progress value for ring fill - keeps current value when paused (ring becomes grey via CSS)
    */
   get progressValue(): number {
-    // When paused, reset the ring fill to 0 (greyed out)
-    if (this.isPaused) {
-      return 0;
-    }
-    
     const downloaded = this.manifest?.bytesDownloaded ?? null;
     const total = this.manifest?.bytesTotal ?? null;
     let percent: number;
@@ -115,5 +112,9 @@ export class ManifestDownloadCardComponent {
   onTogglePause(event: MouseEvent): void {
     event.stopPropagation();
     this.pauseToggled.emit();
+  }
+
+  toggleOutput(): void {
+    this.showOutput = !this.showOutput;
   }
 }

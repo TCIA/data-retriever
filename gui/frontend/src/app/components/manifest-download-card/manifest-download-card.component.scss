@@ -5,70 +5,139 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   padding: 16px 18px;
   min-width: 280px;
 }
 
-.card-header {
+.card-main {
   display: flex;
+  gap: 16px;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.card-title-group {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.card-title {
-  font-weight: 600;
-  font-size: 14px;
-  color: #333;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.card-subtitle {
-  font-size: 12px;
-  color: #666;
-  opacity: 0.75;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.status-chip {
-  align-items: center;
-  border-radius: 999px;
-  display: inline-flex;
-  font-size: 11px;
-  font-weight: 700;
-  gap: 6px;
-  padding: 2px 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  background: #e9ecef;
-  color: #444;
-}
-
-.card-body {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 16px;
-  align-items: stretch;
 }
 
 .progress-shell {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  min-width: 120px;
+  justify-content: center;
+  min-width: 96px;
+  flex-shrink: 0;
+}
+
+.card-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.info-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.title-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.card-title {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text-primary, #333);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-status {
+  font-size: 13px;
+  font-weight: 600;
+  color: #666;
+  
+  &.downloading {
+    color: #2196f3;
+  }
+  
+  &.paused {
+    color: #9e9e9e;
+  }
+}
+
+.card-path {
+  font-size: 11px;
+  color: #888;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+.collapse-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #666;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: #333;
+  }
+  
+  .material-icons-outlined {
+    font-size: 20px;
+  }
+}
+
+.statistics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px 12px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary, #333);
+}
+
+.stat-label {
+  font-size: 11px;
+  color: #888;
+  text-transform: capitalize;
+}
+
+.bytes-info {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e6e6e6;
+}
+
+.bytes-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary, #333);
 }
 
 /* Spinner replacing the progress ring */
@@ -100,30 +169,27 @@
   to { transform: rotate(360deg); }
 }
 
-.progress-caption {
-  font-size: 12px;
-  color: #555;
-  font-weight: 600;
-  text-align: center;
-}
-
-.bytes-line {
-  margin-top: 4px;
-  font-weight: 500;
-}
-
 .card-output {
   border: 1px solid #e6e6e6;
-  border-radius: 10px;
-  background: #fafafa;
-  padding: 10px;
-  min-height: 96px;
-  max-height: 140px;
+  border-radius: 8px;
+  background: #1a1a1a;
+  padding: 12px;
+  min-height: 80px;
+  max-height: 160px;
   overflow-y: auto;
   font-family: 'Fira Mono', 'Consolas', 'Menlo', monospace;
-  font-size: 12px;
-  color: #444;
-  line-height: 1.4;
+  font-size: 11px;
+  color: #d0d0d0;
+  line-height: 1.5;
+}
+
+.log-line {
+  margin-bottom: 2px;
+}
+
+.log-placeholder {
+  color: #777;
+  font-style: italic;
 }
 
 /* Ring progress indicator */
@@ -191,6 +257,10 @@
   --card-bg: #2d2d2d;
 }
 
+:host-context(.dark-mode) .download-card {
+  border-color: #1a1a1a;
+}
+
 :host-context(.dark-mode) .play-pause-btn .material-icons-outlined {
   color: #e0e0e0;
 }
@@ -201,4 +271,46 @@
 
 :host-context(.dark-mode) .play-pause-btn:hover {
   background: rgba(255, 255, 255, 0.1);
+}
+
+:host-context(.dark-mode) .card-title {
+  color: #e0e0e0;
+}
+
+:host-context(.dark-mode) .card-path {
+  color: #999;
+}
+
+:host-context(.dark-mode) .stat-value {
+  color: #e0e0e0;
+}
+
+:host-context(.dark-mode) .stat-label {
+  color: #999;
+}
+
+:host-context(.dark-mode) .collapse-btn {
+  color: #aaa;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #e0e0e0;
+  }
+}
+
+:host-context(.dark-mode) .card-output {
+  background: #0d0d0d;
+  border-color: #333;
+}
+
+:host-context(.dark-mode) .card-status.downloading {
+  color: #64b5f6;
+}
+
+:host-context(.dark-mode) .bytes-info {
+  border-top-color: #444;
+}
+
+:host-context(.dark-mode) .bytes-text {
+  color: #e0e0e0;
 }

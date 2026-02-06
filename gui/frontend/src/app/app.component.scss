@@ -387,12 +387,22 @@
 .sources-cards {
   padding: 16px;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* fixed 3-column layout so each card occupies one grid cell */
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   /* Allow scrolling when content overflows */
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   max-height: 100%;
+  overflow-x: hidden; /* prevent horizontal scroller from grid */
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.sources-cards > * {
+  /* make sure each card is confined to its grid cell and can shrink */
+  min-width: 0;
+  width: 100%;
 }
 
 .source-card {
