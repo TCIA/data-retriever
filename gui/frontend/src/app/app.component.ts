@@ -32,6 +32,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   // Collapse state
   downloadsCollapsed = true;  // Collapsed until downloads start
+  hasAutoExpanded = false;
 
   // Dark mode
   isDarkMode = false;
@@ -62,9 +63,14 @@ export class AppComponent implements OnInit, OnDestroy {
     });
 
     this.overviewSubscription = this.overview$.subscribe((snapshot: DownloadOverviewSnapshot) => {
-      // Auto-expand downloads section when downloads start
-      if (snapshot.total > 0 && this.downloadsCollapsed) {
+      // Reset auto-expand guard when no downloads are present
+      if (snapshot.total === 0) {
+        this.hasAutoExpanded = false;
+      }
+      // Auto-expand downloads section only once per run
+      if (snapshot.total > 0 && this.downloadsCollapsed && !this.hasAutoExpanded) {
         this.downloadsCollapsed = false;
+        this.hasAutoExpanded = true;
       }
       if (this.showInitializing && snapshot.total > 0) {
         this.showInitializing = false;

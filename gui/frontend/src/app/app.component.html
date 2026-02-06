@@ -103,15 +103,15 @@
         <div class="section-header downloads-header" (click)="downloadsCollapsed = !downloadsCollapsed">
           <div class="downloads-header-content">
             <span class="downloads-title">Active Downloads</span>
-            <span class="downloads-percentage" *ngIf="!isManifestPaused">{{ overview.progressPercent }}%</span>
             <span class="material-icons-outlined collapse-icon">
               {{ downloadsCollapsed ? 'expand_more' : 'expand_less' }}
             </span>
           </div>
-          <div class="downloads-progress-bar">
-            <div class="downloads-progress-fill" [style.width.%]="overview.progressPercent"></div>
-          </div>
-          <div class="downloads-meta">
+          <div
+            class="downloads-meta"
+            [title]="overview.completed + ' completed, ' + overview.failed + ' failed, ' + overview.skipped + ' skipped, ' + overview.cancelled + ' cancelled, ' + overview.active + ' in progress'"
+            [attr.aria-label]="overview.completed + ' completed, ' + overview.failed + ' failed, ' + overview.skipped + ' skipped, ' + overview.cancelled + ' cancelled, ' + overview.active + ' in progress'"
+          >
             <span>{{ overview.completed }} completed</span>
             <span>{{ overview.failed }} failed</span>
             <span>{{ overview.skipped }} skipped</span>
