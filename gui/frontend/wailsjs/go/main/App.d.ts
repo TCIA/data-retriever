@@ -17,6 +17,6 @@ export function PauseManifest(arg1:string):Promise<void>;
 
 export function ResumeManifest(arg1:string):Promise<void>;
 
-export function RunCLIFetch(arg1:string,arg2:string,arg3:number,arg4:number,arg5:number,arg6:boolean,arg7:boolean):Promise<string>;
+export function RunCLIFetch(arg1:string,arg2:string,arg3:number,arg4:number,arg5:number,arg6:boolean,arg7:boolean,arg8:string):Promise<string>;
 
 export function ShowDialog():Promise<void>;

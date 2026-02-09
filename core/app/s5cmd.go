@@ -11,6 +11,7 @@ import (
 	"strings"
 	"strconv"
 	"context"
+	"regexp"
   "github.com/apache/arrow/go/v14/arrow/array"
   "github.com/apache/arrow/go/v14/arrow/memory"
   "github.com/apache/arrow/go/v14/parquet/file"
@@ -30,28 +31,28 @@ type SeriesMetadata struct {
 var parquetFS embed.FS
 
 
-func loadSeriesMetadataFromParquet() (map[string]SeriesMetadata, error) {
+func loadSeriesMetadataFromParquet() (map[string]SeriesMetadata, map[string]string, error) {
 		f, err := parquetFS.Open("parquet/idc_index.parquet")
 		if err != nil {
-		    return nil, fmt.Errorf("failed to open embedded parquet: %w", err)
+		    return nil, nil, fmt.Errorf("failed to open embedded parquet: %w", err)
 		}
 		defer f.Close()
 		
 		stat, err := f.Stat()
 		if err != nil {
-		    return nil, fmt.Errorf("failed to stat parquet file: %w", err)
+		    return nil, nil, fmt.Errorf("failed to stat parquet file: %w", err)
 		}
 		
 		readerAt, ok := f.(io.ReaderAt)
 		if !ok {
-		    return nil, fmt.Errorf("embedded file does not implement ReaderAt")
+		    return nil, nil, fmt.Errorf("embedded file does not implement ReaderAt")
 		}
 		
 		section := io.NewSectionReader(readerAt, 0, stat.Size())
 		
 		pqReader, err := file.NewParquetReader(section)
 		if err != nil {
-		    return nil, fmt.Errorf("failed to create parquet reader: %w", err)
+		    return nil, nil, fmt.Errorf("failed to create parquet reader: %w", err)
 		}
 		defer pqReader.Close()
 
@@ -70,7 +71,7 @@ for i := 0; i < pqReader.NumRowGroups(); i++ {
 		
 		arrowReader, err := pqarrow.NewFileReader(pqReader, props, mem)
 		if err != nil {
-		    return nil, fmt.Errorf("failed to create Arrow reader: %w", err)
+		    return nil, nil, fmt.Errorf("failed to create Arrow reader: %w", err)
 		}
 		
 		recReader, err := arrowReader.GetRecordReader(
@@ -80,7 +81,7 @@ for i := 0; i < pqReader.NumRowGroups(); i++ {
 		)
 		
 		if err != nil {
-		    return nil, fmt.Errorf("failed to get record reader: %w", err)
+		    return nil, nil, fmt.Errorf("failed to get record reader: %w", err)
 		}
 		defer recReader.Release()
 
@@ -91,6 +92,7 @@ for _, f := range schema.Fields() {
 }
 
     meta := make(map[string]SeriesMetadata)
+		metaFromSeries := make(map[string]string)
 
 		logger.Warnf("parquet row groups: %d", pqReader.NumRowGroups())
     for recReader.Next() {
@@ -105,7 +107,7 @@ for _, f := range schema.Fields() {
         collectionIDIdxs := rec.Schema().FieldIndices("collection_id")
         fileSizeIdxs := rec.Schema().FieldIndices("series_size_MB")
         if len(uidIdxs) == 0 || len(urlIdxs) == 0 {
-            return nil, fmt.Errorf("required columns not found in parquet")
+            return nil, nil, fmt.Errorf("required columns not found in parquet")
         }
 
         uidCol := rec.Column(uidIdxs[0]).(*array.String)
@@ -140,15 +142,16 @@ for _, f := range schema.Fields() {
 								StudyInstanceUID:	 studyUID,
 								collection_id:		 collectionID,
             }
+						metaFromSeries[uid] = url
         }
 				rec.Release()
     }
 
 		if err := recReader.Err(); err != nil && err != io.EOF {
-		    return nil, fmt.Errorf("error reading Parquet records: %w", err)
+		    return nil, nil, fmt.Errorf("error reading Parquet records: %w", err)
 		}
 
-    return meta, nil
+    return meta, metaFromSeries, nil
 }
 
 
@@ -227,13 +230,14 @@ func decodeS5cmd(filePath string, outputDir string, processedSeries map[string]s
 
 
 
-  seriesMeta, err := loadSeriesMetadataFromParquet()
+  seriesMeta, nbiaLookup, err := loadSeriesMetadataFromParquet()
   if err != nil {
       logger.Fatalf("Failed to load parquet metadata: %v", err)
   }
 
 	var jobsToProcess []*FileInfo
 	var newJobs int
+	var numDotRe = regexp.MustCompile(`^[0-9][0-9.]*$`)
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -243,6 +247,8 @@ func decodeS5cmd(filePath string, outputDir string, processedSeries map[string]s
 			originalURI = parts[1]
 		} else if len(parts) == 1 && strings.HasPrefix(parts[0], "s3://") {
 			originalURI = parts[0]
+		} else if len(parts) == 1 && numDotRe.MatchString(parts[0]) {
+			originalURI = nbiaLookup[parts[0]]
 		} else {
 			continue // Skip comments and invalid lines
 		}

@@ -14,6 +14,7 @@ import { DownloadOverviewSnapshot } from './models/download-series.model';
 export class AppComponent implements OnInit, OnDestroy {
   inputFilePath = '';
   outputDirPath = '';
+  authFilePath = '';
   defaultDownloadDir = '';
 
   private unsubscribeCliError?: () => void;
@@ -24,9 +25,10 @@ export class AppComponent implements OnInit, OnDestroy {
 
   // Advanced options / UI state
   showAdvancedModal = false;
+  showManifestSection = true;
   maxConnections = 8;
   maxRetries = 3;
-  simultaneousDownloads = 2;
+  simultaneousDownloads = 8;
   skipExisting = true;
   downloadInParallel = true;
 
@@ -147,12 +149,23 @@ export class AppComponent implements OnInit, OnDestroy {
     });
   }
 
+  onSelectAuthFile() {
+    OpenOutputDirectoryDialog().then((dirPath: string) => {
+      if (dirPath) {
+        this.authFilePath = dirPath;
+      }
+    }).catch(err => {
+      //this.status = "Error: " + err;
+    });
+  }
+
   onFetchFiles() {
     if (!this.inputFilePath || !this.outputDirPath) {
       this.downloadStatus.appendManifestLog("ERROR: Please select both an input TCIA file and an output directory.");
       return;
     }
 
+    this.showManifestSection = false;
     this.showInitializing = true;
     this.downloadStatus.beginRun(this.inputFilePath);
 
@@ -189,7 +202,8 @@ export class AppComponent implements OnInit, OnDestroy {
       this.maxRetries,
       this.simultaneousDownloads,
       this.skipExisting,
-      this.downloadInParallel
+      this.downloadInParallel,
+      this.authFilePath
     ).catch(err => {
       this.ngZone.run(() => {
         this.downloadStatus.appendManifestLog('ERROR: ' + err);

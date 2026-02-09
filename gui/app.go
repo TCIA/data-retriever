@@ -124,6 +124,7 @@ func (b *App) RunCLIFetch(
     simultaneousDownloads int,
     skipExisting bool,
     downloadInParallel bool,
+		authPath string,
 ) (string, error) {
 
     if b.ctx == nil {
@@ -147,6 +148,7 @@ func (b *App) RunCLIFetch(
         MaxRetries: maxRetries,
         Parallel:   simultaneousDownloads,
         SkipExist:  skipExisting,
+				AuthPath:		authPath,
     }
 
     if b.batches == nil {
@@ -203,6 +205,7 @@ func (b *App) runBatch(batch *DownloadBatch) {
         NoDecompress:    false,
         RefreshMetadata: false,
         MetadataWorkers: 20,
+				Auth:						 batch.AuthPath,
     }
 
     logDir := filepath.Join(".", "logs")
@@ -358,6 +361,7 @@ func (b *App) ResumeManifest(manifestPath string) error {
         pausedBatch.Parallel,
         true, // skipExisting = true to resume from where we left off
         true, // downloadInParallel
+				pausedBatch.AuthPath,
     )
     if err != nil {
         return err
@@ -379,6 +383,8 @@ type DownloadBatch struct {
     MaxRetries int
     Parallel   int
     SkipExist  bool
+
+		AuthPath	 string
 }
 
 func (a *App) FetchFiles() string {

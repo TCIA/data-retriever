@@ -587,9 +587,20 @@
 .file-input-row {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 6px;
   margin-bottom: 12px;
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.file-input-row .file-input {
+  flex: 1; 
+  min-width: 0;     /* prevents overflow in flexbox */
+}
+
+.file-input-row .browse-btn {
+  flex-shrink: 0;
 }
 
 .file-label {

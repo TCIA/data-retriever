@@ -40,6 +40,15 @@
               Skip Existing
             </label>
           </div>
+          <div class="file-input-row">
+            <div class="file-input-group">
+              <input type="text" [(ngModel)]="authFilePath" class="file-input" placeholder="Path/to/the/CRDC/auth/file">
+              <button (click)="onSelectInputFile()" class="browse-btn" title="Browse">
+                <span class="material-icons-outlined">folder_open</span>
+              </button>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
@@ -62,7 +71,7 @@
 
   <div class="main-grid">
 
-    <div class="grid-section manifest-section">
+    <div class="grid-section manifest-section" *ngIf="showManifestSection">
       <div class="section-header">
         <span>Manifest & Destination</span>
       </div>

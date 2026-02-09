@@ -675,7 +675,10 @@ func decodeInputFile(ctx context.Context, filePath string, client *http.Client, 
 	ext := strings.ToLower(filepath.Ext(filePath))
 	switch ext {
 	case ".tcia":
-		files := decodeTCIA(ctx, filePath, client, options, callbacks)
+		files, _ := decodeS5cmd(filePath, options.Output, s5cmdMap, callbacks)
+		if len(files) == 0 {
+			files = decodeTCIA(ctx, filePath, client, options, callbacks)
+		}
 		emitManifestMetadata(callbacks, filePath, files)
 		return files, 0, nil
 	case ".s5cmd":
