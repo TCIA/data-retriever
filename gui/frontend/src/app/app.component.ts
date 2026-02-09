@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, NgZone, HostListener } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
-import { CancelDownload, OpenInputFileDialog, OpenOutputDirectoryDialog, GetDefaultOutputDirectory, RunCLIFetch } from '../../wailsjs/go/main/App';
+import { CancelDownload, OpenAuthFileDialog, OpenInputFileDialog, OpenOutputDirectoryDialog, GetDefaultOutputDirectory, RunCLIFetch } from '../../wailsjs/go/main/App';
 import { DownloadStatusService } from './services/download-status.service';
 import { DownloadOverviewSnapshot } from './models/download-series.model';
 
@@ -150,7 +150,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   onSelectAuthFile() {
-    OpenOutputDirectoryDialog().then((dirPath: string) => {
+    OpenAuthFileDialog().then((dirPath: string) => {
       if (dirPath) {
         this.authFilePath = dirPath;
       }

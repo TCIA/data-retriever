@@ -87,6 +87,20 @@ func (b *App) GetDefaultOutputDirectory() string {
 	}
 }
 
+// OpenAuthFileDialog opens a system file dialog and returns the selected file path
+func (b *App) OpenAuthFileDialog() (string, error) {
+	result, err := wailsRuntime.OpenFileDialog(b.ctx, wailsRuntime.OpenDialogOptions{
+		Title: "Select .json Auth Token",
+	})
+	if err != nil {
+		return "", err
+	}
+	if result == "" {
+		return "", nil // User cancelled
+	}
+	return result, nil
+}
+
 // OpenInputFileDialog opens a system file dialog and returns the selected file path
 func (b *App) OpenInputFileDialog() (string, error) {
 	result, err := wailsRuntime.OpenFileDialog(b.ctx, wailsRuntime.OpenDialogOptions{

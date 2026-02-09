@@ -9,6 +9,8 @@ export function GetDefaultOutputDirectory():Promise<string>;
 
 export function Greet(arg1:string):Promise<string>;
 
+export function OpenAuthFileDialog():Promise<string>;
+
 export function OpenInputFileDialog():Promise<string>;
 
 export function OpenOutputDirectoryDialog():Promise<string>;

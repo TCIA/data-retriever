@@ -18,6 +18,10 @@ export function Greet(arg1) {
   return window['go']['main']['App']['Greet'](arg1);
 }
 
+export function OpenAuthFileDialog() {
+  return window['go']['main']['App']['OpenAuthFileDialog']();
+}
+
 export function OpenInputFileDialog() {
   return window['go']['main']['App']['OpenInputFileDialog']();
 }
