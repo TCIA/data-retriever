@@ -3,7 +3,6 @@ package app
 import (
     "fmt"
     "os"
-    "path/filepath"
     "time"
 
     "github.com/DavidGamba/go-getoptions"
@@ -105,7 +104,7 @@ func InitOptions() *Options {
     }
 
     if opt.Debug || opt.SaveLog {
-        setLogger(opt.Debug, filepath.Join(opt.Output, "progress.log"))
+        setLogger(opt.Debug, "")
     }
 
     if opt.opt.Called("help") || len(os.Args) < 2 {

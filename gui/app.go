@@ -1,16 +1,16 @@
 package main
 
 import (
-	"context"
-	"errors"
-	"fmt"
-	"os"
-	"strings"
-	"sync"
-	"time"
-	"path/filepath"
-	"bufio"
+    "bufio"
+    "context"
+    "errors"
+    "fmt"
+    "os"
+    "path/filepath"
 	stdRuntime "runtime"
+    "strings"
+    "sync"
+    "time"
 
 	"github.com/GrigoryEvko/NBIA_data_retriever_CLI/core/app"
 	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
@@ -225,59 +225,51 @@ func (b *App) runBatch(batch *DownloadBatch) {
     logDir := filepath.Join(".", "logs")
     logTimestamp := time.Now().Format("20060102-150405")
     logPath := filepath.Join(logDir, fmt.Sprintf("nbia-output-%s.log", logTimestamp))
+    runStart := time.Now()
 
-    var (
-        logFile   *os.File
-        logWriter *bufio.Writer
-        logMu     sync.Mutex
-    )
-
+    var eventLog *app.TextEventLogger
     if err := os.MkdirAll(logDir, 0o755); err == nil {
-        if file, err := os.Create(logPath); err == nil {
-            logFile = file
-            logWriter = bufio.NewWriter(file)
+        if l, logErr := app.NewTextEventLogger(logPath, runStart, 10*time.Second); logErr == nil {
+            eventLog = l
         }
     }
 
     defer func() {
-        if logWriter != nil {
-            _ = logWriter.Flush()
-        }
-        if logFile != nil {
-            _ = logFile.Close()
+        if eventLog != nil {
+            eventLog.Close()
         }
     }()
 
-    writeLine := func(line string) {
-        if logWriter == nil {
-            return
-        }
-        logMu.Lock()
-        defer logMu.Unlock()
-        if !strings.HasSuffix(line, "\n") {
-            line += "\n"
-        }
-        _, _ = logWriter.WriteString(line)
-        _ = logWriter.Flush()
-    }
-
-    emit := func(line string) {
-        writeLine(line)
-    }
-
     callbacks := app.Callbacks{
-        Stdout: emit,
-        Stderr: emit,
+        Stdout: func(line string) {
+            if eventLog != nil {
+                eventLog.HandleStdout(line)
+            }
+        },
+        Stderr: func(line string) {
+            if eventLog != nil {
+                eventLog.HandleStderr(line)
+            }
+        },
         Series: func(evt app.SeriesEvent) {
+            if eventLog != nil {
+                eventLog.HandleSeries(evt)
+            }
             wailsRuntime.EventsEmit(b.ctx, "download-series-event", evt)
         },
         Manifest: func(p app.ManifestPayload) {
+            if eventLog != nil {
+                eventLog.HandleManifest(p)
+            }
             wailsRuntime.EventsEmit(b.ctx, "manifest-series-metadata", p)
         },
     }
 
     // Run the CLI download (blocking inside goroutine)
     summary, err := app.Run(batch.Ctx, options, callbacks)
+    if eventLog != nil {
+        eventLog.LogRunFinished(summary, err)
+    }
 
     if err != nil {
         if errors.Is(err, context.Canceled) {
@@ -299,9 +291,6 @@ func (b *App) runBatch(batch *DownloadBatch) {
             summary.Failed,
             summary.Elapsed.String(),
         )
-    }
-    if summaryText != "" {
-        writeLine(summaryText)
     }
     wailsRuntime.EventsEmit(b.ctx, "cli-finished", summaryText)
 }
