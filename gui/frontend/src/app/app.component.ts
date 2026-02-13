@@ -16,6 +16,7 @@ export class AppComponent implements OnInit, OnDestroy {
   outputDirPath = '';
   authFilePath = '';
   defaultDownloadDir = '';
+  directoryMode: 'classic' | 'descriptive' = 'classic';
 
   private unsubscribeCliError?: () => void;
   private unsubscribeCliFinished?: () => void;
@@ -203,7 +204,8 @@ export class AppComponent implements OnInit, OnDestroy {
       this.simultaneousDownloads,
       this.skipExisting,
       this.downloadInParallel,
-      this.authFilePath
+      this.authFilePath,
+      this.directoryMode
     ).catch(err => {
       this.ngZone.run(() => {
         this.downloadStatus.appendManifestLog('ERROR: ' + err);

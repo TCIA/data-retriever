@@ -48,6 +48,7 @@ type Options struct {
     RefreshMetadata bool
     MetadataWorkers int
 		Auth						string
+		DirectoryMode		string
 
     opt *getoptions.GetOpt
 }
@@ -90,6 +91,8 @@ func InitOptions() *Options {
     opt.opt.IntVar(&opt.MetadataWorkers, "metadata-workers", 20, opt.opt.Description("number of parallel metadata fetch workers"))
 		opt.opt.StringVar(&opt.Auth, "auth", "",
 			opt.opt.Description("path to JSON API key file for Gen3 authentication"))
+		opt.opt.StringVar(&opt.DirectoryMode, "directory-mode", "",
+ 			opt.opt.Description("Directory structure of saved files: classic or descriptive"))
 
     if _, err := opt.opt.Parse(os.Args[1:]); err != nil {
         Logger.Fatal(err)

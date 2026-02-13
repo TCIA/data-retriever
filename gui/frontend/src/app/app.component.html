@@ -48,6 +48,31 @@
               </button>
             </div>
           </div>
+          <div class="setting-item">
+            <label class="setting-label">Directory Mode</label>
+            <div class="radio-group">
+              <label class="radio-label">
+                <input
+                  type="radio"
+                  name="directoryMode"
+                  value="classic"
+                  [(ngModel)]="directoryMode"
+                />
+                Classic
+              </label>
+          
+              <label class="radio-label">
+                <input
+                  type="radio"
+                  name="directoryMode"
+                  value="descriptive"
+                  [(ngModel)]="directoryMode"
+                />
+                Descriptive
+              </label>
+            </div>
+          </div>
+
 
         </div>
       </div>

@@ -500,7 +500,7 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 
 	wc.emitSeriesEvent(fileInfo, "downloading", fmt.Sprintf("[Worker %d] Preparing download", wc.WorkerID), 25)
 
-	if wc.Options.SkipExisting && !fileInfo.NeedsDownload(wc.Options.Output, false, wc.Options.NoDecompress) {
+	if wc.Options.SkipExisting && !fileInfo.NeedsDownload(wc.Options.Output, false, wc.Options.NoDecompress, wc.Options) {
 		Logger.Debugf("[Worker %d] Skip existing %s", wc.WorkerID, fileInfo.SeriesInstanceUID)
 		atomic.AddInt32(&wc.Stats.Skipped, 1)
 		updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
@@ -508,7 +508,7 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 		return
 	}
 
-	if !fileInfo.NeedsDownload(wc.Options.Output, wc.Options.Force, wc.Options.NoDecompress) {
+	if !fileInfo.NeedsDownload(wc.Options.Output, wc.Options.Force, wc.Options.NoDecompress, wc.Options) {
 		Logger.Debugf("[Worker %d] Skip %s (already exists with correct size/checksum)", wc.WorkerID, fileInfo.SeriesInstanceUID)
 		atomic.AddInt32(&wc.Stats.Skipped, 1)
 		updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
@@ -675,14 +675,14 @@ func decodeInputFile(ctx context.Context, filePath string, client *http.Client, 
 	ext := strings.ToLower(filepath.Ext(filePath))
 	switch ext {
 	case ".tcia":
-		files, _ := decodeS5cmd(filePath, options.Output, s5cmdMap, callbacks)
+		files, _ := decodeS5cmd(filePath, options.Output, s5cmdMap, callbacks, options)
 		if len(files) == 0 {
 			files = decodeTCIA(ctx, filePath, client, options, callbacks)
 		}
 		emitManifestMetadata(callbacks, filePath, files)
 		return files, 0, nil
 	case ".s5cmd":
-		files, newJobs := decodeS5cmd(filePath, options.Output, s5cmdMap, callbacks)
+		files, newJobs := decodeS5cmd(filePath, options.Output, s5cmdMap, callbacks, options)
 		emitManifestMetadata(callbacks, filePath, files)
 		return files, newJobs, nil
 	case ".csv", ".tsv", ".xlsx":

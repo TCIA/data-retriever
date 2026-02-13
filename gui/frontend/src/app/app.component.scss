@@ -584,6 +584,20 @@
   flex-shrink: 0;
 }
 
+.radio-group {
+  display: flex;
+  gap: 1rem;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #666;
+  cursor: pointer;
+}
+
 .file-input-row {
   display: flex;
   flex-direction: column;

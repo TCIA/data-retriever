@@ -460,7 +460,7 @@ func decodeTCIA(ctx context.Context, path string, httpClient *http.Client, optio
 	}
 
 	// Save all to a single CSV file
-	csvPath := filepath.Join(options.Output, "metadata.csv")
+	csvPath := filepath.Join(options.Output, "metadata",  "metadata.csv")
 	if err := WriteAllMetadataToCSV(files, csvPath); err != nil {
 		logger.Errorf("Failed to save combined CSV: %v", err)
 	} else {
@@ -520,8 +520,31 @@ type FileInfo struct {
 }
 
 // GetOutput construct the output directory (thread-safe)
-func (info *FileInfo) getOutput(output string) string {
-	outputDir := filepath.Join(output, info.PatientID, info.StudyInstanceUID)
+func (info *FileInfo) getOutput(output string, options *Options) string {
+
+	var outputDir string
+	if options.DirectoryMode == "classic" {
+		outputDir = filepath.Join(output, info.Collection, info.PatientID, info.StudyInstanceUID, info.SeriesInstanceUID)
+
+	} else {
+		cleanStudyDesc := strings.ReplaceAll(info.StudyDesc, "/", "")
+		cleanSeriesDesc := strings.ReplaceAll(info.SeriesDescription, "/", "")
+		studyUID := info.StudyInstanceUID
+		if len(studyUID) > 5 {
+		    studyUID = studyUID[len(studyUID)-5:]
+		}
+		seriesUID := info.SeriesInstanceUID
+		if len(seriesUID) > 5 {
+		    seriesUID = seriesUID[len(seriesUID)-5:]
+		}
+
+		outputDir = filepath.Join(output, info.Collection, info.PatientID, 
+										info.StudyDate + cleanStudyDesc[:min(54, len(cleanStudyDesc))] + studyUID,
+										info.SeriesNumber + cleanSeriesDesc[:min(54, len(cleanSeriesDesc))] + seriesUID)
+
+	}
+
+
 	// Check if directory exists without lock first
 	if _, err := os.Stat(outputDir); !os.IsNotExist(err) {
 		return outputDir
@@ -542,24 +565,27 @@ func (info *FileInfo) MetaFile(output string) string {
 	return getMetadataCachePath(output, info.SeriesInstanceUID)
 }
 
-func (info *FileInfo) DcimFiles(output string) string {
-	return filepath.Join(info.getOutput(output), info.SeriesInstanceUID)
+
+func (info *FileInfo) DcimFiles(output string, options *Options) string {
+	return info.getOutput(output, options)
 }
 
 // NeedsDownload checks if files need to be downloaded
-func (info *FileInfo) NeedsDownload(output string, force bool, noDecompress bool) bool {
+func (info *FileInfo) NeedsDownload(output string, force bool, noDecompress bool, options *Options) bool {
 	if force {
 		logger.Debugf("Force flag set, will re-download %s", info.SeriesInstanceUID)
 		return true
 	}
+	//logger.Warnf("running needs download: %s", output)
 
 	var targetPath string
-	if info.S5cmdManifestPath != "" {
+//	if info.S5cmdManifestPath != "" {
 		// s5cmd downloads files to the output directory, so we can't check for a specific file
 		// and we assume the file needs to be downloaded.
-		return true
-	}
-	if info.DownloadURL != "" {
+//		return true
+//	}
+	if info.DownloadURL != "" && info.S5cmdManifestPath == "" {
+		logger.Warnf("has download url: %s", info.DownloadURL)
 		targetPath = filepath.Join(output, info.SeriesInstanceUID)
 		_, err := os.Stat(targetPath)
 		if os.IsNotExist(err) {
@@ -573,11 +599,12 @@ func (info *FileInfo) NeedsDownload(output string, force bool, noDecompress bool
 
 	if noDecompress {
 		// Check for ZIP file
-		targetPath = info.DcimFiles(output) + ".zip"
+		targetPath = info.DcimFiles(output, options) + ".zip"
 	} else {
 		// Check for extracted directory
-		targetPath = info.DcimFiles(output)
+		targetPath = info.DcimFiles(output, options)
 	}
+	//logger.Warnf("targetpath: %s", targetPath)
 
 	stat, err := os.Stat(targetPath)
 	if err != nil {
@@ -615,7 +642,9 @@ func (info *FileInfo) NeedsDownload(output string, force bool, noDecompress bool
 					logger.Warnf("Error calculating directory size for %s: %v", targetPath, err)
 					return true
 				}
-				if actualSize != expectedSize {
+				if float64(actualSize) < (float64(expectedSize) * .9) {
+					logger.Warnf("Actual: %s Expected: %s", actualSize, expectedSize)
+					logger.Warnf("target dir: %s", targetPath)
 					logger.Debugf("Directory %s size mismatch: expected %d, got %d", targetPath, expectedSize, actualSize)
 					return true
 				}
@@ -1336,7 +1365,6 @@ func (info *FileInfo) downloadDirect(ctx context.Context, output string, httpCli
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	logger.Debugf("Downloading direct from URL: %s", info.DownloadURL)
 
 	finalPath := filepath.Join(output, info.SeriesInstanceUID)
 	tempPath := finalPath + ".tmp"
@@ -1412,7 +1440,7 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 	logger.Debugf("getting image file to %s", output)
 
 	url_, err := makeURL(ImageUrl, map[string]interface{}{"SeriesInstanceUID": info.SeriesInstanceUID,
-		"IncludeMD5": "Yes"})
+		"IncludeMD5": "Yes", "NewFileNames": "Yes"})
 	if err != nil {
 		return fmt.Errorf("failed to make URL: %v", err)
 	}
@@ -1423,11 +1451,11 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 
 	if options.NoDecompress {
 		// Keep as ZIP file
-		finalPath = info.DcimFiles(output) + ".zip"
+		finalPath = info.DcimFiles(output, options) + ".zip"
 		tempZipPath = finalPath + ".tmp"
 	} else {
 		// Extract to directory
-		finalPath = info.DcimFiles(output)
+		finalPath = info.DcimFiles(output, options)
 		tempZipPath = finalPath + ".zip.tmp"
 	}
 

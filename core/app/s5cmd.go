@@ -25,6 +25,10 @@ type SeriesMetadata struct {
 		collection_id				string
 		PatientID						string
 		StudyInstanceUID		string
+		StudyDate						string
+		StudyDescription		string
+		SeriesNumber				string
+		SeriesDescription		string
 }
 
 //go:embed parquet/idc_index.parquet
@@ -106,6 +110,10 @@ for _, f := range schema.Fields() {
         studyUIDIdxs := rec.Schema().FieldIndices("StudyInstanceUID")
         collectionIDIdxs := rec.Schema().FieldIndices("collection_id")
         fileSizeIdxs := rec.Schema().FieldIndices("series_size_MB")
+        studyDateIdxs := rec.Schema().FieldIndices("StudyDate")
+        studyDescIdxs := rec.Schema().FieldIndices("StudyDescription")
+        seriesNumIdxs := rec.Schema().FieldIndices("SeriesNumber")
+        seriesDescIdxs := rec.Schema().FieldIndices("SeriesDescription")
         if len(uidIdxs) == 0 || len(urlIdxs) == 0 {
             return nil, nil, fmt.Errorf("required columns not found in parquet")
         }
@@ -116,6 +124,10 @@ for _, f := range schema.Fields() {
         patientIDCol := rec.Column(patientIDIdxs[0]).(*array.String)
         studyUIDCol := rec.Column(studyUIDIdxs[0]).(*array.String)
         collectionIDCol := rec.Column(collectionIDIdxs[0]).(*array.String)
+        studyDateCol := rec.Column(studyDateIdxs[0]).(*array.String)
+        studyDescCol := rec.Column(studyDescIdxs[0]).(*array.String)
+        seriesNumCol := rec.Column(seriesNumIdxs[0]).(*array.String)
+        seriesDescCol := rec.Column(seriesDescIdxs[0]).(*array.String)
 
         rows := int(rec.NumRows())
         for i := 0; i < rows; i++ {
@@ -128,6 +140,10 @@ for _, f := range schema.Fields() {
 						patientID := patientIDCol.Value(i)
 						studyUID := studyUIDCol.Value(i)
 						collectionID := collectionIDCol.Value(i)
+						studyDate := studyDateCol.Value(i)
+						studyDesc := studyDescCol.Value(i)
+						seriesNum := seriesNumCol.Value(i)
+						seriesDesc := seriesDescCol.Value(i)
 
             if _, exists := meta[url]; exists {
                 continue
@@ -141,6 +157,10 @@ for _, f := range schema.Fields() {
 								PatientID:				 patientID,
 								StudyInstanceUID:	 studyUID,
 								collection_id:		 collectionID,
+								StudyDate:				 studyDate,
+								StudyDescription:	 studyDesc,
+								SeriesNumber:			 seriesNum,
+								SeriesDescription: seriesDesc,
             }
 						metaFromSeries[uid] = url
         }
@@ -170,7 +190,7 @@ func loadS5cmdSeriesMapFromCSVs(outputDir string) (map[string]string, error) {
 	}
 
 	for _, file := range files {
-		if file.IsDir() || !strings.HasSuffix(file.Name(), "-metadata.csv") {
+		if file.IsDir() || !strings.HasSuffix(file.Name(), "metadata.csv") {
 			continue
 		}
 
@@ -221,7 +241,7 @@ func loadS5cmdSeriesMapFromCSVs(outputDir string) (map[string]string, error) {
 	return seriesMap, nil
 }
 
-func decodeS5cmd(filePath string, outputDir string, processedSeries map[string]string, callbacks Callbacks) ([]*FileInfo, int) {
+func decodeS5cmd(filePath string, outputDir string, processedSeries map[string]string, callbacks Callbacks, options *Options) ([]*FileInfo, int) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		logger.Fatalf("could not open s5cmd manifest: %v", err)
@@ -253,7 +273,7 @@ func decodeS5cmd(filePath string, outputDir string, processedSeries map[string]s
 			continue // Skip comments and invalid lines
 		}
 
-		if seriesUID, ok := processedSeries[originalURI]; ok {
+		if seriesUID, ok := processedSeries[originalURI]; ok && 1==2 {
 			// This is a sync job for an existing series
 			logger.Infof("Queueing sync job for existing series: %s", originalURI)
 			finalDirPath := filepath.Join(outputDir, seriesUID)
@@ -279,17 +299,32 @@ func decodeS5cmd(filePath string, outputDir string, processedSeries map[string]s
 			if meta, ok := seriesMeta[originalURI]; ok {
 			    fi.SeriesInstanceUID= meta.SeriesInstanceUID
 					fi.FileSize = strconv.FormatInt(
-											    int64(meta.series_size_MB*1024*1024),
+											    int64(meta.series_size_MB*1000*1000),
 											    10,
 												)
 					fi.PatientID = meta.PatientID
 					fi.StudyInstanceUID = meta.StudyInstanceUID
 					fi.Collection = meta.collection_id
+					fi.StudyDate = meta.StudyDate
+					fi.StudyDesc = meta.StudyDescription
+					fi.SeriesNumber = meta.SeriesNumber
+					fi.SeriesDescription = meta.SeriesDescription
 			} else {
 			    logger.Warnf("No parquet metadata found for series %s", originalURI)
 			}
 
-			finalDirPath := filepath.Join(outputDir, fi.Collection, fi.PatientID, fi.StudyInstanceUID, fi.SeriesInstanceUID)
+			var finalDirPath string
+			if options.DirectoryMode == "classic" {
+				finalDirPath = filepath.Join(outputDir, fi.Collection, fi.PatientID, fi.StudyInstanceUID, fi.SeriesInstanceUID)
+			} else {
+				
+				cleanStudyDesc := strings.ReplaceAll(fi.StudyDesc, "/", "")
+				cleanSeriesDesc := strings.ReplaceAll(fi.SeriesDescription, "/", "")
+
+				finalDirPath = filepath.Join(outputDir, fi.Collection, fi.PatientID, 
+												fi.StudyDate + cleanStudyDesc[:min(54, len(cleanStudyDesc))] + fi.StudyInstanceUID[len(fi.StudyInstanceUID) - 5:],
+												fi.SeriesNumber + cleanSeriesDesc[:min(54, len(cleanSeriesDesc))] + fi.SeriesInstanceUID[len(fi.SeriesInstanceUID) - 5:])
+			}
 
 			if err := os.MkdirAll(finalDirPath, 0755); err != nil {
 				logger.Warnf("Could not create temp directory for %s: %v", originalURI, err)
@@ -308,7 +343,7 @@ func decodeS5cmd(filePath string, outputDir string, processedSeries map[string]s
 
 
 	// Save all to a single CSV file
-	csvPath := filepath.Join(outputDir, "metadata.csv")
+	csvPath := filepath.Join(outputDir, "metadata", "metadata.csv")
 	if err := WriteAllMetadataToCSV(jobsToProcess, csvPath); err != nil {
 		logger.Errorf("Failed to save combined CSV: %v", err)
 	} else {
