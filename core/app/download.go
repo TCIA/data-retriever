@@ -584,8 +584,7 @@ func (info *FileInfo) NeedsDownload(output string, force bool, noDecompress bool
 		// and we assume the file needs to be downloaded.
 //		return true
 //	}
-	if info.DownloadURL != "" && info.S5cmdManifestPath == "" {
-		logger.Warnf("has download url: %s", info.DownloadURL)
+	if (info.DownloadURL != "" || info.DRSURI != "")  && info.S5cmdManifestPath == "" {
 		targetPath = filepath.Join(output, info.SeriesInstanceUID)
 		_, err := os.Stat(targetPath)
 		if os.IsNotExist(err) {
