@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 	"time"
 
@@ -40,7 +39,7 @@ func main() {
 	var eventLog *app.TextEventLogger
 	runStart := time.Now()
 	if options.SaveLog {
-		logPath := filepath.Join(options.Output, "progress.log")
+		logPath := app.DefaultLogFilePath("progress.log")
 		l, err := app.NewTextEventLogger(logPath, runStart, 10*time.Second)
 		if err != nil {
 			logger.Warnf("Failed to initialise event log file: %v", err)

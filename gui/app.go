@@ -1,16 +1,16 @@
 package main
 
 import (
-    "bufio"
-    "context"
-    "errors"
-    "fmt"
-    "os"
-    "path/filepath"
+	"bufio"
+	"context"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
 	stdRuntime "runtime"
-    "strings"
-    "sync"
-    "time"
+	"strings"
+	"sync"
+	"time"
 
 	"github.com/GrigoryEvko/NBIA_data_retriever_CLI/core/app"
 	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
@@ -20,7 +20,6 @@ func dirExists(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && info.IsDir()
 }
-
 
 func linuxDownloadsDir(home string) string {
 	config := filepath.Join(home, ".config", "user-dirs.dirs")
@@ -131,263 +130,256 @@ func (b *App) OpenOutputDirectoryDialog() (string, error) {
 
 // RunCLIFetch runs the CLI tool asynchronously with the given manifest and output directory and advanced options.
 func (b *App) RunCLIFetch(
-    manifestPath string,
-    outputDir string,
-    maxConnections int,
-    maxRetries int,
-    simultaneousDownloads int,
-    skipExisting bool,
-    downloadInParallel bool,
-		authPath string,
+	manifestPath string,
+	outputDir string,
+	maxConnections int,
+	maxRetries int,
+	simultaneousDownloads int,
+	skipExisting bool,
+	downloadInParallel bool,
+	authPath string,
 ) (string, error) {
 
-    if b.ctx == nil {
-        return "", fmt.Errorf("application context not initialised")
-    }
+	if b.ctx == nil {
+		return "", fmt.Errorf("application context not initialised")
+	}
 
-    // Create a new batch
-    b.mu.Lock()
-    b.runID++
-    id := b.runID
+	// Create a new batch
+	b.mu.Lock()
+	b.runID++
+	id := b.runID
 
-    ctx, cancel := context.WithCancel(b.ctx)
+	ctx, cancel := context.WithCancel(b.ctx)
 
-    batch := &DownloadBatch{
-        ID:         id,
-        Ctx:        ctx,
-        Cancel:     cancel,
-        Manifest:   manifestPath,
-        OutputDir:  outputDir,
-        MaxConn:    maxConnections,
-        MaxRetries: maxRetries,
-        Parallel:   simultaneousDownloads,
-        SkipExist:  skipExisting,
-				AuthPath:		authPath,
-    }
+	batch := &DownloadBatch{
+		ID:         id,
+		Ctx:        ctx,
+		Cancel:     cancel,
+		Manifest:   manifestPath,
+		OutputDir:  outputDir,
+		MaxConn:    maxConnections,
+		MaxRetries: maxRetries,
+		Parallel:   simultaneousDownloads,
+		SkipExist:  skipExisting,
+		AuthPath:   authPath,
+	}
 
-    if b.batches == nil {
-        b.batches = make(map[uint64]*DownloadBatch)
-    }
-    b.batches[id] = batch
-    b.mu.Unlock()
+	if b.batches == nil {
+		b.batches = make(map[uint64]*DownloadBatch)
+	}
+	b.batches[id] = batch
+	b.mu.Unlock()
 
-    // Run the batch in its own goroutine
-    go b.runBatch(batch)
+	// Run the batch in its own goroutine
+	go b.runBatch(batch)
 
-    // Return immediately so frontend is free to repaint
-    return fmt.Sprintf("started batch %d", id), nil
+	// Return immediately so frontend is free to repaint
+	return fmt.Sprintf("started batch %d", id), nil
 }
 
 func (b *App) runBatch(batch *DownloadBatch) {
-    defer func() {
-        // Remove batch from map when done
-        b.mu.Lock()
-        delete(b.batches, batch.ID)
-        b.mu.Unlock()
-    }()
+	defer func() {
+		// Remove batch from map when done
+		b.mu.Lock()
+		delete(b.batches, batch.ID)
+		b.mu.Unlock()
+	}()
 
-    user := os.Getenv("NBIA_USER")
-    if user == "" {
-        user = "nbia_guest"
-    }
-    pass := os.Getenv("NBIA_PASS")
+	user := os.Getenv("NBIA_USER")
+	if user == "" {
+		user = "nbia_guest"
+	}
+	pass := os.Getenv("NBIA_PASS")
 
-    options := &app.Options{
-        Input:           batch.Manifest,
-        Output:          batch.OutputDir,
-        Proxy:           "",
-        Concurrent:      batch.Parallel,
-        Meta:            false,
-        Username:        user,
-        Password:        pass,
-        Version:         false,
-        Debug:           false,
-        Help:            false,
-        MetaUrl:         app.MetaUrl,
-        TokenUrl:        app.TokenUrl,
-        ImageUrl:        app.ImageUrl,
-        SaveLog:         false,
-        Prompt:          false,
-        Force:           false,
-        SkipExisting:    batch.SkipExist,
-        MaxRetries:      batch.MaxRetries,
-        RetryDelay:      10 * time.Second,
-        MaxConnsPerHost: batch.MaxConn,
-        ServerFriendly:  false,
-        RequestDelay:    500 * time.Millisecond,
-        NoMD5:           false,
-        NoDecompress:    false,
-        RefreshMetadata: false,
-        MetadataWorkers: 20,
-				Auth:						 batch.AuthPath,
-    }
+	options := &app.Options{
+		Input:           batch.Manifest,
+		Output:          batch.OutputDir,
+		Proxy:           "",
+		Concurrent:      batch.Parallel,
+		Meta:            false,
+		Username:        user,
+		Password:        pass,
+		Version:         false,
+		Debug:           false,
+		Help:            false,
+		MetaUrl:         app.MetaUrl,
+		TokenUrl:        app.TokenUrl,
+		ImageUrl:        app.ImageUrl,
+		SaveLog:         false,
+		Prompt:          false,
+		Force:           false,
+		SkipExisting:    batch.SkipExist,
+		MaxRetries:      batch.MaxRetries,
+		RetryDelay:      10 * time.Second,
+		MaxConnsPerHost: batch.MaxConn,
+		ServerFriendly:  false,
+		RequestDelay:    500 * time.Millisecond,
+		NoMD5:           false,
+		NoDecompress:    false,
+		RefreshMetadata: false,
+		MetadataWorkers: 20,
+		Auth:            batch.AuthPath,
+	}
 
-    logDir := filepath.Join(".", "logs")
-    logTimestamp := time.Now().Format("20060102-150405")
-    logPath := filepath.Join(logDir, fmt.Sprintf("nbia-output-%s.log", logTimestamp))
-    runStart := time.Now()
+	logTimestamp := time.Now().Format("20060102-150405")
+	logPath := app.DefaultLogFilePath(fmt.Sprintf("nbia-output-%s.log", logTimestamp))
+	runStart := time.Now()
 
-    var eventLog *app.TextEventLogger
-    if err := os.MkdirAll(logDir, 0o755); err == nil {
-        if l, logErr := app.NewTextEventLogger(logPath, runStart, 10*time.Second); logErr == nil {
-            eventLog = l
-        }
-    }
+	var eventLog *app.TextEventLogger
+	if l, logErr := app.NewTextEventLogger(logPath, runStart, 10*time.Second); logErr == nil {
+		eventLog = l
+	}
 
-    defer func() {
-        if eventLog != nil {
-            eventLog.Close()
-        }
-    }()
+	defer func() {
+		if eventLog != nil {
+			eventLog.Close()
+		}
+	}()
 
-    callbacks := app.Callbacks{
-        Stdout: func(line string) {
-            if eventLog != nil {
-                eventLog.HandleStdout(line)
-            }
-        },
-        Stderr: func(line string) {
-            if eventLog != nil {
-                eventLog.HandleStderr(line)
-            }
-        },
-        Series: func(evt app.SeriesEvent) {
-            if eventLog != nil {
-                eventLog.HandleSeries(evt)
-            }
-            wailsRuntime.EventsEmit(b.ctx, "download-series-event", evt)
-        },
-        Manifest: func(p app.ManifestPayload) {
-            if eventLog != nil {
-                eventLog.HandleManifest(p)
-            }
-            wailsRuntime.EventsEmit(b.ctx, "manifest-series-metadata", p)
-        },
-    }
+	callbacks := app.Callbacks{
+		Stdout: func(line string) {
+			if eventLog != nil {
+				eventLog.HandleStdout(line)
+			}
+		},
+		Stderr: func(line string) {
+			if eventLog != nil {
+				eventLog.HandleStderr(line)
+			}
+		},
+		Series: func(evt app.SeriesEvent) {
+			if eventLog != nil {
+				eventLog.HandleSeries(evt)
+			}
+			wailsRuntime.EventsEmit(b.ctx, "download-series-event", evt)
+		},
+		Manifest: func(p app.ManifestPayload) {
+			if eventLog != nil {
+				eventLog.HandleManifest(p)
+			}
+			wailsRuntime.EventsEmit(b.ctx, "manifest-series-metadata", p)
+		},
+	}
 
-    // Run the CLI download (blocking inside goroutine)
-    summary, err := app.Run(batch.Ctx, options, callbacks)
-    if eventLog != nil {
-        eventLog.LogRunFinished(summary, err)
-    }
+	// Run the CLI download (blocking inside goroutine)
+	summary, err := app.Run(batch.Ctx, options, callbacks)
+	if eventLog != nil {
+		eventLog.LogRunFinished(summary, err)
+	}
 
-    if err != nil {
-        if errors.Is(err, context.Canceled) {
-            wailsRuntime.EventsEmit(b.ctx, "cli-finished", "")
-            return
-        }
-        wailsRuntime.EventsEmit(b.ctx, "cli-error", fmt.Sprintf("download failed: %v", err))
-        return
-    }
+	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			wailsRuntime.EventsEmit(b.ctx, "cli-finished", "")
+			return
+		}
+		wailsRuntime.EventsEmit(b.ctx, "cli-error", fmt.Sprintf("download failed: %v", err))
+		return
+	}
 
-    summaryText := ""
-    if summary != nil {
-        summaryText = fmt.Sprintf(
-            "Download Summary: total %d, downloaded %d, synced %d, skipped %d, failed %d, elapsed %s",
-            summary.Total,
-            summary.Downloaded,
-            summary.Synced,
-            summary.Skipped,
-            summary.Failed,
-            summary.Elapsed.String(),
-        )
-    }
-    wailsRuntime.EventsEmit(b.ctx, "cli-finished", summaryText)
+	summaryText := ""
+	if summary != nil {
+		summaryText = fmt.Sprintf(
+			"Download Summary: total %d, downloaded %d, synced %d, skipped %d, failed %d, elapsed %s",
+			summary.Total,
+			summary.Downloaded,
+			summary.Synced,
+			summary.Skipped,
+			summary.Failed,
+			summary.Elapsed.String(),
+		)
+	}
+	wailsRuntime.EventsEmit(b.ctx, "cli-finished", summaryText)
 }
-
-
-
 
 func (b *App) CancelDownload() {
-    b.mu.Lock()
-    defer b.mu.Unlock()
+	b.mu.Lock()
+	defer b.mu.Unlock()
 
-    for id, batch := range b.batches {
-        batch.Cancel()           // cancel the batch
-        delete(b.batches, id)   // remove it from the map
-    }
+	for id, batch := range b.batches {
+		batch.Cancel()        // cancel the batch
+		delete(b.batches, id) // remove it from the map
+	}
 }
 
-
 type App struct {
-    ctx           context.Context
-    mu            sync.Mutex
-    runID         uint64
-    batches       map[uint64]*DownloadBatch
-    pausedBatches map[string]*DownloadBatch // keyed by manifest path for resume
+	ctx           context.Context
+	mu            sync.Mutex
+	runID         uint64
+	batches       map[uint64]*DownloadBatch
+	pausedBatches map[string]*DownloadBatch // keyed by manifest path for resume
 }
 
 func NewApp(ctx context.Context) *App {
-    return &App{
-        ctx:           ctx,
-        batches:       make(map[uint64]*DownloadBatch),
-        pausedBatches: make(map[string]*DownloadBatch),
-    }
+	return &App{
+		ctx:           ctx,
+		batches:       make(map[uint64]*DownloadBatch),
+		pausedBatches: make(map[string]*DownloadBatch),
+	}
 }
 
 // PauseManifest pauses a download by canceling its context and storing the batch for resume
 func (b *App) PauseManifest(manifestPath string) error {
-    b.mu.Lock()
-    defer b.mu.Unlock()
+	b.mu.Lock()
+	defer b.mu.Unlock()
 
-    for id, batch := range b.batches {
-        if batch.Manifest == manifestPath {
-            batch.Cancel() // Cancel the context to stop downloads
-            b.pausedBatches[manifestPath] = batch
-            delete(b.batches, id)
-            wailsRuntime.EventsEmit(b.ctx, "manifest-paused", manifestPath)
-            return nil
-        }
-    }
-    return fmt.Errorf("no active download found for manifest: %s", manifestPath)
+	for id, batch := range b.batches {
+		if batch.Manifest == manifestPath {
+			batch.Cancel() // Cancel the context to stop downloads
+			b.pausedBatches[manifestPath] = batch
+			delete(b.batches, id)
+			wailsRuntime.EventsEmit(b.ctx, "manifest-paused", manifestPath)
+			return nil
+		}
+	}
+	return fmt.Errorf("no active download found for manifest: %s", manifestPath)
 }
 
 // ResumeManifest resumes a paused download by restarting with skip-existing enabled
 func (b *App) ResumeManifest(manifestPath string) error {
-    b.mu.Lock()
-    pausedBatch, exists := b.pausedBatches[manifestPath]
-    if exists {
-        delete(b.pausedBatches, manifestPath)
-    }
-    b.mu.Unlock()
+	b.mu.Lock()
+	pausedBatch, exists := b.pausedBatches[manifestPath]
+	if exists {
+		delete(b.pausedBatches, manifestPath)
+	}
+	b.mu.Unlock()
 
-    if !exists {
-        return fmt.Errorf("no paused download found for manifest: %s", manifestPath)
-    }
+	if !exists {
+		return fmt.Errorf("no paused download found for manifest: %s", manifestPath)
+	}
 
-    // Resume by re-running with skip-existing enabled
-    _, err := b.RunCLIFetch(
-        pausedBatch.Manifest,
-        pausedBatch.OutputDir,
-        pausedBatch.MaxConn,
-        pausedBatch.MaxRetries,
-        pausedBatch.Parallel,
-        true, // skipExisting = true to resume from where we left off
-        true, // downloadInParallel
-				pausedBatch.AuthPath,
-    )
-    if err != nil {
-        return err
-    }
+	// Resume by re-running with skip-existing enabled
+	_, err := b.RunCLIFetch(
+		pausedBatch.Manifest,
+		pausedBatch.OutputDir,
+		pausedBatch.MaxConn,
+		pausedBatch.MaxRetries,
+		pausedBatch.Parallel,
+		true, // skipExisting = true to resume from where we left off
+		true, // downloadInParallel
+		pausedBatch.AuthPath,
+	)
+	if err != nil {
+		return err
+	}
 
-    wailsRuntime.EventsEmit(b.ctx, "manifest-resumed", manifestPath)
-    return nil
+	wailsRuntime.EventsEmit(b.ctx, "manifest-resumed", manifestPath)
+	return nil
 }
 
 type DownloadBatch struct {
-    ID         uint64 
-    Ctx        context.Context
-    Cancel     context.CancelFunc
+	ID     uint64
+	Ctx    context.Context
+	Cancel context.CancelFunc
 
-    Manifest   string
-    OutputDir  string
+	Manifest  string
+	OutputDir string
 
-    MaxConn    int
-    MaxRetries int
-    Parallel   int
-    SkipExist  bool
+	MaxConn    int
+	MaxRetries int
+	Parallel   int
+	SkipExist  bool
 
-		AuthPath	 string
+	AuthPath string
 }
 
 func (a *App) FetchFiles() string {
