@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/GrigoryEvko/NBIA_data_retriever_CLI/core/app"
 )
@@ -35,12 +36,48 @@ func main() {
 		return
 	}
 
+	var eventLog *app.TextEventLogger
+	runStart := time.Now()
+	if options.SaveLog {
+		logPath := app.DefaultLogFilePath("progress.log")
+		l, err := app.NewTextEventLogger(logPath, runStart, 10*time.Second)
+		if err != nil {
+			logger.Warnf("Failed to initialise event log file: %v", err)
+		} else {
+			eventLog = l
+			defer eventLog.Close()
+		}
+	}
+
 	callbacks := app.Callbacks{
-		Stdout: func(msg string) { fmt.Fprint(os.Stdout, msg) },
-		Stderr: func(msg string) { fmt.Fprint(os.Stderr, msg) },
+		Stdout: func(msg string) {
+			fmt.Fprint(os.Stdout, msg)
+			if eventLog != nil {
+				eventLog.HandleStdout(msg)
+			}
+		},
+		Stderr: func(msg string) {
+			fmt.Fprint(os.Stderr, msg)
+			if eventLog != nil {
+				eventLog.HandleStderr(msg)
+			}
+		},
+		Series: func(evt app.SeriesEvent) {
+			if eventLog != nil {
+				eventLog.HandleSeries(evt)
+			}
+		},
+		Manifest: func(payload app.ManifestPayload) {
+			if eventLog != nil {
+				eventLog.HandleManifest(payload)
+			}
+		},
 	}
 
 	summary, err := app.Run(ctx, options, callbacks)
+	if eventLog != nil {
+		eventLog.LogRunFinished(summary, err)
+	}
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			logger.Warn("Download cancelled by user")

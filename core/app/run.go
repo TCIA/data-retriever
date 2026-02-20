@@ -276,11 +276,7 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 	}
 
 	if Logger == nil {
-		logPath := ""
-		if options.SaveLog {
-			logPath = filepath.Join(options.Output, "progress.log")
-		}
-		setLogger(options.Debug, logPath)
+		setLogger(options.Debug, "")
 	}
 
 	if ctx == nil {
