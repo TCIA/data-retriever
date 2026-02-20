@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"github.com/tealeg/xlsx"
+	"unicode"
 )
 
 // SpreadSheetDecoder defines behaviour for decoding spreadsheet files.
@@ -86,6 +87,20 @@ func getSpreadsheetDecoder(filename string) (SpreadSheetDecoder, error) {
 	}
 }
 
+func normalize(s string) string {
+    s = strings.TrimSpace(s)
+    s = strings.ToLower(s)
+
+    // remove non letters/numbers
+    var b strings.Builder
+    for _, r := range s {
+        if unicode.IsLetter(r) || unicode.IsDigit(r) {
+            b.WriteRune(r)
+        }
+    }
+    return b.String()
+}
+
 func decodeSpreadsheet(filePath string) ([]*FileInfo, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -111,14 +126,29 @@ func decodeSpreadsheet(filePath string) ([]*FileInfo, error) {
 	drsURIIndex := -1
 	imageURLIndex := -1
 	nameIndex := -1
+	collectionIndex := -1
+	patientIdIndex := -1
+	studyIdIndex := -1
+	studyDateIndex := -1
+	studyDescIndex := -1
 	for i, col := range header {
-		switch col {
-		case "drs_uri":
+		switch normalize(col) {
+		case "drsuri":
 			drsURIIndex = i
-		case "imageUrl":
+		case "imageurl","wsiimageurl" :
 			imageURLIndex = i
-		case "name":
+		case "name", "filename":
 			nameIndex = i
+		case "collection", "collectionname":
+			collectionIndex = i
+		case "patient", "patientid", "subject", "subjectid":
+			patientIdIndex = i
+		case "studyuid", "studyid":
+			studyIdIndex = i
+		case "studydescription", "studydesc", "studyshortname":
+			studyDescIndex = i
+		case "studydate":
+			studyDateIndex = i
 		}
 	}
 
@@ -129,8 +159,28 @@ func decodeSpreadsheet(filePath string) ([]*FileInfo, error) {
 	var fileInfos []*FileInfo
 		for _, record := range records[1:] {
 		var fileName string
+		var collection string
+		var patientId string
+		var studyId string
+		var studyDesc string
+		var studyDate string
 		if nameIndex != -1 && len(record) > nameIndex {
 			fileName = record[nameIndex]
+		}
+		if collectionIndex != -1 && len(record) > collectionIndex {
+			collection = record[collectionIndex]
+		}
+		if patientIdIndex != -1 && len(record) > patientIdIndex {
+			patientId = record[patientIdIndex]
+		}
+		if studyIdIndex != -1 && len(record) > studyIdIndex {
+			studyId = record[studyIdIndex]
+		}
+		if studyDescIndex != -1 && len(record) > studyDescIndex {
+			studyDesc = record[studyDescIndex]
+		}
+		if studyDateIndex != -1 && len(record) > studyDateIndex {
+			studyDate = record[studyDateIndex]
 		}
 
 		if drsURIIndex != -1 {
@@ -139,10 +189,17 @@ func decodeSpreadsheet(filePath string) ([]*FileInfo, error) {
 				if fileName == "" {
 					fileName = filepath.Base(uri)
 				}
+				base := filepath.Base(uri)
+				ext := filepath.Ext(base)
 				fileInfos = append(fileInfos, &FileInfo{
 					DRSURI:    uri,
-					SeriesInstanceUID: filepath.Base(uri),
+					SeriesInstanceUID:  strings.TrimSuffix(base, ext), 
 					FileName:  fileName,
+					Collection: collection,
+					PatientID: patientId,
+					StudyID: studyId,
+					StudyDesc: studyDesc,
+					StudyDate: studyDate,
 				})
 			}
 		} else {
@@ -151,10 +208,17 @@ func decodeSpreadsheet(filePath string) ([]*FileInfo, error) {
 				if fileName == "" {
 					fileName = filepath.Base(url)
 				}
+				base := filepath.Base(url)
+				ext := filepath.Ext(base)
 				fileInfos = append(fileInfos, &FileInfo{
 					DownloadURL: url,
-					SeriesInstanceUID:   filepath.Base(url),
+					SeriesInstanceUID:  strings.TrimSuffix(base, ext), 
 					FileName:    fileName,
+					Collection: collection,
+					PatientID: patientId,
+					StudyID: studyId,
+					StudyDesc: studyDesc,
+					StudyDate: studyDate,
 				})
 			}
 		}

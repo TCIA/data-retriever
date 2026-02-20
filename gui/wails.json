@@ -1,23 +1,49 @@
-
 {
-    "$schema": "https://wails.io/schemas/config.v2.json",
-    "name": "TCIA_Data_Retriever",
-    "assetdir": "frontend/dist",
-    "frontend:build": "npx ng build",
-    "frontend:install": "npm install",
-    "frontend:dev:watcher": "npx ng serve",
-    "frontend:dev:serverUrl": "http://localhost:4200",
-    "wailsjsdir": "./frontend",
-    "Author": {
-        "name": "aregesteruams",
-        "email": "regesterandrew@uams.edu"
-    },
-    "mac": {
-      "icon": "frontend/src/assets/AppIcon.icns",
-      "bundleid": "net.cancerimagingarchive.data-retriever",
-      "category": "public.app-category.utilities",
-      "plist": "build/Info.plist",
-      "entitlements": "build/entitlements.plist",
-      "sign": false
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "TCIA_Data_Retriever",
+  "assetdir": "frontend/dist",
+  "wailsjsdir": "./frontend",
+  "author": {
+    "name": "aregesteruams",
+    "email": "regesterandrew@uams.edu"
+  },
+  "frontend": {
+    "install": "npm install",
+    "build": "npx ng build",
+    "dev": {
+      "watcher": "npx ng serve",
+      "serverUrl": "http://localhost:4200"
     }
+  },
+  "mac": {
+    "icon": "frontend/src/assets/AppIcon.icns",
+    "bundleId": "net.cancerimagingarchive.data-retriever",
+    "category": "public.app-category.utilities",
+    "info": {
+      "CFBundleName": "TCIA_Data_Retriever",
+      "CFBundleDisplayName": "TCIA Data Retriever",
+      "CFBundleShortVersionString": "1.0.0",
+      "CFBundleVersion": "1",
+      "CFBundleDocumentTypes": [
+        {
+          "CFBundleTypeName": "TCIA Manifest",
+          "CFBundleTypeExtensions": ["tcia"],
+          "CFBundleTypeRole": "Editor",
+          "LSHandlerRank": "Owner",
+          "LSItemContentTypes": ["org.tcia.manifest"]
+        }
+      ]
+    }
+  },
+  "build": {
+    "platforms": {
+      "darwin": {
+        "sandbox": true,
+        "entitlements": "build/entitlements.plist",
+        "sign": {
+          "identity": "WailsDevCert"
+        }
+      }
+    }
+  }
 }

@@ -525,7 +525,6 @@ func (info *FileInfo) getOutput(output string, options *Options) string {
 	var outputDir string
 	if options.DirectoryMode == "classic" {
 		outputDir = filepath.Join(output, info.Collection, info.PatientID, info.StudyInstanceUID, info.SeriesInstanceUID)
-
 	} else {
 		cleanStudyDesc := strings.ReplaceAll(info.StudyDesc, "/", "")
 		cleanSeriesDesc := strings.ReplaceAll(info.SeriesDescription, "/", "")
@@ -1365,7 +1364,7 @@ func (info *FileInfo) downloadDirect(ctx context.Context, output string, httpCli
 		ctx = context.Background()
 	}
 
-	finalPath := filepath.Join(output, info.SeriesInstanceUID)
+	finalPath := filepath.Join(info.DcimFiles(output, options), info.FileName)
 	tempPath := finalPath + ".tmp"
 
 	// Clean up any previous temporary files

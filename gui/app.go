@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
 	stdRuntime "runtime"
 	"strings"
@@ -62,6 +63,10 @@ func (b *App) GetDefaultOutputDirectory() string {
 
 	case "darwin":
 		// macOS: ~/Downloads
+		u, err := user.Lookup(os.Getenv("LOGNAME"))
+		if err == nil {
+		    return filepath.Join(u.HomeDir, "Downloads")
+		}
 		downloads := filepath.Join(home, "Downloads")
 		if dirExists(downloads) {
 			return downloads
