@@ -16,64 +16,76 @@
       </div>
       <div class="advanced-settings-body">
         <div class="settings-grid">
-          <div class="setting-item">
-            <label class="setting-label">Max Connections</label>
-            <input type="number" [(ngModel)]="maxConnections" min="1" class="setting-input">
-          </div>
-          <div class="setting-item">
-            <label class="setting-label">Max Retries</label>
-            <input type="number" [(ngModel)]="maxRetries" min="0" class="setting-input">
-          </div>
-          <div class="setting-item">
-            <label class="setting-label">Simultaneous Downloads</label>
-            <input type="number" [(ngModel)]="simultaneousDownloads" min="1" class="setting-input">
-          </div>
-          <div class="setting-item">
-            <label class="checkbox-label">
-              <input type="checkbox" [(ngModel)]="downloadInParallel" class="setting-checkbox">
-              Download In Parallel
-            </label>
-          </div>
-          <div class="setting-item">
-            <label class="checkbox-label">
-              <input type="checkbox" [(ngModel)]="skipExisting" class="setting-checkbox">
-              Skip Existing
-            </label>
-          </div>
-          <div class="file-input-row">
-            <div class="file-input-group">
-              <input type="text" [(ngModel)]="authFilePath" class="file-input" placeholder="Path/to/the/CRDC/auth/file">
-              <button (click)="onSelectAuthFile()" class="browse-btn" title="Browse">
-                <span class="material-icons-outlined">folder_open</span>
-              </button>
+          <section class="settings-group" aria-labelledby="advanced-performance-group">
+            <h3 id="advanced-performance-group" class="settings-group-title">Performance</h3>
+            <div class="settings-pairs">
+              <div class="setting-item">
+                <label class="setting-label" for="max-connections-input">Max Connections</label>
+                <input id="max-connections-input" type="number" [(ngModel)]="maxConnections" min="1" class="setting-input">
+              </div>
+              <div class="setting-item">
+                <label class="setting-label" for="max-retries-input">Max Retries</label>
+                <input id="max-retries-input" type="number" [(ngModel)]="maxRetries" min="0" class="setting-input">
+              </div>
+              <div class="setting-item">
+                <label class="setting-label" for="simultaneous-downloads-input">Simultaneous Downloads</label>
+                <input id="simultaneous-downloads-input" type="number" [(ngModel)]="simultaneousDownloads" min="1" class="setting-input">
+              </div>
+              <div class="setting-item setting-item--checkbox">
+                <label class="checkbox-label" for="download-in-parallel-input">
+                  <input id="download-in-parallel-input" type="checkbox" [(ngModel)]="downloadInParallel" class="setting-checkbox">
+                  Download In Parallel
+                </label>
+              </div>
+              <div class="setting-item setting-item--checkbox settings-span-full">
+                <label class="checkbox-label" for="skip-existing-input">
+                  <input id="skip-existing-input" type="checkbox" [(ngModel)]="skipExisting" class="setting-checkbox">
+                  Skip Existing
+                </label>
+              </div>
             </div>
-          </div>
-          <div class="setting-item">
-            <label class="setting-label">Directory Mode</label>
-            <div class="radio-group">
-              <label class="radio-label">
-                <input
-                  type="radio"
-                  name="directoryMode"
-                  value="classic"
-                  [(ngModel)]="directoryMode"
-                />
-                Classic
-              </label>
-          
-              <label class="radio-label">
-                <input
-                  type="radio"
-                  name="directoryMode"
-                  value="descriptive"
-                  [(ngModel)]="directoryMode"
-                />
-                Descriptive
-              </label>
+          </section>
+
+          <section class="settings-group" aria-labelledby="advanced-auth-group">
+            <h3 id="advanced-auth-group" class="settings-group-title">Authentication File</h3>
+            <div class="setting-file-row">
+              <label class="setting-label" for="auth-file-path-input">CRDC auth path</label>
+              <div class="file-input-group">
+                <input id="auth-file-path-input" type="text" [(ngModel)]="authFilePath" class="file-input" placeholder="Path/to/the/CRDC/auth/file">
+                <button (click)="onSelectAuthFile()" class="browse-btn" title="Browse">
+                  <span class="material-icons-outlined">folder_open</span>
+                </button>
+              </div>
             </div>
-          </div>
+          </section>
 
+          <section class="settings-group" aria-labelledby="advanced-directory-group">
+            <h3 id="advanced-directory-group" class="settings-group-title">Directory Naming</h3>
+            <div class="setting-item">
+              <label class="setting-label">Directory Mode</label>
+              <div class="radio-group">
+                <label class="radio-label">
+                  <input
+                    type="radio"
+                    name="directoryMode"
+                    value="classic"
+                    [(ngModel)]="directoryMode"
+                  />
+                  Classic
+                </label>
 
+                <label class="radio-label">
+                  <input
+                    type="radio"
+                    name="directoryMode"
+                    value="descriptive"
+                    [(ngModel)]="directoryMode"
+                  />
+                  Descriptive
+                </label>
+              </div>
+            </div>
+          </section>
         </div>
       </div>
     </div>

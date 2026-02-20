@@ -60,7 +60,7 @@
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 18px 36px rgba(0, 0, 0, 0.2);
-  width: min(640px, 92vw);
+  width: min(700px, 92vw);
   max-height: 85vh;
   display: flex;
   flex-direction: column;
@@ -78,7 +78,7 @@
 }
 
 .advanced-settings-body {
-  padding: 20px;
+  padding: 16px;
   overflow: auto;
 }
 
@@ -667,24 +667,55 @@
 
 .settings-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.settings-group {
+  background: #f8f9fa;
+  border: 1px solid #e8eaed;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.settings-group-title {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #333;
+}
+
+.settings-pairs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
 }
 
 .setting-item {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.setting-item--checkbox {
+  justify-content: center;
+}
+
+.settings-span-full {
+  grid-column: 1 / -1;
 }
 
 .setting-label {
   font-size: 13px;
   color: #666;
-  min-width: 120px;
+  min-width: 0;
 }
 
 .setting-input {
-  width: 80px;
+  width: 100%;
+  max-width: 150px;
   padding: 6px 8px;
   border: 1px solid #ddd;
   border-radius: 999px;
@@ -702,6 +733,25 @@
 
 .setting-checkbox {
   margin: 0;
+}
+
+.setting-file-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.advanced-settings-body .file-input-group {
+  gap: 8px;
+}
+
+.advanced-settings-body .browse-btn {
+  min-height: 36px;
+}
+
+.advanced-settings-body .radio-group {
+  gap: 18px;
+  flex-wrap: wrap;
 }
 
 
@@ -889,6 +939,15 @@
     color: #999;
   }
 
+  .settings-group {
+    background: #252525;
+    border-color: #3c3c3c;
+  }
+
+  .settings-group-title {
+    color: #e0e0e0;
+  }
+
   .advanced-settings-modal {
     background: #2d2d2d;
     border: 1px solid #404040;
@@ -1001,5 +1060,19 @@
     background: #0d0d0d;
     border-color: #333;
     color: #cfcfcf;
+  }
+}
+
+@media (max-width: 720px) {
+  .advanced-settings-body {
+    padding: 14px;
+  }
+
+  .settings-pairs {
+    grid-template-columns: 1fr;
+  }
+
+  .setting-input {
+    max-width: 100%;
   }
 }
