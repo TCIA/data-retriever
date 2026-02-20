@@ -43,7 +43,7 @@
           <div class="card-status" [class.downloading]="statusLabel === 'Downloading'" [class.paused]="isPaused">
             {{ statusLabel }}
           </div>
-          <div class="card-path" [title]="manifest?.manifestPath">{{ manifest?.manifestPath }}</div>
+          <div class="card-path" [title]="manifest.manifestPath">{{ manifest.manifestPath }}</div>
         </div>
         <button class="collapse-btn" (click)="toggleOutput()" [title]="showOutput ? 'Collapse' : 'Expand'">
           <span class="material-icons-outlined">{{ showOutput ? 'expand_less' : 'expand_more' }}</span>
@@ -53,35 +53,35 @@
       <!-- Statistics Grid -->
       <div class="statistics-grid">
         <div class="stat-item">
-          <span class="stat-value">{{ manifest?.total ?? 0 }}</span>
+          <span class="stat-value">{{ manifest.total }}</span>
           <span class="stat-label">Loaded</span>
         </div>
         <div class="stat-item">
-          <span class="stat-value">{{ manifest?.completed ?? 0 }}</span>
+          <span class="stat-value">{{ manifest.completed }}</span>
           <span class="stat-label">Completed</span>
         </div>
         <div class="stat-item">
-          <span class="stat-value">{{ manifest?.failed ?? 0 }}</span>
+          <span class="stat-value">{{ manifest.failed }}</span>
           <span class="stat-label">Failed</span>
         </div>
         <div class="stat-item">
-          <span class="stat-value">{{ manifest?.active ?? 0 }}</span>
+          <span class="stat-value">{{ manifest.active }}</span>
           <span class="stat-label">In-Progress</span>
         </div>
         <div class="stat-item">
-          <span class="stat-value">{{ manifest?.skipped ?? 0 }}</span>
+          <span class="stat-value">{{ manifest.skipped }}</span>
           <span class="stat-label">Skipped</span>
         </div>
       </div>
 
       <!-- Downloaded Bytes -->
-      <div class="bytes-info" *ngIf="manifest?.bytesDownloaded as bd">
+      <div class="bytes-info" *ngIf="manifest.bytesDownloaded as bd">
         <ng-container *ngIf="isCompleted; else showWithTotal">
           <span class="bytes-text">{{ bd | bytes }}</span>
         </ng-container>
         <ng-template #showWithTotal>
           <span class="bytes-text">{{ bd | bytes }}</span>
-          <ng-container *ngIf="manifest?.bytesTotal as bt">
+          <ng-container *ngIf="manifest.bytesTotal as bt">
             <span class="bytes-text"> / {{ bt | bytes }}</span>
           </ng-container>
         </ng-template>
