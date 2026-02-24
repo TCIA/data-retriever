@@ -578,22 +578,6 @@ func (info *FileInfo) NeedsDownload(output string, force bool, noDecompress bool
 	//logger.Warnf("running needs download: %s", output)
 
 	var targetPath string
-//	if info.S5cmdManifestPath != "" {
-		// s5cmd downloads files to the output directory, so we can't check for a specific file
-		// and we assume the file needs to be downloaded.
-//		return true
-//	}
-	if (info.DownloadURL != "" || info.DRSURI != "")  && info.S5cmdManifestPath == "" {
-		targetPath = filepath.Join(output, info.SeriesInstanceUID)
-		_, err := os.Stat(targetPath)
-		if os.IsNotExist(err) {
-			logger.Debugf("Target %s does not exist, need to download", targetPath)
-			return true
-		}
-		// If it exists, we assume it's downloaded. We don't have size/checksum info for these.
-		logger.Debugf("Direct download file %s exists, skipping", targetPath)
-		return false
-	}
 
 	if noDecompress {
 		// Check for ZIP file
@@ -645,8 +629,20 @@ func (info *FileInfo) NeedsDownload(output string, force bool, noDecompress bool
 					logger.Warnf("target dir: %s", targetPath)
 					logger.Debugf("Directory %s size mismatch: expected %d, got %d", targetPath, expectedSize, actualSize)
 					return true
+				} else {
+					return false
 				}
 			}
+		} else {
+			_, err := os.Stat(targetPath)
+			if os.IsNotExist(err) {
+				logger.Debugf("Target %s does not exist, need to download", targetPath)
+				return true
+			}
+			// If it exists, we assume it's downloaded. We don't have size/checksum info for these.
+			logger.Debugf("Direct download file %s exists, skipping", targetPath)
+			return false
+
 		}
 
 		logger.Debugf("Directory %s exists with correct size, skipping", targetPath)

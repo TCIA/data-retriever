@@ -1,6 +1,7 @@
 package app
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -667,6 +668,32 @@ func (callbacks Callbacks) emitProgress(stats *DownloadStats, currentSeriesID st
 	updateProgress(stats, currentSeriesID, debugMode, callbacks)
 }
 
+func saveSeriesUIDsToFile(originalPath string, seriesUIDs []string) (string, error) {
+    dir := filepath.Dir(originalPath)
+    base := filepath.Base(originalPath)
+    outPath := filepath.Join(dir, base+".series_uids.txt")
+
+    f, err := os.Create(outPath)
+    if err != nil {
+        return "", err
+    }
+    defer f.Close()
+
+    writer := bufio.NewWriter(f)
+    defer writer.Flush()
+
+    for _, uid := range seriesUIDs {
+        if uid == "" {
+            continue
+        }
+        if _, err := writer.WriteString(uid + "\n"); err != nil {
+            return "", err
+        }
+    }
+
+    return outPath, nil
+}
+
 func decodeInputFile(ctx context.Context, filePath string, client *http.Client, options *Options, callbacks Callbacks, s5cmdMap map[string]string) ([]*FileInfo, int, error) {
 	ext := strings.ToLower(filepath.Ext(filePath))
 	switch ext {
@@ -686,10 +713,16 @@ func decodeInputFile(ctx context.Context, filePath string, client *http.Client, 
 		seriesUIDs, err := getSeriesInstanceUIDsFromSpreadsheet(filePath)
 		if err == nil {
 			// Success, handle like a TCIA manifest
-			files, err := FetchMetadataForSeriesUIDs(ctx, seriesUIDs, client, options, callbacks)
+			outPath, err := saveSeriesUIDsToFile(filePath, seriesUIDs)
 			if err != nil {
-				return nil, 0, err
+			    return nil, 0, err
 			}
+			defer os.Remove(outPath)
+			files, _ := decodeS5cmd(filePath, options.Output, s5cmdMap, callbacks, options)
+			if len(files) == 0 {
+				files = decodeTCIA(ctx, filePath, client, options, callbacks)
+			}
+
 			emitManifestMetadata(callbacks, filePath, files)
 			return files, 0, nil
 		} else if err != ErrSeriesInstanceUIDColumnNotFound {
