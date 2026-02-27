@@ -268,12 +268,93 @@ type WorkerContext struct {
 	Stats      *DownloadStats
 	WorkerID   int
 	Callbacks  Callbacks
+	EventGate  *SeriesEventGate
+}
+
+// SeriesEventGate throttles interim per-series events while always allowing
+// lifecycle-critical events.
+type SeriesEventGate struct {
+	interval time.Duration
+	mu       sync.Mutex
+	lastSent map[string]time.Time
+}
+
+func NewSeriesEventGate(interval time.Duration) *SeriesEventGate {
+	if interval <= 0 {
+		interval = DefaultInterimUpdateInterval
+	}
+
+	return &SeriesEventGate{
+		interval: interval,
+		lastSent: make(map[string]time.Time),
+	}
+}
+
+func (g *SeriesEventGate) Allow(evt SeriesEvent) bool {
+	if g == nil {
+		return true
+	}
+
+	if alwaysEmitSeriesEvent(evt) || !isInterimSeriesStatus(evt.Status) {
+		return true
+	}
+
+	ts := evt.Timestamp
+	if ts.IsZero() {
+		ts = time.Now()
+	}
+
+	key := evt.SeriesInstanceUID
+	if key == "" {
+		key = "run"
+	}
+
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	if last, ok := g.lastSent[key]; ok {
+		if ts.Sub(last) < g.interval {
+			return false
+		}
+	}
+
+	g.lastSent[key] = ts
+	return true
+}
+
+func isInterimSeriesStatus(status string) bool {
+	switch status {
+	case "metadata", "downloading", "decompressing":
+		return true
+	default:
+		return false
+	}
+}
+
+func isTerminalSeriesStatus(status string) bool {
+	switch status {
+	case "succeeded", "failed", "cancelled", "skipped":
+		return true
+	default:
+		return false
+	}
+}
+
+func alwaysEmitSeriesEvent(evt SeriesEvent) bool {
+	if isTerminalSeriesStatus(evt.Status) {
+		return true
+	}
+
+	return evt.Status == "downloading" && strings.Contains(strings.ToLower(evt.Message), "download started")
 }
 
 // Run executes the shared download workflow.
 func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, error) {
 	if options == nil {
 		return nil, errors.New("options cannot be nil")
+	}
+	if options.InterimUpdateInterval <= 0 {
+		options.InterimUpdateInterval = DefaultInterimUpdateInterval
 	}
 
 	if Logger == nil {
@@ -289,7 +370,6 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 	if err := os.MkdirAll(options.Output, os.ModePerm); err != nil {
 		return nil, fmt.Errorf("failed to create output directory: %w", err)
 	}
-
 
 	if err := createMetadataDir(options.Output); err != nil {
 		return nil, fmt.Errorf("failed to create metadata directory: %w", err)
@@ -360,6 +440,7 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 		Options:    options,
 		Stats:      stats,
 		Callbacks:  callbacks,
+		EventGate:  NewSeriesEventGate(options.InterimUpdateInterval),
 	}
 
 	summary := &Summary{Total: int32(len(files))}
@@ -481,7 +562,14 @@ func (wc *WorkerContext) processFiles(input <-chan *FileInfo) {
 }
 
 func (wc *WorkerContext) emitSeriesEvent(fileInfo *FileInfo, status, message string, progress float64) {
-	wc.Callbacks.emitSeries(newSeriesEvent(fileInfo, status, message, progress))
+	wc.emitSeries(newSeriesEvent(fileInfo, status, message, progress))
+}
+
+func (wc *WorkerContext) emitSeries(evt SeriesEvent) {
+	if wc.EventGate != nil && !wc.EventGate.Allow(evt) {
+		return
+	}
+	wc.Callbacks.emitSeries(evt)
 }
 
 func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
@@ -544,7 +632,7 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 			BytesTotal:        bytesTotal,
 			Timestamp:         time.Now(),
 		}
-		wc.Callbacks.emitSeries(evt)
+		wc.emitSeries(evt)
 	}
 
 	var expectedUncompressed int64
@@ -577,7 +665,7 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 			UncompressedTotal: bytesTotal,
 			Timestamp:         time.Now(),
 		}
-		wc.Callbacks.emitSeries(evt)
+		wc.emitSeries(evt)
 	}
 
 	err := fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.Options, onProgress, onDecompress, wc.Gen3Auth)
@@ -588,7 +676,6 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 		wc.emitSeriesEvent(fileInfo, "failed", err.Error(), 100)
 		return
 	}
-
 
 	if fileInfo.IsSyncJob {
 		atomic.AddInt32(&wc.Stats.Synced, 1)
@@ -669,29 +756,29 @@ func (callbacks Callbacks) emitProgress(stats *DownloadStats, currentSeriesID st
 }
 
 func saveSeriesUIDsToFile(originalPath string, seriesUIDs []string) (string, error) {
-    dir := filepath.Dir(originalPath)
-    base := filepath.Base(originalPath)
-    outPath := filepath.Join(dir, base+".series_uids.txt")
+	dir := filepath.Dir(originalPath)
+	base := filepath.Base(originalPath)
+	outPath := filepath.Join(dir, base+".series_uids.txt")
 
-    f, err := os.Create(outPath)
-    if err != nil {
-        return "", err
-    }
-    defer f.Close()
+	f, err := os.Create(outPath)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
 
-    writer := bufio.NewWriter(f)
-    defer writer.Flush()
+	writer := bufio.NewWriter(f)
+	defer writer.Flush()
 
-    for _, uid := range seriesUIDs {
-        if uid == "" {
-            continue
-        }
-        if _, err := writer.WriteString(uid + "\n"); err != nil {
-            return "", err
-        }
-    }
+	for _, uid := range seriesUIDs {
+		if uid == "" {
+			continue
+		}
+		if _, err := writer.WriteString(uid + "\n"); err != nil {
+			return "", err
+		}
+	}
 
-    return outPath, nil
+	return outPath, nil
 }
 
 func decodeInputFile(ctx context.Context, filePath string, client *http.Client, options *Options, callbacks Callbacks, s5cmdMap map[string]string) ([]*FileInfo, int, error) {
@@ -715,7 +802,7 @@ func decodeInputFile(ctx context.Context, filePath string, client *http.Client, 
 			// Success, handle like a TCIA manifest
 			outPath, err := saveSeriesUIDsToFile(filePath, seriesUIDs)
 			if err != nil {
-			    return nil, 0, err
+				return nil, 0, err
 			}
 			defer os.Remove(outPath)
 			files, _ := decodeS5cmd(filePath, options.Output, s5cmdMap, callbacks, options)

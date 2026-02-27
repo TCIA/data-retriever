@@ -42,7 +42,7 @@ func NewTextEventLogger(filePath string, runStart time.Time, interval time.Durat
 		runStart = time.Now()
 	}
 	if interval <= 0 {
-		interval = 10 * time.Second
+		interval = DefaultInterimUpdateInterval
 	}
 
 	if err := os.MkdirAll(filepath.Dir(filePath), 0o755); err != nil {

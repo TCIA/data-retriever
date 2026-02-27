@@ -65,7 +65,7 @@ func (b *App) GetDefaultOutputDirectory() string {
 		// macOS: ~/Downloads
 		u, err := user.Lookup(os.Getenv("LOGNAME"))
 		if err == nil {
-		    return filepath.Join(u.HomeDir, "Downloads")
+			return filepath.Join(u.HomeDir, "Downloads")
 		}
 		downloads := filepath.Join(home, "Downloads")
 		if dirExists(downloads) {
@@ -199,34 +199,35 @@ func (b *App) runBatch(batch *DownloadBatch) {
 	pass := os.Getenv("NBIA_PASS")
 
 	options := &app.Options{
-		Input:           batch.Manifest,
-		Output:          batch.OutputDir,
-		Proxy:           "",
-		Concurrent:      batch.Parallel,
-		Meta:            false,
-		Username:        user,
-		Password:        pass,
-		Version:         false,
-		Debug:           false,
-		Help:            false,
-		MetaUrl:         app.MetaUrl,
-		TokenUrl:        app.TokenUrl,
-		ImageUrl:        app.ImageUrl,
-		SaveLog:         false,
-		Prompt:          false,
-		Force:           false,
-		SkipExisting:    batch.SkipExist,
-		MaxRetries:      batch.MaxRetries,
-		RetryDelay:      10 * time.Second,
-		MaxConnsPerHost: batch.MaxConn,
-		ServerFriendly:  false,
-		RequestDelay:    500 * time.Millisecond,
-		NoMD5:           false,
-		NoDecompress:    false,
-		RefreshMetadata: false,
-		MetadataWorkers: 20,
-		Auth:            batch.AuthPath,
-		DirectoryMode:   batch.DirectoryMode,
+		Input:                 batch.Manifest,
+		Output:                batch.OutputDir,
+		Proxy:                 "",
+		Concurrent:            batch.Parallel,
+		Meta:                  false,
+		Username:              user,
+		Password:              pass,
+		Version:               false,
+		Debug:                 false,
+		Help:                  false,
+		MetaUrl:               app.MetaUrl,
+		TokenUrl:              app.TokenUrl,
+		ImageUrl:              app.ImageUrl,
+		SaveLog:               false,
+		Prompt:                false,
+		Force:                 false,
+		SkipExisting:          batch.SkipExist,
+		MaxRetries:            batch.MaxRetries,
+		RetryDelay:            10 * time.Second,
+		InterimUpdateInterval: app.DefaultInterimUpdateInterval,
+		MaxConnsPerHost:       batch.MaxConn,
+		ServerFriendly:        false,
+		RequestDelay:          500 * time.Millisecond,
+		NoMD5:                 false,
+		NoDecompress:          false,
+		RefreshMetadata:       false,
+		MetadataWorkers:       20,
+		Auth:                  batch.AuthPath,
+		DirectoryMode:         batch.DirectoryMode,
 	}
 
 	logTimestamp := time.Now().Format("20060102-150405")
@@ -234,7 +235,7 @@ func (b *App) runBatch(batch *DownloadBatch) {
 	runStart := time.Now()
 
 	var eventLog *app.TextEventLogger
-	if l, logErr := app.NewTextEventLogger(logPath, runStart, 10*time.Second); logErr == nil {
+	if l, logErr := app.NewTextEventLogger(logPath, runStart, options.InterimUpdateInterval); logErr == nil {
 		eventLog = l
 	}
 

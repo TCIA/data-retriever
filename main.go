@@ -40,7 +40,7 @@ func main() {
 	runStart := time.Now()
 	if options.SaveLog {
 		logPath := app.DefaultLogFilePath("progress.log")
-		l, err := app.NewTextEventLogger(logPath, runStart, 10*time.Second)
+		l, err := app.NewTextEventLogger(logPath, runStart, options.InterimUpdateInterval)
 		if err != nil {
 			logger.Warnf("Failed to initialise event log file: %v", err)
 		} else {
