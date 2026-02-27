@@ -120,10 +120,23 @@ func (b *App) OpenInputFileDialog() (string, error) {
 }
 
 // OpenOutputDirectoryDialog opens a system directory dialog and returns the selected directory path
-func (b *App) OpenOutputDirectoryDialog() (string, error) {
-	result, err := wailsRuntime.OpenDirectoryDialog(b.ctx, wailsRuntime.OpenDialogOptions{
-		Title: "Download Directory",
-	})
+func (b *App) OpenOutputDirectoryDialog(inputFile string) (string, error) {
+	var result string
+	var err error
+	if (stdRuntime.GOOS == "darwin"){
+		defaultDir := b.GetDefaultOutputDirectory()
+
+		result, err = wailsRuntime.OpenDirectoryDialog(b.ctx, wailsRuntime.OpenDialogOptions{
+			Title:            "Download Directory",
+			DefaultDirectory: defaultDir,
+		})
+		result = filepath.Join(result, inputFile)
+
+	} else {
+		result, err = wailsRuntime.OpenDirectoryDialog(b.ctx, wailsRuntime.OpenDialogOptions{
+			Title: "Download Directory",
+		})
+	}
 	if err != nil {
 		return "", err
 	}
@@ -245,6 +258,8 @@ func (b *App) runBatch(batch *DownloadBatch) {
 		}
 	}()
 
+
+
 	callbacks := app.Callbacks{
 		Stdout: func(line string) {
 			if eventLog != nil {
@@ -308,6 +323,10 @@ func (b *App) CancelDownload() {
 		batch.Cancel()        // cancel the batch
 		delete(b.batches, id) // remove it from the map
 	}
+}
+
+func (a *App) IsMac() bool {
+    return stdRuntime.GOOS == "darwin"
 }
 
 type App struct {

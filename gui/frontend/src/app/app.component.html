@@ -51,7 +51,7 @@
             <div class="setting-file-row">
               <label class="setting-label" for="auth-file-path-input">CRDC auth path</label>
               <div class="file-input-group">
-                <input id="auth-file-path-input" type="text" [(ngModel)]="authFilePath" class="file-input" placeholder="Path/to/the/CRDC/auth/file">
+                <input [disabled]="isMac" id="auth-file-path-input" type="text" [(ngModel)]="authFilePath" class="file-input" placeholder="Path/to/the/CRDC/auth/file">
                 <button (click)="onSelectAuthFile()" class="browse-btn" title="Browse">
                   <span class="material-icons-outlined">folder_open</span>
                 </button>
@@ -116,7 +116,7 @@
         <div class="file-input-row">
           <label class="file-label" for="manifest-file">Manifest file</label>
           <div class="file-input-group">
-            <input id="manifest-file" type="text" [(ngModel)]="inputFilePath" class="file-input">
+            <input [disabled]="isMac" id="manifest-file" type="text" [(ngModel)]="inputFilePath" class="file-input">
             <button (click)="onSelectInputFile()" class="browse-btn" title="Browse">
               <span class="material-icons-outlined">folder_open</span>
             </button>
@@ -125,7 +125,7 @@
         <div class="file-input-row">
           <label class="file-label" for="download-directory">Download directory</label>
           <div class="file-input-group">
-            <input id="download-directory" type="text" [(ngModel)]="outputDirPath" class="file-input">
+            <input [disabled]="isMac" id="download-directory" type="text" [(ngModel)]="outputDirPath" class="file-input">
             <button (click)="onSelectOutputDirectory()" class="browse-btn" title="Browse">
               <span class="material-icons-outlined">folder_open</span>
             </button>

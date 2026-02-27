@@ -1076,3 +1076,27 @@
     max-width: 100%;
   }
 }
+
+
+/* Base transition */
+.file-input {
+  transition: background-color 0.2s ease,
+              color 0.2s ease,
+              border-color 0.2s ease;
+}
+
+.file-input[disabled] {
+  background-color: #f5f5f5;   /* subtle gray, not white */
+  color: #333333;              /* readable dark text */
+  border-color: #d0d0d0;
+  cursor: default;             /* less aggressive than not-allowed */
+  opacity: 1;
+}
+
+/* Dark mode */
+.app-container.dark-mode .file-input[disabled] {
+  background-color: #2a2a2a;
+  color: #e0e0e0;        /* high contrast, readable */
+  border-color: #444444;
+  opacity: 1;
+}

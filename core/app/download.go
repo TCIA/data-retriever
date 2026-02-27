@@ -598,6 +598,7 @@ func (info *FileInfo) NeedsDownload(output string, force bool, noDecompress bool
 		return true
 	}
 
+
 	if noDecompress {
 		// For ZIP files, check if it's a regular file
 		if stat.IsDir() {
@@ -625,14 +626,26 @@ func (info *FileInfo) NeedsDownload(output string, force bool, noDecompress bool
 					return true
 				}
 				if float64(actualSize) < (float64(expectedSize) * .9) {
-					logger.Warnf("Actual: %s Expected: %s", actualSize, expectedSize)
-					logger.Warnf("target dir: %s", targetPath)
 					logger.Debugf("Directory %s size mismatch: expected %d, got %d", targetPath, expectedSize, actualSize)
 					return true
 				} else {
 					return false
 				}
 			}
+
+		} else if (info.FileName != "") {
+			filePath := filepath.Join(targetPath, info.FileName)
+    	if _, err := os.Stat(filePath); err == nil {
+    	    logger.Debugf("File %s exists, skipping download", filePath)
+    	    return false
+    	} else if os.IsNotExist(err) {
+    	    logger.Debugf("File %s does not exist, need to download", filePath)
+    	    return true
+    	} else {
+    	    logger.Errorf("Error checking file %s: %v", filePath, err)
+    	    return true
+    	}
+
 		} else {
 			_, err := os.Stat(targetPath)
 			if os.IsNotExist(err) {

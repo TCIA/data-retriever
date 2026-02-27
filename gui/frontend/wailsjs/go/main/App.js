@@ -18,6 +18,10 @@ export function Greet(arg1) {
   return window['go']['main']['App']['Greet'](arg1);
 }
 
+export function IsMac() {
+  return window['go']['main']['App']['IsMac']();
+}
+
 export function OpenAuthFileDialog() {
   return window['go']['main']['App']['OpenAuthFileDialog']();
 }
@@ -26,8 +30,8 @@ export function OpenInputFileDialog() {
   return window['go']['main']['App']['OpenInputFileDialog']();
 }
 
-export function OpenOutputDirectoryDialog() {
-  return window['go']['main']['App']['OpenOutputDirectoryDialog']();
+export function OpenOutputDirectoryDialog(arg1) {
+  return window['go']['main']['App']['OpenOutputDirectoryDialog'](arg1);
 }
 
 export function PauseManifest(arg1) {

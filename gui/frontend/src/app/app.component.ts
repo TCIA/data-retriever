@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, NgZone, HostListener } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
-import { CancelDownload, OpenAuthFileDialog, OpenInputFileDialog, OpenOutputDirectoryDialog, GetDefaultOutputDirectory, RunCLIFetch } from '../../wailsjs/go/main/App';
+import { CancelDownload, OpenAuthFileDialog, OpenInputFileDialog, OpenOutputDirectoryDialog, GetDefaultOutputDirectory, RunCLIFetch , IsMac } from '../../wailsjs/go/main/App';
 import { DownloadStatusService } from './services/download-status.service';
 import { DownloadOverviewSnapshot } from './models/download-series.model';
 
@@ -17,6 +17,8 @@ export class AppComponent implements OnInit, OnDestroy {
   authFilePath = '';
   defaultDownloadDir = '';
   directoryMode: 'classic' | 'descriptive' = 'classic';
+
+  isMac = false;
 
   private unsubscribeCliError?: () => void;
   private unsubscribeCliFinished?: () => void;
@@ -57,7 +59,15 @@ export class AppComponent implements OnInit, OnDestroy {
       this.isDarkMode = true;
     }
 
+    try {
+      this.isMac = await IsMac();
+      console.log("isMac =", this.isMac);
+    } catch (err) {
+      console.error("Error detecting macOS:", err);
+    }
+
     this.defaultDownloadDir = await GetDefaultOutputDirectory();
+    if (this.isMac) {this.defaultDownloadDir = ""}
     this.outputDirPath = this.defaultDownloadDir;
 
     // Listen for system theme changes
@@ -141,7 +151,9 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   onSelectOutputDirectory() {
-    OpenOutputDirectoryDialog().then((dirPath: string) => {
+    const fileName = this.inputFilePath.split(/[\\/]/).pop() || '';
+    const baseName = fileName.replace(/\.[^/.]+$/, '');
+    OpenOutputDirectoryDialog(baseName).then((dirPath: string) => {
       if (dirPath) {
         this.outputDirPath = dirPath;
       }
@@ -238,11 +250,24 @@ onSelectInputFile() {
       const baseName = fileName.replace(/\.[^/.]+$/, '');
 
       // Only auto-set if user hasn't manually changed it
-      if (
-        !this.outputDirPath ||
-        this.outputDirPath === this.defaultDownloadDir
+      if ( !this.isMac && 
+        (!this.outputDirPath ||
+        this.outputDirPath === this.defaultDownloadDir)
       ) {
         this.outputDirPath = `${this.defaultDownloadDir}/${baseName}`;
+      }
+      if (this.isMac) {
+
+          if (this.outputDirPath) {
+            const parts = this.outputDirPath.split('/');
+            parts[parts.length - 1] = baseName;
+            this.outputDirPath = parts.join('/');
+          } else {
+            // fallback if outputDirPath is empty
+            this.outputDirPath = ""
+          }
+
+
       }
     })
     .catch(err => {
