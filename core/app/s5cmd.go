@@ -311,6 +311,7 @@ func decodeS5cmd(filePath string, outputDir string, processedSeries map[string]s
 					fi.SeriesDescription = meta.SeriesDescription
 			} else {
 			    logger.Warnf("No parquet metadata found for series %s", originalURI)
+					continue;
 			}
 
 			var finalDirPath string
