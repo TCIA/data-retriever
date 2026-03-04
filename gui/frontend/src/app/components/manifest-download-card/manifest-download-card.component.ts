@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import { OpenDirectory } from '../../../../wailsjs/go/main/App';
 import { ManifestDownloadSnapshot } from '../../models/download-series.model';
+import { DownloadStatusService } from '../../services/download-status.service';
 
 @Component({
   selector: 'app-manifest-download-card',
@@ -12,6 +14,8 @@ export class ManifestDownloadCardComponent {
   @Output() pauseToggled = new EventEmitter<void>();
   
   showOutput = false;
+
+  constructor(private readonly downloadStatus: DownloadStatusService) {}
 
   get title(): string {
     const path = this.manifest?.manifestPath || '';
@@ -109,6 +113,16 @@ export class ManifestDownloadCardComponent {
     return 'Queued';
   }
 
+  get canOpenOutputDirectory(): boolean {
+    const total = this.manifest?.total ?? 0;
+    const completed = this.manifest?.completed ?? 0;
+    const failed = this.manifest?.failed ?? 0;
+    const skipped = this.manifest?.skipped ?? 0;
+    const cancelled = this.manifest?.cancelled ?? 0;
+    const outputDirPath = this.manifest?.outputDirPath ?? '';
+    return total > 0 && completed === total && failed === 0 && skipped === 0 && cancelled === 0 && outputDirPath.length > 0;
+  }
+
   onTogglePause(event: MouseEvent): void {
     event.stopPropagation();
     this.pauseToggled.emit();
@@ -116,5 +130,18 @@ export class ManifestDownloadCardComponent {
 
   toggleOutput(): void {
     this.showOutput = !this.showOutput;
+  }
+
+  openOutputDirectory(event: MouseEvent): void {
+    event.stopPropagation();
+    const outputDirPath = this.manifest?.outputDirPath;
+    if (!outputDirPath) {
+      this.downloadStatus.appendManifestLog('ERROR: No output directory is available for this run.');
+      return;
+    }
+    OpenDirectory(outputDirPath).catch((error) => {
+      const message = typeof error === 'string' ? error : String(error);
+      this.downloadStatus.appendManifestLog(`ERROR: Failed to open output directory: ${message}`);
+    });
   }
 }

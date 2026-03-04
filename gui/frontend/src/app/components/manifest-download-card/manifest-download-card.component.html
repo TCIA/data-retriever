@@ -44,6 +44,16 @@
             {{ statusLabel }}
           </div>
           <div class="card-path" [title]="manifest.manifestPath">{{ manifest.manifestPath }}</div>
+          <button
+            *ngIf="canOpenOutputDirectory"
+            class="open-folder-btn"
+            type="button"
+            (click)="openOutputDirectory($event)"
+            title="Open output folder"
+            aria-label="Open output folder"
+          >
+            Open Folder
+          </button>
         </div>
         <button class="collapse-btn" (click)="toggleOutput()" [title]="showOutput ? 'Collapse' : 'Expand'">
           <span class="material-icons-outlined">{{ showOutput ? 'expand_less' : 'expand_more' }}</span>

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"os/user"
 	"path/filepath"
 	stdRuntime "runtime"
@@ -323,6 +324,44 @@ func (b *App) CancelDownload() {
 		batch.Cancel()        // cancel the batch
 		delete(b.batches, id) // remove it from the map
 	}
+}
+
+func (b *App) OpenDirectory(path string) error {
+	trimmed := strings.TrimSpace(path)
+	if trimmed == "" {
+		return fmt.Errorf("directory path is empty")
+	}
+
+	cleaned := filepath.Clean(trimmed)
+	info, err := os.Stat(cleaned)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("directory does not exist: %s", cleaned)
+		}
+		return fmt.Errorf("failed to access directory: %w", err)
+	}
+
+	if !info.IsDir() {
+		return fmt.Errorf("path is not a directory: %s", cleaned)
+	}
+
+	var cmd *exec.Cmd
+	switch stdRuntime.GOOS {
+	case "windows":
+		cmd = exec.Command("explorer", cleaned)
+	case "darwin":
+		cmd = exec.Command("open", cleaned)
+	case "linux":
+		cmd = exec.Command("xdg-open", cleaned)
+	default:
+		return fmt.Errorf("unsupported operating system: %s", stdRuntime.GOOS)
+	}
+
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to open directory in file manager: %w", err)
+	}
+
+	return nil
 }
 
 func (a *App) IsMac() bool {

@@ -180,7 +180,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
     this.showManifestSection = false;
     this.showInitializing = true;
-    this.downloadStatus.beginRun(this.inputFilePath);
+    this.downloadStatus.beginRun(this.inputFilePath, this.outputDirPath);
 
     // Reconstruct the exact CLI command for display (quote paths to handle spaces)
     const cliPath = '../nbia-data-retriever-cli';

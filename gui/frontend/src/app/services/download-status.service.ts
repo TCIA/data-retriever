@@ -50,6 +50,7 @@ export class DownloadStatusService implements OnDestroy {
   });
 
   private currentManifestPath: string = '';
+  private currentOutputDirPath: string = '';
   private manifestInitialBytesTotal = 0;
   private isPaused = false;
 
@@ -135,12 +136,14 @@ export class DownloadStatusService implements OnDestroy {
     this.overviewSubject.complete();
   }
 
-  beginRun(manifestPath: string): void {
+  beginRun(manifestPath: string, outputDirPath: string): void {
     this.currentManifestPath = manifestPath;
+    this.currentOutputDirPath = outputDirPath;
     this.manifestInitialBytesTotal = 0;
     this.seriesMap.clear();
     this.manifestSubject.next({
       manifestPath,
+      outputDirPath,
       total: 0,
       active: 0,
       completed: 0,
@@ -484,6 +487,7 @@ export class DownloadStatusService implements OnDestroy {
     const updated: ManifestDownloadSnapshot = {
       ...current,
       manifestPath: this.currentManifestPath,
+      outputDirPath: this.currentOutputDirPath,
       total: overview.total,
       active: overview.active,
       completed: overview.completed,
