@@ -1,12 +1,9 @@
 <div class="app-container" [class.dark-mode]="isDarkMode">
-  <div class="init-overlay" *ngIf="showInitializing" role="status" aria-live="polite">
-    <div class="init-dialog">
-      <div class="init-spinner" aria-hidden="true"></div>
-      <p>Download initializing...</p>
-    </div>
-  </div>
 
-  <div class="advanced-settings-overlay" *ngIf="showAdvancedModal" (click)="closeAdvancedModal()" role="dialog" aria-modal="true" aria-label="Advanced Settings">
+  <!-- Advanced Settings Modal -->
+  <div class="advanced-settings-overlay" *ngIf="showAdvancedModal"
+       (click)="closeAdvancedModal()"
+       role="dialog" aria-modal="true" aria-label="Advanced Settings">
     <div class="advanced-settings-modal" (click)="$event.stopPropagation()">
       <div class="advanced-settings-header">
         <span>Advanced Settings</span>
@@ -51,7 +48,8 @@
             <div class="setting-file-row">
               <label class="setting-label" for="auth-file-path-input">CRDC auth path</label>
               <div class="file-input-group">
-                <input [disabled]="isMac" id="auth-file-path-input" type="text" [(ngModel)]="authFilePath" class="file-input" placeholder="Path/to/the/CRDC/auth/file">
+                <input [disabled]="isMac" id="auth-file-path-input" type="text" [(ngModel)]="authFilePath"
+                       class="file-input" placeholder="Path/to/the/CRDC/auth/file">
                 <button (click)="onSelectAuthFile()" class="browse-btn" title="Browse">
                   <span class="material-icons-outlined">folder_open</span>
                 </button>
@@ -65,22 +63,11 @@
               <label class="setting-label">Directory Mode</label>
               <div class="radio-group">
                 <label class="radio-label">
-                  <input
-                    type="radio"
-                    name="directoryMode"
-                    value="classic"
-                    [(ngModel)]="directoryMode"
-                  />
+                  <input type="radio" name="directoryMode" value="classic" [(ngModel)]="directoryMode" />
                   Classic
                 </label>
-
                 <label class="radio-label">
-                  <input
-                    type="radio"
-                    name="directoryMode"
-                    value="descriptive"
-                    [(ngModel)]="directoryMode"
-                  />
+                  <input type="radio" name="directoryMode" value="descriptive" [(ngModel)]="directoryMode" />
                   Descriptive
                 </label>
               </div>
@@ -103,20 +90,29 @@
       <button class="advanced-settings-btn" (click)="openAdvancedModal()" title="Advanced Settings">
         <span class="material-icons-outlined">settings</span>
       </button>
+      <button class="fetch-manifest-btn" (click)="openManifestModal()" title="Add a Manifest">
+        <span class="material-icons">add</span>
+      </button>
     </div>
   </div>
 
-  <div class="main-grid">
-
-    <div class="grid-section manifest-section" *ngIf="showManifestSection">
-      <div class="section-header">
-        <span>Manifest & Destination</span>
+  <!-- Manifest & Destination Modal -->
+  <div class="advanced-settings-overlay" *ngIf="showManifestModal"
+       (click)="closeManifestModal()"
+       role="dialog" aria-modal="true" aria-label="Manifest & Destination">
+    <div class="advanced-settings-modal" (click)="$event.stopPropagation()">
+      <div class="advanced-settings-header">
+        <span>Manifest &amp; Destination</span>
+        <button class="advanced-settings-close" (click)="closeManifestModal()" title="Close">
+          <span class="material-icons-outlined">close</span>
+        </button>
       </div>
-      <div class="section-content">
+      <div class="advanced-settings-body">
         <div class="file-input-row">
           <label class="file-label" for="manifest-file">Manifest file</label>
           <div class="file-input-group">
-            <input [disabled]="isMac" id="manifest-file" type="text" [(ngModel)]="inputFilePath" class="file-input">
+            <input [disabled]="isMac" id="manifest-file" type="text"
+                   [(ngModel)]="inputFilePath" class="file-input">
             <button (click)="onSelectInputFile()" class="browse-btn" title="Browse">
               <span class="material-icons-outlined">folder_open</span>
             </button>
@@ -125,58 +121,64 @@
         <div class="file-input-row">
           <label class="file-label" for="download-directory">Download directory</label>
           <div class="file-input-group">
-            <input [disabled]="isMac" id="download-directory" type="text" [(ngModel)]="outputDirPath" class="file-input">
+            <input [disabled]="isMac" id="download-directory" type="text"
+                   [(ngModel)]="outputDirPath" class="file-input">
             <button (click)="onSelectOutputDirectory()" class="browse-btn" title="Browse">
               <span class="material-icons-outlined">folder_open</span>
             </button>
           </div>
         </div>
-      </div>
-      <div class="action-bar">
-        <button (click)="onFetchFiles()" class="fetch-btn" [disabled]="!inputFilePath || !outputDirPath">
-          <span class="material-icons-outlined">file_download</span>
-          Fetch Files
-        </button>
-        <button (click)="onCancelDownload()" class="fetch-btn cancel-btn" [disabled]="!((overview$ | async)?.active)">
-          <span class="material-icons-outlined">cancel</span>
-          Cancel
-        </button>
+        <div class="action-bar">
+          <button (click)="onFetchFiles()" class="fetch-btn"
+                  [disabled]="!inputFilePath || !outputDirPath">
+            <span class="material-icons-outlined">file_download</span>
+            Fetch Files
+          </button>
+        </div>
       </div>
     </div>
+  </div>
 
-    <div class="grid-section downloads-section" [class.collapsed]="downloadsCollapsed">
-      <ng-container *ngIf="overview$ | async as overview">
-        <div class="section-header downloads-header" (click)="downloadsCollapsed = !downloadsCollapsed">
-          <div class="downloads-header-content">
-            <span class="downloads-title">Active Downloads</span>
-            <span class="material-icons-outlined collapse-icon">
-              {{ downloadsCollapsed ? 'expand_more' : 'expand_less' }}
-            </span>
-          </div>
-          <div
-            class="downloads-meta"
-            [title]="overview.completed + ' completed, ' + overview.failed + ' failed, ' + overview.skipped + ' skipped, ' + overview.cancelled + ' cancelled, ' + overview.active + ' in progress'"
-            [attr.aria-label]="overview.completed + ' completed, ' + overview.failed + ' failed, ' + overview.skipped + ' skipped, ' + overview.cancelled + ' cancelled, ' + overview.active + ' in progress'"
-          >
-            <span>{{ overview.completed }} completed</span>
-            <span>{{ overview.failed }} failed</span>
-            <span>{{ overview.skipped }} skipped</span>
-            <span>{{ overview.cancelled }} cancelled</span>
-            <span>{{ overview.active }} in progress</span>
-          </div>
+  <div class="main-grid">
+
+    <!-- Downloads section — one card per run -->
+    <div class="grid-section downloads-section">
+      <div class="section-header downloads-header">
+        <div class="downloads-header-content">
+          <span class="downloads-title">Active Downloads</span>
         </div>
-      </ng-container>
+        <div class="downloads-meta"
+             *ngIf="runs.length > 0"
+             [title]="globalOverview.completed + ' completed, ' + globalOverview.failed + ' failed, ' + globalOverview.skipped + ' skipped, ' + globalOverview.cancelled + ' cancelled, ' + globalOverview.active + ' in progress'"
+             [attr.aria-label]="globalOverview.completed + ' completed, ' + globalOverview.failed + ' failed, ' + globalOverview.skipped + ' skipped, ' + globalOverview.cancelled + ' cancelled, ' + globalOverview.active + ' in progress'">
+          <span>{{ globalOverview.completed }} completed</span>
+          <span>{{ globalOverview.failed }} failed</span>
+          <span>{{ globalOverview.skipped }} skipped</span>
+          <span>{{ globalOverview.cancelled }} cancelled</span>
+          <span>{{ globalOverview.active }} in progress</span>
+        </div>
+      </div>
+
       <div class="section-content downloads-content">
-        <ng-container *ngIf="manifest$ | async as manifest">
-          <div *ngIf="manifest.total; else emptyDownloads" class="sources-cards">
-            <app-manifest-download-card [manifest]="manifest" (pauseToggled)="onPauseToggled()"></app-manifest-download-card>
-          </div>
+        <ng-container *ngIf="runs.length > 0; else emptyDownloads">
+          <app-manifest-download-card
+            *ngFor="let run of runs; trackBy: trackByRunId"
+            [run]="run"
+            (pauseToggled)="onPauseToggled(run.runId)"
+            (cancelRequested)="onCancelDownload(run.runId)"
+            (removeRequested)="onRemoveRun(run.runId)"
+            (collapseToggled)="onCollapseToggled(run.runId, $event)">
+          </app-manifest-download-card>
         </ng-container>
+
         <ng-template #emptyDownloads>
           <div class="empty-state">
             <span class="material-icons-outlined">hourglass_empty</span>
             <p>No downloads queued.</p>
             <small>Select a manifest and start a download to see progress.</small>
+            <button class="fetch-manifest-btn" (click)="openManifestModal()" title="Add a Manifest">
+              <span class="material-icons">add</span>
+            </button>
           </div>
         </ng-template>
       </div>
