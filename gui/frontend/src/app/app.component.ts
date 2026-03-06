@@ -1,125 +1,106 @@
 import { Component, OnInit, OnDestroy, NgZone, HostListener } from '@angular/core';
 import { Subscription } from 'rxjs';
-import { EventsOn } from '../../wailsjs/runtime/runtime';
-import { CancelDownload, OpenAuthFileDialog, OpenInputFileDialog, OpenOutputDirectoryDialog, GetDefaultOutputDirectory, RunCLIFetch , IsMac } from '../../wailsjs/go/main/App';
+import {
+  CancelDownload,
+  OpenAuthFileDialog,
+  OpenInputFileDialog,
+  OpenOutputDirectoryDialog,
+  GetDefaultOutputDirectory,
+  RunCLIFetch,
+  IsMac,
+} from '../../wailsjs/go/main/App';
 import { DownloadStatusService } from './services/download-status.service';
-import { DownloadOverviewSnapshot } from './models/download-series.model';
-
+import { RunState } from './models/run-state.model';
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss']
+  styleUrls: ['./app.component.scss'],
 })
 export class AppComponent implements OnInit, OnDestroy {
+  // ── Form state (shared across all runs) ──────────────────────────────────
   inputFilePath = '';
   outputDirPath = '';
   authFilePath = '';
   defaultDownloadDir = '';
   directoryMode: 'classic' | 'descriptive' = 'classic';
-
   isMac = false;
 
-  private unsubscribeCliError?: () => void;
-  private unsubscribeCliFinished?: () => void;
+  // Track the last path that was auto-set so we can avoid overwriting manual edits
+  private lastAutoSetOutputPath = '';
 
-  private overviewSubscription?: Subscription;
-  private seriesSubscription?: Subscription;
-
-  // Advanced options / UI state
+  // ── Advanced options ──────────────────────────────────────────────────────
   showAdvancedModal = false;
-  showManifestSection = true;
+  showManifestModal = false;
   maxConnections = 8;
   maxRetries = 3;
   simultaneousDownloads = 8;
   skipExisting = true;
   downloadInParallel = true;
 
-  // Collapse state
-  downloadsCollapsed = true;  // Collapsed until downloads start
-  hasAutoExpanded = false;
-
-  // Dark mode
+  // ── Dark mode ─────────────────────────────────────────────────────────────
   isDarkMode = false;
 
-  showInitializing = false;
-
-  series$ = this.downloadStatus.series$;
-  overview$ = this.downloadStatus.overview$;
-  manifest$ = this.downloadStatus.manifest$;
+  // ── Runs (one entry per manifest) ─────────────────────────────────────────
+  runs: RunState[] = [];
+  private runsSubscription?: Subscription;
 
   constructor(
     private readonly downloadStatus: DownloadStatusService,
-    private ngZone: NgZone
+    private readonly ngZone: NgZone,
   ) {}
 
   async ngOnInit() {
-    // Detect system theme preference
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    // Detect system theme
+    if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) {
       this.isDarkMode = true;
     }
-
-    try {
-      this.isMac = await IsMac();
-      console.log("isMac =", this.isMac);
-    } catch (err) {
-      console.error("Error detecting macOS:", err);
-    }
-
-    this.defaultDownloadDir = await GetDefaultOutputDirectory();
-    if (this.isMac) {this.defaultDownloadDir = ""}
-    this.outputDirPath = this.defaultDownloadDir;
-
-    // Listen for system theme changes
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
       this.isDarkMode = e.matches;
     });
 
-    this.overviewSubscription = this.overview$.subscribe((snapshot: DownloadOverviewSnapshot) => {
-      // Reset auto-expand guard when no downloads are present
-      if (snapshot.total === 0) {
-        this.hasAutoExpanded = false;
-      }
-      // Auto-expand downloads section only once per run
-      if (snapshot.total > 0 && this.downloadsCollapsed && !this.hasAutoExpanded) {
-        this.downloadsCollapsed = false;
-        this.hasAutoExpanded = true;
-      }
-      if (this.showInitializing && snapshot.total > 0) {
-        this.showInitializing = false;
-      }
-    });
+    // Detect platform
+    try {
+      this.isMac = await IsMac();
+    } catch (err) {
+      console.error('Error detecting macOS:', err);
+    }
 
-    this.seriesSubscription = this.series$.subscribe(series => {
-      if (this.showInitializing && series.length > 0) {
-        this.showInitializing = false;
-      }
-    });
+    // Set default output directory
+    this.defaultDownloadDir = await GetDefaultOutputDirectory();
+    if (this.isMac) this.defaultDownloadDir = '';
+    this.outputDirPath = this.defaultDownloadDir;
 
-    // Subscribe to CLI error events
-    this.unsubscribeCliError = EventsOn('cli-error', (err: string) => {
-      this.ngZone.run(() => {
-        this.showInitializing = false;
-        this.downloadStatus.appendManifestLog(`ERROR: ${err}`);
-      });
-    });
-
-    // Subscribe to CLI finished event
-    this.unsubscribeCliFinished = EventsOn('cli-finished', (summary: string) => {
-      this.ngZone.run(() => {
-        this.showInitializing = false;
-        if (summary) {
-          this.downloadStatus.appendManifestLog(summary);
-        }
-      });
+    // Subscribe to all runs
+    this.runsSubscription = this.downloadStatus.runs$.subscribe(runs => {
+      this.runs = runs;
     });
   }
 
   ngOnDestroy() {
-    this.unsubscribeCliError?.();
-    this.unsubscribeCliFinished?.();
-    this.overviewSubscription?.unsubscribe();
-    this.seriesSubscription?.unsubscribe();
+    this.runsSubscription?.unsubscribe();
+  }
+
+  // ── Aggregates across all runs ────────────────────────────────────────────
+
+  get globalOverview() {
+    let total = 0, active = 0, completed = 0, failed = 0, skipped = 0, cancelled = 0;
+    for (const run of this.runs) {
+      total     += run.overview.total;
+      active    += run.overview.active;
+      completed += run.overview.completed;
+      failed    += run.overview.failed;
+      skipped   += run.overview.skipped;
+      cancelled += run.overview.cancelled;
+    }
+    return { total, active, completed, failed, skipped, cancelled };
+  }
+
+
+  // ── UI helpers ─────────────────────────────────────────────────────────────
+
+  trackByRunId(_: number, run: RunState): bigint {
+    return run.runId;
   }
 
   toggleDarkMode() {
@@ -134,80 +115,102 @@ export class AppComponent implements OnInit, OnDestroy {
     this.showAdvancedModal = false;
   }
 
-  @HostListener('document:keydown.escape', ['$event'])
-  handleEscapeKey(event: KeyboardEvent) {
-    if (this.showAdvancedModal) {
-      event.preventDefault();
-      this.closeAdvancedModal();
-    }
+  openManifestModal() { this.showManifestModal = true; }
+  closeManifestModal() { this.showManifestModal = false; }
+
+  @HostListener('document:keydown.escape')
+  handleEscapeKey() {
+    if (this.showAdvancedModal) this.closeAdvancedModal();
+    if (this.showManifestModal) this.closeManifestModal();
   }
 
-  get isManifestPaused(): boolean {
-    return this.downloadStatus.getIsPaused();
-  }
+  // ── File / directory pickers ───────────────────────────────────────────────
 
-  onPauseToggled() {
-    this.downloadStatus.togglePause();
+  onSelectInputFile() {
+    OpenInputFileDialog()
+      .then((filePath: string) => {
+        if (!filePath) return;
+        this.inputFilePath = filePath;
+
+        const baseName = this.baseNameOf(filePath);
+
+        if (!this.isMac) {
+          // Only auto-set if user hasn't diverged from the last auto-set value
+          if (!this.outputDirPath || this.outputDirPath === this.lastAutoSetOutputPath) {
+            this.outputDirPath = `${this.defaultDownloadDir}/${baseName}`;
+            this.lastAutoSetOutputPath = this.outputDirPath;
+          }
+        } else {
+          if (this.outputDirPath ) {
+            const parts = this.outputDirPath.split('/');
+            parts[parts.length - 1] = baseName;
+            this.outputDirPath = parts.join('/');
+            this.lastAutoSetOutputPath = this.outputDirPath;
+          }
+          // If outputDirPath is empty or was set manually, leave it alone
+        }
+      })
+      .catch(err => {
+        // No active runId yet — log to console; file picker errors are non-critical
+        console.error('Error selecting input file:', err);
+      });
   }
 
   onSelectOutputDirectory() {
-    const fileName = this.inputFilePath.split(/[\\/]/).pop() || '';
-    const baseName = fileName.replace(/\.[^/.]+$/, '');
-    OpenOutputDirectoryDialog(baseName).then((dirPath: string) => {
-      if (dirPath) {
-        this.outputDirPath = dirPath;
-      }
-    }).catch(err => {
-      this.downloadStatus.appendManifestLog("ERROR: " + err);
-    });
+    const baseName = this.baseNameOf(this.inputFilePath);
+    OpenOutputDirectoryDialog(baseName)
+      .then((dirPath: string) => {
+        if (dirPath) {
+          this.outputDirPath = dirPath;
+          this.lastAutoSetOutputPath = dirPath;
+        }
+      })
+      .catch(err => console.error('Error selecting output directory:', err));
   }
 
   onSelectAuthFile() {
-    OpenAuthFileDialog().then((dirPath: string) => {
-      if (dirPath) {
-        this.authFilePath = dirPath;
-      }
-    }).catch(err => {
-      //this.status = "Error: " + err;
-    });
+    OpenAuthFileDialog()
+      .then((filePath: string) => {
+        if (filePath) this.authFilePath = filePath;
+      })
+      .catch(err => console.error('Error selecting auth file:', err));
   }
+
+  // ── Start a new manifest download ─────────────────────────────────────────
 
   onFetchFiles() {
     if (!this.inputFilePath || !this.outputDirPath) {
-      this.downloadStatus.appendManifestLog("ERROR: Please select both an input TCIA file and an output directory.");
+      // No active runId yet; create a temporary log entry via the first run or a toast
+      console.warn('Please select both an input file and an output directory.');
       return;
     }
 
-    this.showManifestSection = false;
-    this.showInitializing = true;
-    this.downloadStatus.beginRun(this.inputFilePath, this.outputDirPath);
+    // Generate a random uint64 ID (matches Go backend's uint64 type).
+    // Combine two random uint32s into one uint64 via BigInt.
+    const buf = new Uint32Array(2);
+    crypto.getRandomValues(buf);
+    const runId: bigint = (BigInt(buf[0]) << 32n) | BigInt(buf[1]);
 
-    // Reconstruct the exact CLI command for display (quote paths to handle spaces)
-    const cliPath = '../nbia-data-retriever-cli';
-    const parts: string[] = [];
-    parts.push(cliPath);
-    parts.push('-i');
-    parts.push(`"${this.inputFilePath}"`);
-    parts.push('--output');
-    parts.push(`"${this.outputDirPath}"`);
-    parts.push('--max-connections');
-    parts.push(String(this.maxConnections));
-    parts.push('--max-retries');
-    parts.push(String(this.maxRetries));
-    parts.push('--processes');
-    parts.push(String(this.simultaneousDownloads));
-    if (this.downloadInParallel) {
-      // The CLI does not have a --download-in-parallel flag.
-      // We keep the frontend checkbox for UI/intent, but do not forward an unsupported flag.
-    }
-    if (this.skipExisting) {
-      parts.push('--skip-existing');
-    }
-    const cmdStr = parts.join(' ');
+    // Register the run immediately so the card appears
+    this.downloadStatus.beginRun(runId, this.inputFilePath, this.outputDirPath);
 
-    this.downloadStatus.appendManifestLog('Running: ' + cmdStr);
+    // Close the modal so the user can see the new card appear
+    this.closeManifestModal();
 
-    // Call backend to run the CLI
+    // Build CLI command string for the log
+    const parts: string[] = [
+      '../nbia-data-retriever-cli',
+      '-i', `"${this.inputFilePath}"`,
+      '--output', `"${this.outputDirPath}"`,
+      '--max-connections', String(this.maxConnections),
+      '--max-retries', String(this.maxRetries),
+      '--processes', String(this.simultaneousDownloads),
+    ];
+    if (this.skipExisting) parts.push('--skip-existing');
+    this.downloadStatus.appendManifestLog(runId, 'Running: ' + parts.join(' '));
+    this.downloadStatus.appendManifestLog(runId, 'Started');
+
+    // Kick off the download — pass runId so Go can tag events back to us
     RunCLIFetch(
       this.inputFilePath,
       this.outputDirPath,
@@ -217,61 +220,44 @@ export class AppComponent implements OnInit, OnDestroy {
       this.skipExisting,
       this.downloadInParallel,
       this.authFilePath,
-      this.directoryMode
+      this.directoryMode,
+      Number(runId),
     ).catch(err => {
       this.ngZone.run(() => {
-        this.downloadStatus.appendManifestLog('ERROR: ' + err);
-        this.showInitializing = false;
+        this.downloadStatus.setRunError(runId, err);
       });
     });
-    this.downloadStatus.appendManifestLog('Started');
+
+    // Reset the form fields so the user can immediately add another manifest
+    this.inputFilePath = '';
+    this.lastAutoSetOutputPath = '';
+    // Leave outputDirPath as-is as a convenience starting point for the next run
   }
 
-  onCancelDownload() {
-    this.showInitializing = false;
+  // ── Per-run controls (called from download-card via events) ───────────────
+
+  onCancelDownload(runId: bigint) {
+    this.downloadStatus.cancelRun(runId);
     CancelDownload()
-      .then(() => {
-        this.downloadStatus.appendManifestLog("Cancellation requested");
-      })
-      .catch(err => {
-        this.downloadStatus.appendManifestLog("ERROR: " + err);
-        this.showInitializing = false;
-      });
+      .catch(err => this.downloadStatus.appendManifestLog(runId, 'ERROR: ' + err));
   }
 
-onSelectInputFile() {
-  OpenInputFileDialog()
-    .then((filePath: string) => {
-      if (!filePath) return;
+  onRemoveRun(runId: bigint) {
+    this.downloadStatus.removeRun(runId);
+  }
 
-      this.inputFilePath = filePath;
+  onPauseToggled(runId: bigint) {
+    this.downloadStatus.togglePause(runId);
+  }
 
-      const fileName = filePath.split(/[\\/]/).pop() || '';
-      const baseName = fileName.replace(/\.[^/.]+$/, '');
+  onCollapseToggled(runId: bigint, collapsed: boolean) {
+    this.downloadStatus.setCollapsed(runId, collapsed);
+  }
 
-      // Only auto-set if user hasn't manually changed it
-      if ( !this.isMac && 
-        (!this.outputDirPath ||
-        this.outputDirPath === this.defaultDownloadDir)
-      ) {
-        this.outputDirPath = `${this.defaultDownloadDir}/${baseName}`;
-      }
-      if (this.isMac) {
+  // ── Convenience ───────────────────────────────────────────────────────────
 
-          if (this.outputDirPath) {
-            const parts = this.outputDirPath.split('/');
-            parts[parts.length - 1] = baseName;
-            this.outputDirPath = parts.join('/');
-          } else {
-            // fallback if outputDirPath is empty
-            this.outputDirPath = ""
-          }
-
-
-      }
-    })
-    .catch(err => {
-      this.downloadStatus.appendManifestLog('ERROR: ' + err);
-    });
-}
+  private baseNameOf(filePath: string): string {
+    const fileName = filePath.split(/[\\/]/).pop() ?? '';
+    return fileName.replace(/\.[^/.]+$/, '');
+  }
 }

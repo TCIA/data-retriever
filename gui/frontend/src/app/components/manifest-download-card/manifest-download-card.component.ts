@@ -1,7 +1,12 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  EventEmitter,
+  Input,
+  Output,
+} from '@angular/core';
 import { OpenDirectory } from '../../../../wailsjs/go/main/App';
-import { ManifestDownloadSnapshot } from '../../models/download-series.model';
-import { DownloadStatusService } from '../../services/download-status.service';
+import { RunState } from '../../models/run-state.model';
 
 @Component({
   selector: 'app-manifest-download-card',
@@ -10,26 +15,31 @@ import { DownloadStatusService } from '../../services/download-status.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ManifestDownloadCardComponent {
-  @Input() manifest!: ManifestDownloadSnapshot;
+  @Input() run!: RunState;
+
   @Output() pauseToggled = new EventEmitter<void>();
-  
+  @Output() cancelRequested = new EventEmitter<void>();
+  @Output() removeRequested = new EventEmitter<void>();
+  /** Emits the new collapsed state so the parent can persist it. */
+  @Output() collapseToggled = new EventEmitter<boolean>();
+
   showOutput = false;
 
-  constructor(private readonly downloadStatus: DownloadStatusService) {}
-
   get title(): string {
-    const path = this.manifest?.manifestPath || '';
+    const path = this.run?.inputFilePath ?? '';
     const parts = path.split(/[\\\/]/);
     return parts[parts.length - 1] || 'Manifest';
   }
 
   get subtitle(): string {
-    const total = this.manifest?.total ?? 0;
-    const active = this.manifest?.active ?? 0;
-    const completed = this.manifest?.completed ?? 0;
-    const failed = this.manifest?.failed ?? 0;
-    const skipped = this.manifest?.skipped ?? 0;
-    const cancelled = this.manifest?.cancelled ?? 0;
+    const m = this.run?.overview;
+    if (!m) return '';
+    const total = this.run.overview.total ?? 0;
+    const active = m.active ?? 0;
+    const completed = m.completed ?? 0;
+    const failed = m.failed ?? 0;
+    const skipped = m.skipped ?? 0;
+    const cancelled = m.cancelled ?? 0;
     const segments: string[] = [];
     segments.push(`${completed} completed`);
     if (failed) segments.push(`${failed} failed`);
@@ -40,33 +50,30 @@ export class ManifestDownloadCardComponent {
   }
 
   /**
-   * Progress value for ring fill - keeps current value when paused (ring becomes grey via CSS)
+   * Byte-accurate progress for the ring fill.
+   * Falls back to series-count-based percent from overview.
    */
   get progressValue(): number {
-    const downloaded = this.manifest?.bytesDownloaded ?? null;
-    const total = this.manifest?.bytesTotal ?? null;
+    const downloaded = this.run?.bytesDownloaded ?? null;
+    const total = this.run?.bytesTotal ?? null;
     let percent: number;
     if (typeof downloaded === 'number' && typeof total === 'number' && total > 0) {
       percent = Math.round((downloaded / total) * 100);
     } else {
-      percent = Math.round(this.manifest?.progressPercent ?? 0);
+      percent = Math.round(this.run?.overview?.progressPercent ?? 0);
     }
     return Math.max(0, Math.min(100, percent));
   }
 
   /**
-   * Display value shown inside the ring - shows completed percentage when paused
-   * This reflects what percentage will be skipped on resume
+   * Value shown inside the ring.
+   * When paused, shows the "safe-to-skip" completed-series percentage.
    */
   get displayProgressValue(): number {
     if (this.isPaused) {
-      // When paused, show the "completed" progress based on series counts
-      const total = this.manifest?.total ?? 0;
-      const done = (this.manifest?.completed ?? 0) + (this.manifest?.skipped ?? 0);
-      if (total > 0) {
-        return Math.round((done / total) * 100);
-      }
-      return 0;
+      const total = this.run?.overview?.total ?? 0;
+      const done = (this.run?.overview?.completed ?? 0) + (this.run?.overview?.skipped ?? 0);
+      return total > 0 ? Math.round((done / total) * 100) : 0;
     }
     return this.progressValue;
   }
@@ -76,56 +83,86 @@ export class ManifestDownloadCardComponent {
   }
 
   get isCompleted(): boolean {
-    // Never show completed state when paused - keep the ring visible
-    if (this.isPaused) {
-      return false;
-    }
-    const total = this.manifest?.total ?? 0;
-    const done = (this.manifest?.completed ?? 0) + (this.manifest?.failed ?? 0) + (this.manifest?.skipped ?? 0) + (this.manifest?.cancelled ?? 0);
+    if (this.isPaused) return false;
+    if (this.run?.status === 'done') return true;
+    const o = this.run?.overview;
+    const total = o?.total ?? 0;
+    const done = (o?.completed ?? 0) + (o?.failed ?? 0) + (o?.skipped ?? 0) + (o?.cancelled ?? 0);
     return total > 0 && done >= total;
   }
 
+  get isTerminal(): boolean {
+    return ['done', 'error', 'cancelled'].includes(this.run?.status ?? '');
+  }
+
   get hasLogs(): boolean {
-    return (this.manifest?.logs?.length ?? 0) > 0;
+    return (this.run?.logs?.length ?? 0) > 0;
   }
 
   get logLines(): string[] {
-    return this.manifest?.logs ?? [];
+    return this.run?.logs ?? [];
   }
 
   get isPaused(): boolean {
-    return this.manifest?.isPaused ?? false;
+    return this.run?.isPaused ?? false;
   }
 
-  get statusLabel(): string {
-    if (this.isPaused) {
-      return 'Paused';
-    }
-    const active = this.manifest?.active ?? 0;
-    if (active > 0) {
-      return 'Downloading';
-    }
-    const total = this.manifest?.total ?? 0;
-    const done = (this.manifest?.completed ?? 0) + (this.manifest?.failed ?? 0) + (this.manifest?.skipped ?? 0) + (this.manifest?.cancelled ?? 0);
-    if (total > 0 && done >= total) {
-      return 'Completed';
-    }
-    return 'Queued';
+  get isCollapsed(): boolean {
+    return this.run?.collapsed ?? false;
   }
 
   get canOpenOutputDirectory(): boolean {
-    const total = this.manifest?.total ?? 0;
-    const completed = this.manifest?.completed ?? 0;
-    const failed = this.manifest?.failed ?? 0;
-    const skipped = this.manifest?.skipped ?? 0;
-    const cancelled = this.manifest?.cancelled ?? 0;
-    const outputDirPath = this.manifest?.outputDirPath ?? '';
+    const o = this.run?.overview;
+    const total = o?.total ?? 0;
+    const completed = o?.completed ?? 0;
+    const failed = o?.failed ?? 0;
+    const skipped = o?.skipped ?? 0;
+    const cancelled = o?.cancelled ?? 0;
+    const outputDirPath = this.run?.outputDirPath ?? '';
     return total > 0 && completed === total && failed === 0 && skipped === 0 && cancelled === 0 && outputDirPath.length > 0;
+  }
+
+  get statusLabel(): string {
+    switch (this.run?.status) {
+      case 'initializing':
+        return 'Initializing';
+      case 'cancelled':
+        return 'Cancelled';
+      case 'error':
+        return 'Error';
+      case 'done':
+        return 'Completed';
+    }
+    if (this.isPaused) return 'Paused';
+    const active = this.run?.overview?.active ?? 0;
+    if (active > 0) return 'Downloading';
+    const total = this.run?.overview?.total ?? 0;
+    const done =
+      (this.run?.overview?.completed ?? 0) +
+      (this.run?.overview?.failed ?? 0) +
+      (this.run?.overview?.skipped ?? 0) +
+      (this.run?.overview?.cancelled ?? 0);
+    if (total > 0 && done >= total) return 'Completed';
+    return 'Queued';
   }
 
   onTogglePause(event: MouseEvent): void {
     event.stopPropagation();
     this.pauseToggled.emit();
+  }
+
+  onCancel(event: MouseEvent): void {
+    event.stopPropagation();
+    this.cancelRequested.emit();
+  }
+
+  onRemove(event: MouseEvent): void {
+    event.stopPropagation();
+    this.removeRequested.emit();
+  }
+
+  onToggleCollapse(): void {
+    this.collapseToggled.emit(!this.isCollapsed);
   }
 
   toggleOutput(): void {
@@ -134,14 +171,14 @@ export class ManifestDownloadCardComponent {
 
   openOutputDirectory(event: MouseEvent): void {
     event.stopPropagation();
-    const outputDirPath = this.manifest?.outputDirPath;
+    const outputDirPath = this.run?.outputDirPath;
     if (!outputDirPath) {
-      this.downloadStatus.appendManifestLog('ERROR: No output directory is available for this run.');
+      console.warn('No output directory is available for this run.');
       return;
     }
     OpenDirectory(outputDirPath).catch((error) => {
       const message = typeof error === 'string' ? error : String(error);
-      this.downloadStatus.appendManifestLog(`ERROR: Failed to open output directory: ${message}`);
+      console.error(`Failed to open output directory: ${message}`);
     });
   }
 }

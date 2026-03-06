@@ -158,6 +158,7 @@ func (b *App) RunCLIFetch(
 	downloadInParallel bool,
 	authPath string,
 	directoryMode string,
+	runId uint64,
 ) (string, error) {
 
 	if b.ctx == nil {
@@ -165,9 +166,9 @@ func (b *App) RunCLIFetch(
 	}
 
 	// Create a new batch
-	b.mu.Lock()
-	b.runID++
-	id := b.runID
+	//b.mu.Lock()
+	//b.runID++
+	id := runId
 
 	ctx, cancel := context.WithCancel(b.ctx)
 
@@ -189,7 +190,7 @@ func (b *App) RunCLIFetch(
 		b.batches = make(map[uint64]*DownloadBatch)
 	}
 	b.batches[id] = batch
-	b.mu.Unlock()
+	//b.mu.Unlock()
 
 	// Run the batch in its own goroutine
 	go b.runBatch(batch)
@@ -425,6 +426,7 @@ func (b *App) ResumeManifest(manifestPath string) error {
 		true, // downloadInParallel
 		pausedBatch.AuthPath,
 		pausedBatch.DirectoryMode,
+		pausedBatch.ID,
 	)
 	if err != nil {
 		return err
@@ -435,7 +437,7 @@ func (b *App) ResumeManifest(manifestPath string) error {
 }
 
 type DownloadBatch struct {
-	ID     uint64
+	ID     uint64 
 	Ctx    context.Context
 	Cancel context.CancelFunc
 

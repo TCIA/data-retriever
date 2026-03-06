@@ -1100,3 +1100,26 @@
   border-color: #444444;
   opacity: 1;
 }
+
+.fetch-manifest-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: #0078e7;
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+}
+
+.fetch-manifest-btn .material-icons {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.fetch-manifest-btn:hover {
+  background: #0066cc;
+}
