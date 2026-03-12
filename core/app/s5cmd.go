@@ -5,129 +5,153 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
-  "embed"
+	"embed"
 	"os"
 	"path/filepath"
 	"strings"
 	"strconv"
 	"context"
 	"regexp"
-  "github.com/apache/arrow/go/v14/arrow/array"
-  "github.com/apache/arrow/go/v14/arrow/memory"
-  "github.com/apache/arrow/go/v14/parquet/file"
-  pqarrow "github.com/apache/arrow/go/v14/parquet/pqarrow"
+	"github.com/apache/arrow/go/v14/arrow/array"
+	"github.com/apache/arrow/go/v14/arrow/memory"
+	"github.com/apache/arrow/go/v14/parquet/file"
+	pqarrow "github.com/apache/arrow/go/v14/parquet/pqarrow"
+	"github.com/apache/arrow/go/v14/arrow"
 )
 
 type SeriesMetadata struct {
-    SeriesInstanceUID   string
-		series_aws_url			string
-		series_size_MB			float64
-		collection_id				string
-		PatientID						string
-		StudyInstanceUID		string
-		StudyDate						string
-		StudyDescription		string
-		SeriesNumber				string
-		SeriesDescription		string
+	SeriesInstanceUID   string
+	series_aws_url			string
+	series_size_MB			float64
+	collection_id				string
+	PatientID						string
+	StudyInstanceUID		string
+	StudyDate						string
+	StudyDescription		string
+	SeriesNumber				string
+	SeriesDescription		string
 }
 
+//go:embed parquet/prior_versions_index.parquet
 //go:embed parquet/idc_index.parquet
 var parquetFS embed.FS
 
-
-func loadSeriesMetadataFromParquet() (map[string]SeriesMetadata, map[string]string, error) {
-		f, err := parquetFS.Open("parquet/idc_index.parquet")
-		if err != nil {
-		    return nil, nil, fmt.Errorf("failed to open embedded parquet: %w", err)
-		}
-		defer f.Close()
-		
-		stat, err := f.Stat()
-		if err != nil {
-		    return nil, nil, fmt.Errorf("failed to stat parquet file: %w", err)
-		}
-		
-		readerAt, ok := f.(io.ReaderAt)
-		if !ok {
-		    return nil, nil, fmt.Errorf("embedded file does not implement ReaderAt")
-		}
-		
-		section := io.NewSectionReader(readerAt, 0, stat.Size())
-		
-		pqReader, err := file.NewParquetReader(section)
-		if err != nil {
-		    return nil, nil, fmt.Errorf("failed to create parquet reader: %w", err)
-		}
-		defer pqReader.Close()
-
-logger.Warnf("num row groups: %d", pqReader.NumRowGroups())
-
-for i := 0; i < pqReader.NumRowGroups(); i++ {
-    rg := pqReader.RowGroup(i)
-    logger.Warnf("row group %d: num rows = %d, num columns = %d", i, rg.NumRows(), rg.NumColumns())
-}
-		
-		mem := memory.NewGoAllocator()
-	
-		props := pqarrow.ArrowReadProperties{
-		    BatchSize: 8192, // THIS is where batch size goes
-		}
-		
-		arrowReader, err := pqarrow.NewFileReader(pqReader, props, mem)
-		if err != nil {
-		    return nil, nil, fmt.Errorf("failed to create Arrow reader: %w", err)
-		}
-		
-		recReader, err := arrowReader.GetRecordReader(
-		    context.Background(),
-		    nil, // all columns
-		    nil, // all row groups
-		)
-		
-		if err != nil {
-		    return nil, nil, fmt.Errorf("failed to get record reader: %w", err)
-		}
-		defer recReader.Release()
-
-		logger.Warnf("record reader schema: %v", recReader.Schema())
-		schema := recReader.Schema()
-for _, f := range schema.Fields() {
-    logger.Warnf("Column: %s, Type: %v", f.Name, f.Type)
+func safeStringCol(schema *arrow.Schema, cols []arrow.Array, name string) *array.String {
+	idxs := schema.FieldIndices(name)
+	if len(idxs) == 0 {
+		return nil
+	}
+	col, _ := cols[idxs[0]].(*array.String)
+	return col
 }
 
-    meta := make(map[string]SeriesMetadata)
-		metaFromSeries := make(map[string]string)
+func safeFloat64Col(schema *arrow.Schema, cols []arrow.Array, name string) *array.Float64 {
+	idxs := schema.FieldIndices(name)
+	if len(idxs) == 0 {
+		return nil
+	}
+	col, _ := cols[idxs[0]].(*array.Float64)
+	return col
+}
 
-		logger.Warnf("parquet row groups: %d", pqReader.NumRowGroups())
-    for recReader.Next() {
+// stringVal returns "" if the column is missing or the cell is null.
+func stringVal(col *array.String, i int) string {
+	if col == nil || col.IsNull(i) {
+		return ""
+	}
+	return col.Value(i)
+}
+
+// float64Val returns nil if the column is missing or the cell is null.
+func float64Val(col *array.Float64, i int) *float64 {
+	if col == nil || col.IsNull(i) {
+		return nil
+	}
+	v := col.Value(i)
+	return &v
+}
+
+func loadSeriesMetadataFromParquet(
+    parquetPath string,
+    meta map[string]*SeriesMetadata,
+    metaFromSeries map[string]string,
+) error {
+    f, err := parquetFS.Open(parquetPath)
+    if err != nil {
+        return fmt.Errorf("opening parquet file %s: %w", parquetPath, err)
+    }
+    defer f.Close()
+
+
+	stat, err := f.Stat()
+	if err != nil {
+		return fmt.Errorf("failed to stat parquet file: %w", err)
+	}
+
+	readerAt, ok := f.(io.ReaderAt)
+	if !ok {
+		return fmt.Errorf("embedded file does not implement ReaderAt")
+	}
+
+	section := io.NewSectionReader(readerAt, 0, stat.Size())
+
+	pqReader, err := file.NewParquetReader(section)
+	if err != nil {
+		return fmt.Errorf("failed to create parquet reader: %w", err)
+	}
+	defer pqReader.Close()
+
+	logger.Warnf("num row groups: %d", pqReader.NumRowGroups())
+
+	for i := 0; i < pqReader.NumRowGroups(); i++ {
+		rg := pqReader.RowGroup(i)
+		logger.Warnf("row group %d: num rows = %d, num columns = %d", i, rg.NumRows(), rg.NumColumns())
+	}
+
+	mem := memory.NewGoAllocator()
+
+	props := pqarrow.ArrowReadProperties{
+		BatchSize: 8192, // THIS is where batch size goes
+	}
+
+	arrowReader, err := pqarrow.NewFileReader(pqReader, props, mem)
+	if err != nil {
+		return fmt.Errorf("failed to create Arrow reader: %w", err)
+	}
+
+	recReader, err := arrowReader.GetRecordReader(
+		context.Background(),
+		nil, // all columns
+		nil, // all row groups
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to get record reader: %w", err)
+	}
+	defer recReader.Release()
+
+	logger.Warnf("record reader schema: %v", recReader.Schema())
+	schema := recReader.Schema()
+	for _, f := range schema.Fields() {
+		logger.Warnf("Column: %s, Type: %v", f.Name, f.Type)
+	}
+
+	logger.Warnf("parquet row groups: %d", pqReader.NumRowGroups())
+	    for recReader.Next() {
         rec := recReader.Record()
-				//logger.Warnf("reading record")
+        schema := rec.Schema()
+        cols := rec.Columns()
 
-        // Get column indices
-        uidIdxs := rec.Schema().FieldIndices("SeriesInstanceUID")
-        urlIdxs := rec.Schema().FieldIndices("series_aws_url")
-        patientIDIdxs := rec.Schema().FieldIndices("PatientID")
-        studyUIDIdxs := rec.Schema().FieldIndices("StudyInstanceUID")
-        collectionIDIdxs := rec.Schema().FieldIndices("collection_id")
-        fileSizeIdxs := rec.Schema().FieldIndices("series_size_MB")
-        studyDateIdxs := rec.Schema().FieldIndices("StudyDate")
-        studyDescIdxs := rec.Schema().FieldIndices("StudyDescription")
-        seriesNumIdxs := rec.Schema().FieldIndices("SeriesNumber")
-        seriesDescIdxs := rec.Schema().FieldIndices("SeriesDescription")
-        if len(uidIdxs) == 0 || len(urlIdxs) == 0 {
-            return nil, nil, fmt.Errorf("required columns not found in parquet")
-        }
-
-        uidCol := rec.Column(uidIdxs[0]).(*array.String)
-        urlCol := rec.Column(urlIdxs[0]).(*array.String)
-        fileSizeCol := rec.Column(fileSizeIdxs[0]).(*array.Float64)
-        patientIDCol := rec.Column(patientIDIdxs[0]).(*array.String)
-        studyUIDCol := rec.Column(studyUIDIdxs[0]).(*array.String)
-        collectionIDCol := rec.Column(collectionIDIdxs[0]).(*array.String)
-        studyDateCol := rec.Column(studyDateIdxs[0]).(*array.String)
-        studyDescCol := rec.Column(studyDescIdxs[0]).(*array.String)
-        seriesNumCol := rec.Column(seriesNumIdxs[0]).(*array.String)
-        seriesDescCol := rec.Column(seriesDescIdxs[0]).(*array.String)
+        uidCol         := safeStringCol(schema, cols, "SeriesInstanceUID")
+        urlCol         := safeStringCol(schema, cols, "series_aws_url")
+        fileSizeCol    := safeFloat64Col(schema, cols, "series_size_MB")
+        patientIDCol   := safeStringCol(schema, cols, "PatientID")
+        studyUIDCol    := safeStringCol(schema, cols, "StudyInstanceUID")
+        collectionIDCol := safeStringCol(schema, cols, "collection_id")
+        studyDateCol   := safeStringCol(schema, cols, "StudyDate")
+        studyDescCol   := safeStringCol(schema, cols, "StudyDescription")
+        seriesNumCol   := safeStringCol(schema, cols, "SeriesNumber")
+        seriesDescCol  := safeStringCol(schema, cols, "SeriesDescription")
 
         rows := int(rec.NumRows())
         for i := 0; i < rows; i++ {
@@ -136,42 +160,38 @@ for _, f := range schema.Fields() {
             }
             uid := uidCol.Value(i)
             url := urlCol.Value(i)
-            fileSize := fileSizeCol.Value(i)
-						patientID := patientIDCol.Value(i)
-						studyUID := studyUIDCol.Value(i)
-						collectionID := collectionIDCol.Value(i)
-						studyDate := studyDateCol.Value(i)
-						studyDesc := studyDescCol.Value(i)
-						seriesNum := seriesNumCol.Value(i)
-						seriesDesc := seriesDescCol.Value(i)
 
+            // Skip if already present — preserves existing entries
             if _, exists := meta[url]; exists {
                 continue
             }
 
-						//logger.Warnf("original url: %s", url)
-            meta[url] = SeriesMetadata{
+            fileSize     := float64Val(fileSizeCol, i)
+            entry := SeriesMetadata{
                 SeriesInstanceUID: uid,
                 series_aws_url:    url,
-								series_size_MB:		 fileSize,
-								PatientID:				 patientID,
-								StudyInstanceUID:	 studyUID,
-								collection_id:		 collectionID,
-								StudyDate:				 studyDate,
-								StudyDescription:	 studyDesc,
-								SeriesNumber:			 seriesNum,
-								SeriesDescription: seriesDesc,
+                PatientID:         stringVal(patientIDCol, i),
+                StudyInstanceUID:  stringVal(studyUIDCol, i),
+                collection_id:     stringVal(collectionIDCol, i),
+                StudyDate:         stringVal(studyDateCol, i),
+                StudyDescription:  stringVal(studyDescCol, i),
+                SeriesNumber:      stringVal(seriesNumCol, i),
+                SeriesDescription: stringVal(seriesDescCol, i),
             }
-						metaFromSeries[uid] = url
+            if fileSize != nil {
+                entry.series_size_MB = *fileSize
+            }
+            meta[url] = &entry
+            metaFromSeries[uid] = url
         }
-				rec.Release()
+        rec.Release()
     }
 
-		if err := recReader.Err(); err != nil && err != io.EOF {
-		    return nil, nil, fmt.Errorf("error reading Parquet records: %w", err)
-		}
+    if err := recReader.Err(); err != nil && err != io.EOF {
+        return fmt.Errorf("error reading Parquet records from %s: %w", parquetPath, err)
+    }
 
-    return meta, metaFromSeries, nil
+    return nil
 }
 
 
@@ -250,10 +270,17 @@ func decodeS5cmd(filePath string, outputDir string, processedSeries map[string]s
 
 
 
-  seriesMeta, nbiaLookup, err := loadSeriesMetadataFromParquet()
-  if err != nil {
-      logger.Fatalf("Failed to load parquet metadata: %v", err)
-  }
+
+	seriesMeta := make(map[string]*SeriesMetadata)
+	nbiaLookup := make(map[string]string)
+
+	loadSeriesMetadataFromParquet("parquet/idc_index.parquet", seriesMeta, nbiaLookup)
+	loadSeriesMetadataFromParquet("parquet/prior_versions_index.parquet", seriesMeta, nbiaLookup)
+
+
+	if err != nil {
+		logger.Fatalf("Failed to load parquet metadata: %v", err)
+	}
 
 	var jobsToProcess []*FileInfo
 	var newJobs int
@@ -266,91 +293,91 @@ func decodeS5cmd(filePath string, outputDir string, processedSeries map[string]s
 		if len(parts) >= 2 && parts[0] == "cp" {
 			originalURI = parts[1]
 		} else if len(parts) == 1 && strings.HasPrefix(parts[0], "s3://") {
-			originalURI = parts[0]
-		} else if len(parts) == 1 && numDotRe.MatchString(parts[0]) {
-			originalURI = nbiaLookup[parts[0]]
-		} else {
-			continue // Skip comments and invalid lines
-		}
-
-		if seriesUID, ok := processedSeries[originalURI]; ok && 1==2 {
-			// This is a sync job for an existing series
-			logger.Infof("Queueing sync job for existing series: %s", originalURI)
-			finalDirPath := filepath.Join(outputDir, seriesUID)
-			jobsToProcess = append(jobsToProcess, &FileInfo{
-				DownloadURL:      originalURI,
-				SeriesInstanceUID:        seriesUID, // We already know the final UID
-				OriginalS5cmdURI: originalURI,
-				S5cmdManifestPath: finalDirPath, // The final directory is the target for sync
-				IsSyncJob:        true,
-			})
-		} else {
-			// This is a new copy job
-			newJobs++
-			logger.Infof("Queueing new copy job for series: %s", originalURI)
-
-			fi := &FileInfo{
-				DownloadURL:      originalURI,
-				SeriesInstanceUID:        originalURI, // Temporary ID for progress
-				OriginalS5cmdURI: originalURI,
-				IsSyncJob:        false,
-			}
-			//  Attach Parquet metadata if available
-			if meta, ok := seriesMeta[originalURI]; ok {
-			    fi.SeriesInstanceUID= meta.SeriesInstanceUID
-					fi.FileSize = strconv.FormatInt(
-											    int64(meta.series_size_MB*1000*1000),
-											    10,
-												)
-					fi.PatientID = meta.PatientID
-					fi.StudyInstanceUID = meta.StudyInstanceUID
-					fi.Collection = meta.collection_id
-					fi.StudyDate = meta.StudyDate
-					fi.StudyDesc = meta.StudyDescription
-					fi.SeriesNumber = meta.SeriesNumber
-					fi.SeriesDescription = meta.SeriesDescription
-			} else {
-			    logger.Warnf("No parquet metadata found for series %s", originalURI)
-					continue;
-			}
-
-			var finalDirPath string
-			if options.DirectoryMode == "classic" {
-				finalDirPath = filepath.Join(outputDir, fi.Collection, fi.PatientID, fi.StudyInstanceUID, fi.SeriesInstanceUID)
-			} else {
-				
-				cleanStudyDesc := strings.ReplaceAll(fi.StudyDesc, "/", "")
-				cleanSeriesDesc := strings.ReplaceAll(fi.SeriesDescription, "/", "")
-
-				finalDirPath = filepath.Join(outputDir, fi.Collection, fi.PatientID, 
-												fi.StudyDate + cleanStudyDesc[:min(54, len(cleanStudyDesc))] + fi.StudyInstanceUID[len(fi.StudyInstanceUID) - 5:],
-												fi.SeriesNumber + cleanSeriesDesc[:min(54, len(cleanSeriesDesc))] + fi.SeriesInstanceUID[len(fi.SeriesInstanceUID) - 5:])
-			}
-
-			if err := os.MkdirAll(finalDirPath, 0755); err != nil {
-				logger.Warnf("Could not create temp directory for %s: %v", originalURI, err)
-				continue
-			}
-
-			fi.S5cmdManifestPath = finalDirPath
-			jobsToProcess = append(jobsToProcess, fi)
-
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		logger.Fatalf("error reading s5cmd manifest: %v", err)
-	}
-
-
-	// Save all to a single CSV file
-	csvPath := filepath.Join(outputDir, "metadata", "metadata.csv")
-	if err := WriteAllMetadataToCSV(jobsToProcess, csvPath); err != nil {
-		logger.Errorf("Failed to save combined CSV: %v", err)
+		originalURI = parts[0]
+	} else if len(parts) == 1 && numDotRe.MatchString(parts[0]) {
+		originalURI = nbiaLookup[parts[0]]
 	} else {
-		callbacks.emitStdout(fmt.Sprintf("Saved metadata for %d files to %s\n", len(jobsToProcess), csvPath))
+		continue // Skip comments and invalid lines
 	}
 
-	logger.Infof("Found %d s5cmd jobs to process (%d new, %d existing)", len(jobsToProcess), newJobs, len(jobsToProcess)-newJobs)
-	return jobsToProcess, newJobs
+	if seriesUID, ok := processedSeries[originalURI]; ok && 1==2 {
+		// This is a sync job for an existing series
+		logger.Infof("Queueing sync job for existing series: %s", originalURI)
+		finalDirPath := filepath.Join(outputDir, seriesUID)
+		jobsToProcess = append(jobsToProcess, &FileInfo{
+			DownloadURL:      originalURI,
+			SeriesInstanceUID:        seriesUID, // We already know the final UID
+			OriginalS5cmdURI: originalURI,
+			S5cmdManifestPath: finalDirPath, // The final directory is the target for sync
+			IsSyncJob:        true,
+		})
+	} else {
+		// This is a new copy job
+		newJobs++
+		logger.Infof("Queueing new copy job for series: %s", originalURI)
+
+		fi := &FileInfo{
+			DownloadURL:      originalURI,
+			SeriesInstanceUID:        originalURI, // Temporary ID for progress
+			OriginalS5cmdURI: originalURI,
+			IsSyncJob:        false,
+		}
+		//  Attach Parquet metadata if available
+		if meta, ok := seriesMeta[originalURI]; ok {
+			fi.SeriesInstanceUID= meta.SeriesInstanceUID
+			fi.FileSize = strconv.FormatInt(
+				int64(meta.series_size_MB*1000*1000),
+				10,
+			)
+			fi.PatientID = meta.PatientID
+			fi.StudyInstanceUID = meta.StudyInstanceUID
+			fi.Collection = meta.collection_id
+			fi.StudyDate = meta.StudyDate
+			fi.StudyDesc = meta.StudyDescription
+			fi.SeriesNumber = meta.SeriesNumber
+			fi.SeriesDescription = meta.SeriesDescription
+		} else {
+			logger.Warnf("No parquet metadata found for series %s", originalURI)
+			continue;
+		}
+
+		var finalDirPath string
+		if options.DirectoryMode == "classic" {
+			finalDirPath = filepath.Join(outputDir, fi.Collection, fi.PatientID, fi.StudyInstanceUID, fi.SeriesInstanceUID)
+		} else {
+
+			cleanStudyDesc := strings.ReplaceAll(fi.StudyDesc, "/", "")
+			cleanSeriesDesc := strings.ReplaceAll(fi.SeriesDescription, "/", "")
+
+			finalDirPath = filepath.Join(outputDir, fi.Collection, fi.PatientID, 
+			fi.StudyDate + cleanStudyDesc[:min(54, len(cleanStudyDesc))] + fi.StudyInstanceUID[len(fi.StudyInstanceUID) - 5:],
+			fi.SeriesNumber + cleanSeriesDesc[:min(54, len(cleanSeriesDesc))] + fi.SeriesInstanceUID[len(fi.SeriesInstanceUID) - 5:])
+		}
+
+		if err := os.MkdirAll(finalDirPath, 0755); err != nil {
+			logger.Warnf("Could not create temp directory for %s: %v", originalURI, err)
+			continue
+		}
+
+		fi.S5cmdManifestPath = finalDirPath
+		jobsToProcess = append(jobsToProcess, fi)
+
+	}
+}
+
+if err := scanner.Err(); err != nil {
+	logger.Fatalf("error reading s5cmd manifest: %v", err)
+}
+
+
+// Save all to a single CSV file
+csvPath := filepath.Join(outputDir, "metadata", "metadata.csv")
+if err := WriteAllMetadataToCSV(jobsToProcess, csvPath); err != nil {
+	logger.Errorf("Failed to save combined CSV: %v", err)
+} else {
+	callbacks.emitStdout(fmt.Sprintf("Saved metadata for %d files to %s\n", len(jobsToProcess), csvPath))
+}
+
+logger.Infof("Found %d s5cmd jobs to process (%d new, %d existing)", len(jobsToProcess), newJobs, len(jobsToProcess)-newJobs)
+return jobsToProcess, newJobs
 }
