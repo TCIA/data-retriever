@@ -34,6 +34,8 @@ type Callbacks struct {
 	Manifest func(ManifestPayload)
 }
 
+
+
 func (cb Callbacks) emitStdout(msg string) {
 	if cb.Stdout != nil {
 		cb.Stdout(msg)
@@ -381,7 +383,7 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 		return nil, fmt.Errorf("Failed to load s5cmd series map from CSVs: %v", err)
 	}
 
-	files, newS5cmdJobs, err := decodeInputFile(ctx, options.Input, client, options, callbacks, s5cmdMap)
+	files, _, err := decodeInputFile(ctx, options.Input, client, options, callbacks, s5cmdMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode input file: %w", err)
 	}
@@ -476,46 +478,6 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 	close(inputChan)
 	wg.Wait()
 
-	// Post-processing for s5cmd series
-	if newS5cmdJobs > 0 {
-		fmt.Println("\nOrganizing s5cmd downloaded series...")
-		s5cmdSeriesToFetchMeta := make(map[string]string) // Map SeriesUID to OriginalS5cmdURI
-
-		for _, seriesInfo := range files {
-			if seriesInfo.IsSyncJob || seriesInfo.S5cmdManifestPath == "" {
-				continue
-			}
-
-			s5cmdSeriesToFetchMeta[seriesInfo.SeriesInstanceUID] = seriesInfo.OriginalS5cmdURI
-		}
-		fmt.Println("s5cmd series organization complete.")
-
-		// Fetch and save metadata
-		if len(s5cmdSeriesToFetchMeta) > 0 {
-			uids := make([]string, 0, len(s5cmdSeriesToFetchMeta))
-			for uid := range s5cmdSeriesToFetchMeta {
-				uids = append(uids, uid)
-			}
-
-			fmt.Println("\nFetching metadata for new s5cmd series...")
-			fetchedMetadata, err := FetchMetadataForSeriesUIDs(ctx, uids, client, options, callbacks)
-			if err != nil {
-				logger.Errorf("Failed to fetch s5cmd metadata: %v", err)
-			} else {
-				for _, meta := range fetchedMetadata {
-					meta.OriginalS5cmdURI = s5cmdSeriesToFetchMeta[meta.SeriesInstanceUID]
-				}
-				manifestName := strings.TrimSuffix(filepath.Base(options.Input), filepath.Ext(options.Input))
-				csvPath := filepath.Join(options.Output, "metadata", fmt.Sprintf("%s-metadata.csv", manifestName))
-				if err := writeMetadataToCSV(csvPath, fetchedMetadata); err != nil {
-					logger.Errorf("Failed to write s5cmd metadata to CSV: %v", err)
-				} else {
-					fmt.Printf("Metadata for %d series saved to %s\n", len(fetchedMetadata), csvPath)
-				}
-			}
-		}
-	}
-
 	callbacks.emitProgress(stats, "Complete", options.Debug)
 	if !options.Debug {
 		callbacks.emitStderr("\n")
@@ -585,20 +547,26 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 
 	wc.emitSeriesEvent(fileInfo, "downloading", fmt.Sprintf("[Worker %d] Preparing download", wc.WorkerID), 25)
 
-	if wc.Options.SkipExisting && !fileInfo.NeedsDownload(wc.Options.Output, false, wc.Options.NoDecompress, wc.Options) {
-		Logger.Debugf("[Worker %d] Skip existing %s", wc.WorkerID, fileInfo.SeriesInstanceUID)
-		atomic.AddInt32(&wc.Stats.Skipped, 1)
-		updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
-		wc.emitSeriesEvent(fileInfo, "skipped", "Series already present (skip existing)", 100)
-		return
-	}
+	//handle needs download so that all s5cmd downloads need download.  that way they can sync properly instead of being skipped
 
-	if !fileInfo.NeedsDownload(wc.Options.Output, wc.Options.Force, wc.Options.NoDecompress, wc.Options) {
-		Logger.Debugf("[Worker %d] Skip %s (already exists with correct size/checksum)", wc.WorkerID, fileInfo.SeriesInstanceUID)
-		atomic.AddInt32(&wc.Stats.Skipped, 1)
-		updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
-		wc.emitSeriesEvent(fileInfo, "skipped", "Series already present with expected size", 100)
-		return
+	if !fileInfo.IsSyncJob {
+		if wc.Options.SkipExisting && !fileInfo.NeedsDownload(wc.Options.Output, false, wc.Options.NoDecompress, wc.Options) {
+			Logger.Debugf("[Worker %d] Skip existing %s", wc.WorkerID, fileInfo.SeriesInstanceUID)
+			atomic.AddInt32(&wc.Stats.Skipped, 1)
+			updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
+			wc.emitSeriesEvent(fileInfo, "skipped", "Series already present (skip existing)", 100)
+			return
+		}
+
+		if !fileInfo.NeedsDownload(wc.Options.Output, wc.Options.Force, wc.Options.NoDecompress, wc.Options) {
+			Logger.Debugf("[Worker %d] Skip %s (already exists with correct size/checksum)", wc.WorkerID, fileInfo.SeriesInstanceUID)
+			atomic.AddInt32(&wc.Stats.Skipped, 1)
+			updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
+			wc.emitSeriesEvent(fileInfo, "skipped", "Series already present with expected size", 100)
+			return
+		}
+	} else {
+		Logger.Warnf("this is a sync job")
 	}
 
 	if wc.Context.Err() != nil {

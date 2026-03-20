@@ -242,6 +242,8 @@ func (b *App) runBatch(batch *DownloadBatch) {
 		MetadataWorkers:       20,
 		Auth:                  batch.AuthPath,
 		DirectoryMode:         batch.DirectoryMode,
+		IDCParquetPath:				 b.parquetPaths.IDCIndex,
+		PriorParquetPath:			 b.parquetPaths.PriorVersions,
 	}
 
 	logTimestamp := time.Now().Format("20060102-150405")
@@ -336,6 +338,7 @@ type App struct {
 	runID         uint64
 	batches       map[uint64]*DownloadBatch
 	pausedBatches map[string]*DownloadBatch // keyed by manifest path for resume
+	parquetPaths	app.ParquetPaths
 }
 
 func NewApp(ctx context.Context) *App {
@@ -419,6 +422,14 @@ func (a *App) FetchFiles() string {
 
 func (b *App) startup(ctx context.Context) {
 	b.ctx = ctx
+
+	paths, err := app.EnsureParquetsUpToDate()
+	if err != nil {
+		// Log but don't crash — app can still run, decodeS5cmd will error
+		// gracefully if the path is empty.
+		fmt.Fprintf(os.Stderr, "parquet init failed: %v\n", err)
+	}
+	b.parquetPaths = paths
 }
 
 func (b *App) shutdown(ctx context.Context) {

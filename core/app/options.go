@@ -52,6 +52,8 @@ type Options struct {
 	MetadataWorkers       int
 	Auth                  string
 	DirectoryMode         string
+	IDCParquetPath				string
+	PriorParquetPath			string
 
 	opt *getoptions.GetOpt
 }

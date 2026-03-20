@@ -1040,7 +1040,6 @@ func (info *FileInfo) downloadFromS3(
 
 	client := options.S3Client
 	if client == nil {
-		// fallback: create anonymous client
 		cfg, err := awsConfig()
 		if err != nil {
 			return err
@@ -1050,14 +1049,18 @@ func (info *FileInfo) downloadFromS3(
 
 	isSync := info.IsSyncJob || wildcard
 
-	var keys []string
+	// ── Sync path: list prefix, skip files that are already complete ─────────
 	if isSync {
-		// List objects under the prefix
+		type s3Object struct {
+			key  string
+			size int64
+		}
+
+		var objects []s3Object
 		paginator := s3.NewListObjectsV2Paginator(client, &s3.ListObjectsV2Input{
 			Bucket: &bucket,
 			Prefix: &key,
 		})
-
 		for paginator.HasMorePages() {
 			page, err := paginator.NextPage(ctx)
 			if err != nil {
@@ -1067,91 +1070,146 @@ func (info *FileInfo) downloadFromS3(
 				if strings.HasSuffix(*obj.Key, "/") {
 					continue
 				}
-				keys = append(keys, *obj.Key)
+				size := int64(0)
+				if obj.Size != nil {
+				    size = *obj.Size
+				}
+				objects = append(objects, s3Object{key: *obj.Key, size: size})
 			}
 		}
-	} else {
-		keys = []string{key}
+
+		downloader := manager.NewDownloader(client, func(d *manager.Downloader) {
+			d.PartSize = 10 * 1024 * 1024
+			d.Concurrency = 16
+		})
+
+		workCh := make(chan s3Object)
+		errCh := make(chan error, 1)
+		var wg sync.WaitGroup
+		numWorkers := 32
+		wg.Add(numWorkers)
+
+		for i := 0; i < numWorkers; i++ {
+			go func() {
+				defer wg.Done()
+				for obj := range workCh {
+					localPath := filepath.Join(targetDir, filepath.Base(obj.key))
+
+					// Skip if local file exists and size matches S3.
+					if stat, err := os.Stat(localPath); err == nil {
+						if stat.Size() == obj.size {
+							logger.Debugf("[sync] skipping %s (size match)", filepath.Base(obj.key))
+							continue
+						}
+						logger.Debugf("[sync] re-downloading %s (local=%d, remote=%d)",
+							filepath.Base(obj.key), stat.Size(), obj.size)
+					}
+
+					if err := os.MkdirAll(filepath.Dir(localPath), 0755); err != nil {
+						select {
+						case errCh <- err:
+						default:
+						}
+						return
+					}
+
+					// Download to a .tmp sibling so a partial file is never
+					// mistaken for a complete one on the next sync.
+					tmpPath := localPath + ".tmp"
+					f, err := os.Create(tmpPath)
+					if err != nil {
+						select {
+						case errCh <- err:
+						default:
+						}
+						return
+					}
+
+					numBytes, err := downloader.Download(ctx, f, &s3.GetObjectInput{
+						Bucket: &bucket,
+						Key:    aws.String(obj.key),
+					})
+					f.Close()
+					if err != nil {
+						os.Remove(tmpPath)
+						select {
+						case errCh <- fmt.Errorf("failed to download s3://%s/%s: %w", bucket, obj.key, err):
+						default:
+						}
+						return
+					}
+
+					if err := os.Rename(tmpPath, localPath); err != nil {
+						os.Remove(tmpPath)
+						select {
+						case errCh <- fmt.Errorf("could not move %s into place: %w", filepath.Base(obj.key), err):
+						default:
+						}
+						return
+					}
+
+					if onProgress != nil {
+						onProgress(100.0, numBytes, numBytes)
+					}
+				}
+			}()
+		}
+
+		go func() {
+			for _, obj := range objects {
+				workCh <- obj
+			}
+			close(workCh)
+		}()
+
+		done := make(chan struct{})
+		go func() {
+			wg.Wait()
+			close(done)
+		}()
+
+		select {
+		case err := <-errCh:
+			return err
+		case <-done:
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
+		}
 	}
 
-	// Create a shared downloader
+	// ── Single-object path (new copy job) ────────────────────────────────────
 	downloader := manager.NewDownloader(client, func(d *manager.Downloader) {
-		d.PartSize = 10 * 1024 * 1024 // 10 MB
+		d.PartSize = 10 * 1024 * 1024
 		d.Concurrency = 16
 	})
 
-	// Worker pool for sync / multiple keys
-	numWorkers := 32 // tune as needed
-	workCh := make(chan string)
-	errCh := make(chan error, 1)
-	var wg sync.WaitGroup
-	wg.Add(numWorkers)
-
-	for i := 0; i < numWorkers; i++ {
-		go func() {
-			defer wg.Done()
-			for k := range workCh {
-				localPath := filepath.Join(targetDir, filepath.Base(k))
-				if err := os.MkdirAll(filepath.Dir(localPath), 0755); err != nil {
-					select {
-					case errCh <- err:
-					default:
-					}
-					return
-				}
-
-				f, err := os.Create(localPath)
-				if err != nil {
-					select {
-					case errCh <- err:
-					default:
-					}
-					return
-				}
-
-				numBytes, err := downloader.Download(ctx, f, &s3.GetObjectInput{
-					Bucket: &bucket,
-					Key:    &k,
-				})
-				f.Close()
-				if err != nil {
-					select {
-					case errCh <- fmt.Errorf("failed to download s3://%s/%s: %w", bucket, k, err):
-					default:
-					}
-					return
-				}
-
-				if onProgress != nil {
-					onProgress(100.0, numBytes, numBytes) // simple per-file progress; you can refine to bytes if desired
-				}
-			}
-		}()
+	localPath := filepath.Join(targetDir, filepath.Base(key))
+	tmpPath := localPath + ".tmp"
+	f, err := os.Create(tmpPath)
+	if err != nil {
+		return fmt.Errorf("could not create temp file: %w", err)
 	}
 
-	// Feed keys
-	go func() {
-		for _, k := range keys {
-			workCh <- k
-		}
-		close(workCh)
-	}()
-
-	// Wait
-	done := make(chan struct{})
-	go func() {
-		wg.Wait()
-		close(done)
-	}()
-
-	select {
-	case err := <-errCh:
-		return err
-	case <-done:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
+	numBytes, err := downloader.Download(ctx, f, &s3.GetObjectInput{
+		Bucket: &bucket,
+		Key:    &key,
+	})
+	f.Close()
+	if err != nil {
+		os.Remove(tmpPath)
+		return fmt.Errorf("failed to download s3://%s/%s: %w", bucket, key, err)
 	}
+
+	if err := os.Rename(tmpPath, localPath); err != nil {
+		os.Remove(tmpPath)
+		return fmt.Errorf("could not move downloaded file into place: %w", err)
+	}
+
+	if onProgress != nil {
+		onProgress(100.0, numBytes, numBytes)
+	}
+	return nil
 }
 
 func awsConfig() (aws.Config, error) {
