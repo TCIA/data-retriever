@@ -142,9 +142,9 @@ func (m *MetadataStats) updateProgress(action string, seriesID string) {
 
 		// Clear line and print progress - identical format to download progress
 		fmt.Fprintf(os.Stderr, "\r\033[K[%d/%d] %.1f%% | Fetched: %d | Cached: %d | Failed: %d%s | Current: %s",
-			completed, m.Total, percentage,
-			m.Fetched, m.Cached, m.Failed,
-			eta, displayID)
+		completed, m.Total, percentage,
+		m.Fetched, m.Cached, m.Failed,
+		eta, displayID)
 
 		if completed == m.Total {
 			fmt.Fprintf(os.Stderr, "\n")
@@ -530,16 +530,16 @@ func (info *FileInfo) getOutput(output string, options *Options) string {
 		cleanSeriesDesc := strings.ReplaceAll(info.SeriesDescription, "/", "")
 		studyUID := info.StudyInstanceUID
 		if len(studyUID) > 5 {
-		    studyUID = studyUID[len(studyUID)-5:]
+			studyUID = studyUID[len(studyUID)-5:]
 		}
 		seriesUID := info.SeriesInstanceUID
 		if len(seriesUID) > 5 {
-		    seriesUID = seriesUID[len(seriesUID)-5:]
+			seriesUID = seriesUID[len(seriesUID)-5:]
 		}
 
 		outputDir = filepath.Join(output, info.Collection, info.PatientID, 
-										info.StudyDate + cleanStudyDesc[:min(54, len(cleanStudyDesc))] + studyUID,
-										info.SeriesNumber + cleanSeriesDesc[:min(54, len(cleanSeriesDesc))] + seriesUID)
+		info.StudyDate + cleanStudyDesc[:min(54, len(cleanStudyDesc))] + studyUID,
+		info.SeriesNumber + cleanSeriesDesc[:min(54, len(cleanSeriesDesc))] + seriesUID)
 
 	}
 
@@ -598,7 +598,6 @@ func (info *FileInfo) NeedsDownload(output string, force bool, noDecompress bool
 		return true
 	}
 
-
 	if noDecompress {
 		// For ZIP files, check if it's a regular file
 		if stat.IsDir() {
@@ -617,7 +616,8 @@ func (info *FileInfo) NeedsDownload(output string, force bool, noDecompress bool
 		}
 
 		// Check total size of extracted files
-		if info.FileSize != "" {
+		if (info.FileSize != "" && info.FileSize != "0" ) {
+			Logger.Warnf("file size: %s", info.FileSize)
 			expectedSize, err := strconv.ParseInt(info.FileSize, 10, 64)
 			if err == nil {
 				actualSize, err := getDirectorySize(targetPath)
@@ -626,7 +626,7 @@ func (info *FileInfo) NeedsDownload(output string, force bool, noDecompress bool
 					return true
 				}
 				if float64(actualSize) < (float64(expectedSize) * .9) {
-					logger.Debugf("Directory %s size mismatch: expected %d, got %d", targetPath, expectedSize, actualSize)
+					logger.Warnf("Directory %s size mismatch: expected %d, got %d", targetPath, expectedSize, actualSize)
 					return true
 				} else {
 					return false
@@ -635,16 +635,16 @@ func (info *FileInfo) NeedsDownload(output string, force bool, noDecompress bool
 
 		} else if (info.FileName != "") {
 			filePath := filepath.Join(targetPath, info.FileName)
-    	if _, err := os.Stat(filePath); err == nil {
-    	    logger.Debugf("File %s exists, skipping download", filePath)
-    	    return false
-    	} else if os.IsNotExist(err) {
-    	    logger.Debugf("File %s does not exist, need to download", filePath)
-    	    return true
-    	} else {
-    	    logger.Errorf("Error checking file %s: %v", filePath, err)
-    	    return true
-    	}
+			if _, err := os.Stat(filePath); err == nil {
+				logger.Debugf("File %s exists, skipping download", filePath)
+				return false
+			} else if os.IsNotExist(err) {
+				logger.Debugf("File %s does not exist, need to download", filePath)
+				return true
+			} else {
+				logger.Errorf("Error checking file %s: %v", filePath, err)
+				return true
+			}
 
 		} else {
 			_, err := os.Stat(targetPath)
@@ -652,7 +652,14 @@ func (info *FileInfo) NeedsDownload(output string, force bool, noDecompress bool
 				logger.Debugf("Target %s does not exist, need to download", targetPath)
 				return true
 			}
-			// If it exists, we assume it's downloaded. We don't have size/checksum info for these.
+
+			entries, err := os.ReadDir(targetPath)
+			if err != nil || len(entries) == 0 {
+				logger.Debugf("Target %s exists but is empty, need to download", targetPath)
+				return true
+			}
+
+			// Directory exists and has contents, assume downloaded.
 			logger.Debugf("Direct download file %s exists, skipping", targetPath)
 			return false
 
@@ -936,17 +943,17 @@ func isRetryableError(err error) bool {
 	}
 
 	return strings.Contains(errStr, "timeout") ||
-		strings.Contains(errStr, "connection refused") ||
-		strings.Contains(errStr, "connection reset") ||
-		strings.Contains(errStr, "EOF") ||
-		strings.Contains(errStr, "incomplete download") || // Truncated downloads
-		strings.Contains(errStr, "closed") || // Connection closed
-		strings.Contains(errStr, "broken pipe") || // Broken connection
-		strings.Contains(errStr, "429") || // Rate limiting
-		strings.Contains(errStr, "500") || // Server error
-		strings.Contains(errStr, "502") || // Bad gateway
-		strings.Contains(errStr, "503") || // Service unavailable
-		strings.Contains(errStr, "504") // Gateway timeout
+	strings.Contains(errStr, "connection refused") ||
+	strings.Contains(errStr, "connection reset") ||
+	strings.Contains(errStr, "EOF") ||
+	strings.Contains(errStr, "incomplete download") || // Truncated downloads
+	strings.Contains(errStr, "closed") || // Connection closed
+	strings.Contains(errStr, "broken pipe") || // Broken connection
+	strings.Contains(errStr, "429") || // Rate limiting
+	strings.Contains(errStr, "500") || // Server error
+	strings.Contains(errStr, "502") || // Bad gateway
+	strings.Contains(errStr, "503") || // Service unavailable
+	strings.Contains(errStr, "504") // Gateway timeout
 }
 
 // doDownload is a dispatcher for different download types
@@ -956,19 +963,19 @@ func (info *FileInfo) doDownload(ctx context.Context, output string, httpClient 
 		return info.downloadFromS3(ctx, info.S5cmdManifestPath, options, onProgress)
 	}
 	if strings.HasPrefix(info.DownloadURL, "s3://") {
-		// This handles other potential S3 downloads that are not from a manifest
-		return info.downloadFromS3(ctx, output, options, onProgress)
-	}
-	if info.DRSURI != "" {
-		return info.downloadFromGen3(ctx, output, httpClient, gen3Auth, options, onProgress)
-	}
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	if info.DownloadURL != "" {
-		return info.downloadDirect(ctx, output, httpClient, options, onProgress, gen3Auth)
-	}
-	return info.downloadFromTCIA(ctx, output, httpClient, options, onProgress, onDecompress)
+	// This handles other potential S3 downloads that are not from a manifest
+	return info.downloadFromS3(ctx, output, options, onProgress)
+}
+if info.DRSURI != "" {
+	return info.downloadFromGen3(ctx, output, httpClient, gen3Auth, options, onProgress)
+}
+if ctx == nil {
+	ctx = context.Background()
+}
+if info.DownloadURL != "" {
+	return info.downloadDirect(ctx, output, httpClient, options, onProgress, gen3Auth)
+}
+return info.downloadFromTCIA(ctx, output, httpClient, options, onProgress, onDecompress)
 }
 
 func downloadS3Object(ctx context.Context, client *s3.Client, bucket, key, targetDir string, onProgress ProgressFunc) error {
@@ -1033,7 +1040,6 @@ func (info *FileInfo) downloadFromS3(
 
 	client := options.S3Client
 	if client == nil {
-		// fallback: create anonymous client
 		cfg, err := awsConfig()
 		if err != nil {
 			return err
@@ -1043,14 +1049,18 @@ func (info *FileInfo) downloadFromS3(
 
 	isSync := info.IsSyncJob || wildcard
 
-	var keys []string
+	// ── Sync path: list prefix, skip files that are already complete ─────────
 	if isSync {
-		// List objects under the prefix
+		type s3Object struct {
+			key  string
+			size int64
+		}
+
+		var objects []s3Object
 		paginator := s3.NewListObjectsV2Paginator(client, &s3.ListObjectsV2Input{
 			Bucket: &bucket,
 			Prefix: &key,
 		})
-
 		for paginator.HasMorePages() {
 			page, err := paginator.NextPage(ctx)
 			if err != nil {
@@ -1060,91 +1070,146 @@ func (info *FileInfo) downloadFromS3(
 				if strings.HasSuffix(*obj.Key, "/") {
 					continue
 				}
-				keys = append(keys, *obj.Key)
+				size := int64(0)
+				if obj.Size != nil {
+				    size = *obj.Size
+				}
+				objects = append(objects, s3Object{key: *obj.Key, size: size})
 			}
 		}
-	} else {
-		keys = []string{key}
+
+		downloader := manager.NewDownloader(client, func(d *manager.Downloader) {
+			d.PartSize = 10 * 1024 * 1024
+			d.Concurrency = 16
+		})
+
+		workCh := make(chan s3Object)
+		errCh := make(chan error, 1)
+		var wg sync.WaitGroup
+		numWorkers := 32
+		wg.Add(numWorkers)
+
+		for i := 0; i < numWorkers; i++ {
+			go func() {
+				defer wg.Done()
+				for obj := range workCh {
+					localPath := filepath.Join(targetDir, filepath.Base(obj.key))
+
+					// Skip if local file exists and size matches S3.
+					if stat, err := os.Stat(localPath); err == nil {
+						if stat.Size() == obj.size {
+							logger.Debugf("[sync] skipping %s (size match)", filepath.Base(obj.key))
+							continue
+						}
+						logger.Debugf("[sync] re-downloading %s (local=%d, remote=%d)",
+							filepath.Base(obj.key), stat.Size(), obj.size)
+					}
+
+					if err := os.MkdirAll(filepath.Dir(localPath), 0755); err != nil {
+						select {
+						case errCh <- err:
+						default:
+						}
+						return
+					}
+
+					// Download to a .tmp sibling so a partial file is never
+					// mistaken for a complete one on the next sync.
+					tmpPath := localPath + ".tmp"
+					f, err := os.Create(tmpPath)
+					if err != nil {
+						select {
+						case errCh <- err:
+						default:
+						}
+						return
+					}
+
+					numBytes, err := downloader.Download(ctx, f, &s3.GetObjectInput{
+						Bucket: &bucket,
+						Key:    aws.String(obj.key),
+					})
+					f.Close()
+					if err != nil {
+						os.Remove(tmpPath)
+						select {
+						case errCh <- fmt.Errorf("failed to download s3://%s/%s: %w", bucket, obj.key, err):
+						default:
+						}
+						return
+					}
+
+					if err := os.Rename(tmpPath, localPath); err != nil {
+						os.Remove(tmpPath)
+						select {
+						case errCh <- fmt.Errorf("could not move %s into place: %w", filepath.Base(obj.key), err):
+						default:
+						}
+						return
+					}
+
+					if onProgress != nil {
+						onProgress(100.0, numBytes, numBytes)
+					}
+				}
+			}()
+		}
+
+		go func() {
+			for _, obj := range objects {
+				workCh <- obj
+			}
+			close(workCh)
+		}()
+
+		done := make(chan struct{})
+		go func() {
+			wg.Wait()
+			close(done)
+		}()
+
+		select {
+		case err := <-errCh:
+			return err
+		case <-done:
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
+		}
 	}
 
-	// Create a shared downloader
+	// ── Single-object path (new copy job) ────────────────────────────────────
 	downloader := manager.NewDownloader(client, func(d *manager.Downloader) {
-		d.PartSize = 10 * 1024 * 1024 // 10 MB
+		d.PartSize = 10 * 1024 * 1024
 		d.Concurrency = 16
 	})
 
-	// Worker pool for sync / multiple keys
-	numWorkers := 32 // tune as needed
-	workCh := make(chan string)
-	errCh := make(chan error, 1)
-	var wg sync.WaitGroup
-	wg.Add(numWorkers)
-
-	for i := 0; i < numWorkers; i++ {
-		go func() {
-			defer wg.Done()
-			for k := range workCh {
-				localPath := filepath.Join(targetDir, filepath.Base(k))
-				if err := os.MkdirAll(filepath.Dir(localPath), 0755); err != nil {
-					select {
-					case errCh <- err:
-					default:
-					}
-					return
-				}
-
-				f, err := os.Create(localPath)
-				if err != nil {
-					select {
-					case errCh <- err:
-					default:
-					}
-					return
-				}
-
-				numBytes, err := downloader.Download(ctx, f, &s3.GetObjectInput{
-					Bucket: &bucket,
-					Key:    &k,
-				})
-				f.Close()
-				if err != nil {
-					select {
-					case errCh <- fmt.Errorf("failed to download s3://%s/%s: %w", bucket, k, err):
-					default:
-					}
-					return
-				}
-
-				if onProgress != nil {
-					onProgress(100.0, numBytes, numBytes) // simple per-file progress; you can refine to bytes if desired
-				}
-			}
-		}()
+	localPath := filepath.Join(targetDir, filepath.Base(key))
+	tmpPath := localPath + ".tmp"
+	f, err := os.Create(tmpPath)
+	if err != nil {
+		return fmt.Errorf("could not create temp file: %w", err)
 	}
 
-	// Feed keys
-	go func() {
-		for _, k := range keys {
-			workCh <- k
-		}
-		close(workCh)
-	}()
-
-	// Wait
-	done := make(chan struct{})
-	go func() {
-		wg.Wait()
-		close(done)
-	}()
-
-	select {
-	case err := <-errCh:
-		return err
-	case <-done:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
+	numBytes, err := downloader.Download(ctx, f, &s3.GetObjectInput{
+		Bucket: &bucket,
+		Key:    &key,
+	})
+	f.Close()
+	if err != nil {
+		os.Remove(tmpPath)
+		return fmt.Errorf("failed to download s3://%s/%s: %w", bucket, key, err)
 	}
+
+	if err := os.Rename(tmpPath, localPath); err != nil {
+		os.Remove(tmpPath)
+		return fmt.Errorf("could not move downloaded file into place: %w", err)
+	}
+
+	if onProgress != nil {
+		onProgress(100.0, numBytes, numBytes)
+	}
+	return nil
 }
 
 func awsConfig() (aws.Config, error) {
@@ -1157,27 +1222,27 @@ func awsConfig() (aws.Config, error) {
 
 func parseS3URL(s string) (bucket string, key string, isWildcard bool, err error) {
 	if !strings.HasPrefix(s, "s3://") {
-		return "", "", false, fmt.Errorf("invalid S3 URL: %s", s)
-	}
+	return "", "", false, fmt.Errorf("invalid S3 URL: %s", s)
+}
 
-	trimmed := strings.TrimPrefix(s, "s3://")
-	parts := strings.SplitN(trimmed, "/", 2)
+trimmed := strings.TrimPrefix(s, "s3://")
+parts := strings.SplitN(trimmed, "/", 2)
 
-	bucket = parts[0]
-	if bucket == "" {
-		return "", "", false, fmt.Errorf("invalid S3 URL: %s", s)
-	}
+bucket = parts[0]
+if bucket == "" {
+	return "", "", false, fmt.Errorf("invalid S3 URL: %s", s)
+}
 
-	if len(parts) == 2 {
-		key = parts[1]
-	}
+if len(parts) == 2 {
+	key = parts[1]
+}
 
-	if strings.HasSuffix(key, "/*") {
-		isWildcard = true
-		key = strings.TrimSuffix(key, "/*")
-	}
+if strings.HasSuffix(key, "/*") {
+	isWildcard = true
+	key = strings.TrimSuffix(key, "/*")
+}
 
-	return bucket, key, isWildcard, nil
+return bucket, key, isWildcard, nil
 }
 
 // downloadFromGen3 downloads a file from a Gen3 server
@@ -1447,7 +1512,7 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 	logger.Debugf("getting image file to %s", output)
 
 	url_, err := makeURL(ImageUrl, map[string]interface{}{"SeriesInstanceUID": info.SeriesInstanceUID,
-		"IncludeMD5": "Yes", "NewFileNames": "Yes"})
+	"IncludeMD5": "Yes", "NewFileNames": "Yes"})
 	if err != nil {
 		return fmt.Errorf("failed to make URL: %v", err)
 	}
@@ -1514,7 +1579,7 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 
 	// Log response headers for debugging
 	logger.Debugf("Response headers for %s: Status=%s, Content-Length=%d, Transfer-Encoding=%s",
-		info.SeriesInstanceUID, resp.Status, resp.ContentLength, resp.Header.Get("Transfer-Encoding"))
+	info.SeriesInstanceUID, resp.Status, resp.ContentLength, resp.Header.Get("Transfer-Encoding"))
 
 	// Check HTTP status
 	if resp.StatusCode != http.StatusOK {
@@ -1587,7 +1652,7 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 		expectedSize, _ := strconv.ParseInt(info.FileSize, 10, 64)
 		compressionRatio := float64(written) / float64(expectedSize) * 100
 		logger.Debugf("Downloaded %s: %d bytes (%.1f%% of uncompressed size %d)",
-			info.SeriesInstanceUID, written, compressionRatio, expectedSize)
+		info.SeriesInstanceUID, written, compressionRatio, expectedSize)
 	}
 
 	// Close ZIP file before extraction

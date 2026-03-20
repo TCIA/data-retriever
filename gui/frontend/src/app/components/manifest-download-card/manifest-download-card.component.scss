@@ -314,3 +314,37 @@
 :host-context(.dark-mode) .bytes-text {
   color: #e0e0e0;
 }
+
+.download-card-close {
+  background: transparent;
+  border: none;
+  padding: 6px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+
+  .material-icons-outlined {
+    font-size: 20px;
+    color: #666;
+  }
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.06);
+  }
+}
+
+// Dark mode — matches app.component.scss dark-mode overrides
+:host-context(.dark-mode) {
+  .download-card-close {
+    .material-icons-outlined {
+      color: #bbb;
+    }
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+  }
+}

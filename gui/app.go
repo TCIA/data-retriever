@@ -157,6 +157,7 @@ func (b *App) RunCLIFetch(
 	downloadInParallel bool,
 	authPath string,
 	directoryMode string,
+	runId uint64,
 ) (string, error) {
 
 	if b.ctx == nil {
@@ -164,9 +165,9 @@ func (b *App) RunCLIFetch(
 	}
 
 	// Create a new batch
-	b.mu.Lock()
-	b.runID++
-	id := b.runID
+	//b.mu.Lock()
+	//b.runID++
+	id := runId
 
 	ctx, cancel := context.WithCancel(b.ctx)
 
@@ -188,7 +189,7 @@ func (b *App) RunCLIFetch(
 		b.batches = make(map[uint64]*DownloadBatch)
 	}
 	b.batches[id] = batch
-	b.mu.Unlock()
+	//b.mu.Unlock()
 
 	// Run the batch in its own goroutine
 	go b.runBatch(batch)
@@ -241,6 +242,8 @@ func (b *App) runBatch(batch *DownloadBatch) {
 		MetadataWorkers:       20,
 		Auth:                  batch.AuthPath,
 		DirectoryMode:         batch.DirectoryMode,
+		IDCParquetPath:				 b.parquetPaths.IDCIndex,
+		PriorParquetPath:			 b.parquetPaths.PriorVersions,
 	}
 
 	logTimestamp := time.Now().Format("20060102-150405")
@@ -335,6 +338,7 @@ type App struct {
 	runID         uint64
 	batches       map[uint64]*DownloadBatch
 	pausedBatches map[string]*DownloadBatch // keyed by manifest path for resume
+	parquetPaths	app.ParquetPaths
 }
 
 func NewApp(ctx context.Context) *App {
@@ -386,6 +390,7 @@ func (b *App) ResumeManifest(manifestPath string) error {
 		true, // downloadInParallel
 		pausedBatch.AuthPath,
 		pausedBatch.DirectoryMode,
+		pausedBatch.ID,
 	)
 	if err != nil {
 		return err
@@ -396,7 +401,7 @@ func (b *App) ResumeManifest(manifestPath string) error {
 }
 
 type DownloadBatch struct {
-	ID     uint64
+	ID     uint64 
 	Ctx    context.Context
 	Cancel context.CancelFunc
 
@@ -417,6 +422,14 @@ func (a *App) FetchFiles() string {
 
 func (b *App) startup(ctx context.Context) {
 	b.ctx = ctx
+
+	paths, err := app.EnsureParquetsUpToDate()
+	if err != nil {
+		// Log but don't crash — app can still run, decodeS5cmd will error
+		// gracefully if the path is empty.
+		fmt.Fprintf(os.Stderr, "parquet init failed: %v\n", err)
+	}
+	b.parquetPaths = paths
 }
 
 func (b *App) shutdown(ctx context.Context) {
