@@ -49,6 +49,16 @@
         </div>
 
         <div class="header-actions">
+          <button
+            *ngIf="canOpenOutputDirectory"
+            class="open-folder-btn"
+            type="button"
+            (click)="openOutputDirectory($event)"
+            title="Open output folder"
+            aria-label="Open output folder"
+          >
+            Open Folder
+          </button>
           <button 
                   class="download-card-close"
                   title="Dismiss"

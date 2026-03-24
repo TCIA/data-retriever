@@ -26,6 +26,10 @@ export function OpenAuthFileDialog() {
   return window['go']['main']['App']['OpenAuthFileDialog']();
 }
 
+export function OpenDirectory(arg1) {
+  return window['go']['main']['App']['OpenDirectory'](arg1);
+}
+
 export function OpenInputFileDialog() {
   return window['go']['main']['App']['OpenInputFileDialog']();
 }

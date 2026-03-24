@@ -13,6 +13,8 @@ export function IsMac():Promise<boolean>;
 
 export function OpenAuthFileDialog():Promise<string>;
 
+export function OpenDirectory(arg1:string):Promise<void>;
+
 export function OpenInputFileDialog():Promise<string>;
 
 export function OpenOutputDirectoryDialog(arg1:string):Promise<string>;

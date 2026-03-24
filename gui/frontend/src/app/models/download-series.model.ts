@@ -69,6 +69,7 @@ export interface DownloadOverviewSnapshot {
 
 export interface ManifestDownloadSnapshot {
   manifestPath: string;
+  outputDirPath?: string;
   total: number;
   active: number;
   completed: number;
