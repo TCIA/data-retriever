@@ -1,7 +1,9 @@
 package app
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"time"
 
@@ -19,6 +21,8 @@ var (
 const (
 	DefaultInterimUpdateInterval = 5 * time.Second
 )
+
+var ErrShowHelp = errors.New("show help")
 
 // Options captures command line parameters shared between CLI and GUI.
 type Options struct {
@@ -60,6 +64,24 @@ type Options struct {
 
 // InitOptions parses command-line arguments and configures logging.
 func InitOptions() *Options {
+	opt, err := ParseOptions(os.Args[1:], os.Stdin)
+	if err != nil {
+		if errors.Is(err, ErrShowHelp) {
+			fmt.Fprintf(os.Stderr, "%s", opt.opt.Help())
+			os.Exit(1)
+		}
+		Logger.Fatal(err)
+	}
+
+	return opt
+}
+
+// ParseOptions parses CLI arguments and returns normalized options.
+func ParseOptions(args []string, promptReader io.Reader) (*Options, error) {
+	if promptReader == nil {
+		promptReader = os.Stdin
+	}
+
 	opt := &Options{
 		opt:                   getoptions.New(),
 		RetryDelay:            10 * time.Second,
@@ -100,8 +122,8 @@ func InitOptions() *Options {
 	opt.opt.StringVar(&opt.DirectoryMode, "directory-mode", "",
 		opt.opt.Description("Directory structure of saved files: classic or descriptive"))
 
-	if _, err := opt.opt.Parse(os.Args[1:]); err != nil {
-		Logger.Fatal(err)
+	if _, err := opt.opt.Parse(args); err != nil {
+		return opt, err
 	}
 
 	if opt.ServerFriendly {
@@ -117,13 +139,12 @@ func InitOptions() *Options {
 		setLogger(opt.Debug, "")
 	}
 
-	if opt.opt.Called("help") || len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "%s", opt.opt.Help())
-		os.Exit(1)
+	if opt.opt.Called("help") || len(args) < 1 {
+		return opt, ErrShowHelp
 	}
 
 	if !opt.NoMD5 && opt.NoDecompress {
-		Logger.Fatal("MD5 validation (default) and --no-decompress are incompatible. Use --no-md5 with --no-decompress.")
+		return opt, fmt.Errorf("MD5 validation (default) and --no-decompress are incompatible. Use --no-md5 with --no-decompress")
 	}
 
 	if opt.TokenUrl != "" && opt.TokenUrl != TokenUrl {
@@ -146,10 +167,10 @@ func InitOptions() *Options {
 
 	if opt.Prompt {
 		Logger.Infof("Please input password for %s: ", opt.Username)
-		if _, err := fmt.Scanln(&opt.Password); err != nil {
-			Logger.Fatalf("failed to scan prompt: %v", err)
+		if _, err := fmt.Fscanln(promptReader, &opt.Password); err != nil {
+			return opt, fmt.Errorf("failed to scan prompt: %w", err)
 		}
 	}
 
-	return opt
+	return opt, nil
 }
