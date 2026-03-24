@@ -133,7 +133,7 @@ func decodeSpreadsheet(filePath string) ([]*FileInfo, error) {
 	studyDescIndex := -1
 	for i, col := range header {
 		switch normalize(col) {
-		case "drsuri":
+		case "drsuri", "fileid":
 			drsURIIndex = i
 		case "imageurl","wsiimageurl" :
 			imageURLIndex = i
@@ -186,6 +186,9 @@ func decodeSpreadsheet(filePath string) ([]*FileInfo, error) {
 		if drsURIIndex != -1 {
 			if len(record) > drsURIIndex {
 				uri := record[drsURIIndex]
+				if !strings.HasPrefix(uri, "drs:") {
+			    uri = "drs://nci-crdc.datacommons.io/" + uri
+				}
 				if fileName == "" {
 					fileName = filepath.Base(uri)
 				}
