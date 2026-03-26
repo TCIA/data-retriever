@@ -8,9 +8,12 @@ import {
   GetDefaultOutputDirectory,
   RunCLIFetch,
   IsMac,
+  GetPendingFileOpen,
+  FrontendReady,
 } from '../../wailsjs/go/main/App';
 import { DownloadStatusService } from './services/download-status.service';
 import { RunState } from './models/run-state.model';
+import { EventsOn } from '../../wailsjs/runtime/runtime';
 
 @Component({
   selector: 'app-root',
@@ -75,6 +78,44 @@ export class AppComponent implements OnInit, OnDestroy {
     this.runsSubscription = this.downloadStatus.runs$.subscribe(runs => {
       this.runs = runs;
     });
+
+    EventsOn('file-opened', (filePath: string) => {
+      this.ngZone.run(() => {
+        this.inputFilePath = filePath;
+        const baseName = this.baseNameOf(filePath);
+        if (this.outputDirPath) {
+          const parts = this.outputDirPath.split('/');
+          parts[parts.length - 1] = baseName;
+          this.outputDirPath = parts.join('/');
+          this.lastAutoSetOutputPath = this.outputDirPath;
+        }
+        this.openManifestModal();
+      });
+    });
+
+    // Check for a file that was opened before the frontend was ready (cold launch)
+    try {
+      const pendingPath = await GetPendingFileOpen();
+      if (pendingPath) {
+        this.ngZone.run(() => {
+          this.inputFilePath = pendingPath;
+          const baseName = this.baseNameOf(pendingPath);
+          if (this.outputDirPath) {
+            const parts = this.outputDirPath.split('/');
+            parts[parts.length - 1] = baseName;
+            this.outputDirPath = parts.join('/');
+            this.lastAutoSetOutputPath = this.outputDirPath;
+          }
+          this.openManifestModal();
+        });
+      }
+    } catch (err) {
+      console.error('Error checking pending file open:', err);
+    }
+
+    FrontendReady();
+
+
   }
 
   ngOnDestroy() {

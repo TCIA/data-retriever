@@ -3,12 +3,13 @@ package main
 import (
 	"embed"
 	"log"
-	"context"
+	"os"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/logger"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
+	"github.com/wailsapp/wails/v2/pkg/options/mac"
 )
 
 //go:embed frontend/dist
@@ -16,8 +17,14 @@ var assets embed.FS
 
 func main() {
 	// Create an instance of the app structure
-  ctx := context.Background() // root context
-	app := NewApp(ctx)
+	app := NewApp()
+
+	// Windows and Linux pass the opened file as the first argument.
+  // Store it before Wails starts so HandleFileOpen-equivalent logic works.
+  if len(os.Args) > 1 {
+      candidate := os.Args[1]
+      app.pendingFileOpen = candidate
+  }
 
 	// Create application with options
 	err := wails.Run(&options.App{
@@ -45,6 +52,11 @@ func main() {
 			WindowIsTranslucent:  false,
 			DisableWindowIcon:    false,
 		},
+		Mac: &mac.Options{
+        OnFileOpen: func(filePath string) {
+            app.HandleFileOpen(filePath)
+        },
+    },
 	})
 
 	if err != nil {

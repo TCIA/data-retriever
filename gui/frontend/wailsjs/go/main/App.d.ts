@@ -5,9 +5,15 @@ export function CancelDownload():Promise<void>;
 
 export function FetchFiles():Promise<string>;
 
+export function FrontendReady():Promise<void>;
+
 export function GetDefaultOutputDirectory():Promise<string>;
 
+export function GetPendingFileOpen():Promise<string>;
+
 export function Greet(arg1:string):Promise<string>;
+
+export function HandleFileOpen(arg1:string):Promise<void>;
 
 export function IsMac():Promise<boolean>;
 

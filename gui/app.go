@@ -18,6 +18,29 @@ import (
 	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
+func (b *App) GetPendingFileOpen() string {
+    path := b.pendingFileOpen
+    b.pendingFileOpen = ""
+    return path
+}
+
+func (b *App) HandleFileOpen(filePath string) {
+    // The app may not be fully started yet when this fires on cold launch,
+    // so guard against a nil context.
+
+    if b.ctx == nil {
+				b.pendingFileOpen = filePath
+        return
+    }
+    go func() {
+        select {
+        case <-b.frontendReady:
+            wailsRuntime.EventsEmit(b.ctx, "file-opened", filePath)
+				}
+    }()
+
+}
+
 func dirExists(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && info.IsDir()
@@ -378,15 +401,27 @@ type App struct {
 	batches       map[uint64]*DownloadBatch
 	pausedBatches map[string]*DownloadBatch // keyed by manifest path for resume
 	parquetPaths	app.ParquetPaths
+	pendingFileOpen string
+	frontendReady	chan struct{}
 }
 
-func NewApp(ctx context.Context) *App {
+func NewApp() *App {
 	return &App{
-		ctx:           ctx,
 		batches:       make(map[uint64]*DownloadBatch),
 		pausedBatches: make(map[string]*DownloadBatch),
+		frontendReady: make(chan struct{}),
 	}
 }
+
+func (b *App) FrontendReady() {
+    select {
+    case <-b.frontendReady:
+        // already closed, no-op
+    default:
+        close(b.frontendReady)
+    }
+}
+
 
 // PauseManifest pauses a download by canceling its context and storing the batch for resume
 func (b *App) PauseManifest(manifestPath string) error {

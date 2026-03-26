@@ -10,12 +10,24 @@ export function FetchFiles() {
   return window['go']['main']['App']['FetchFiles']();
 }
 
+export function FrontendReady() {
+  return window['go']['main']['App']['FrontendReady']();
+}
+
 export function GetDefaultOutputDirectory() {
   return window['go']['main']['App']['GetDefaultOutputDirectory']();
 }
 
+export function GetPendingFileOpen() {
+  return window['go']['main']['App']['GetPendingFileOpen']();
+}
+
 export function Greet(arg1) {
   return window['go']['main']['App']['Greet'](arg1);
+}
+
+export function HandleFileOpen(arg1) {
+  return window['go']['main']['App']['HandleFileOpen'](arg1);
 }
 
 export function IsMac() {
