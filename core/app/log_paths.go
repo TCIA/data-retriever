@@ -25,8 +25,9 @@ func DefaultLogDir() string {
 
 	switch runtime.GOOS {
 	case "darwin":
-		if home != "" {
-			return filepath.Join(home, "Library", "Logs", LogDirectoryAppName)
+		base, _ := os.UserCacheDir() 
+		if base != ""{
+			return filepath.Join(base, "net.cancerimagingarchive.tciadataretriever", "logs")
 		}
 	case "windows":
 		if localAppData := strings.TrimSpace(os.Getenv("LOCALAPPDATA")); localAppData != "" {
