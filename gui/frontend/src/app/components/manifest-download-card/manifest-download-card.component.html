@@ -100,9 +100,11 @@
         </div>
       </div>
 
-      <div class="transfer-status" *ngIf="hasTransferBytes">
+      <div class="completion-fraction">{{ completedSeriesFraction }}</div>
+
+      <div class="transfer-status" *ngIf="showTransferSpinner || hasTransferRate">
         <span class="spinner" *ngIf="showTransferSpinner" aria-hidden="true"></span>
-        <span class="transfer-bytes">Downloaded {{ run.bytesDownloaded ?? 0 | bytes }}</span>
+        <span class="transfer-rate" *ngIf="hasTransferRate">{{ (run.bytesPerSecond ?? 0) | bytes:2 }}/s</span>
       </div>
 
     </div>

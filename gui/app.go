@@ -256,7 +256,7 @@ func (b *App) runBatch(batch *DownloadBatch) {
 		SkipExisting:          batch.SkipExist,
 		MaxRetries:            batch.MaxRetries,
 		RetryDelay:            10 * time.Second,
-		InterimUpdateInterval: app.DefaultInterimUpdateInterval,
+		InterimUpdateInterval: 500 * time.Millisecond,
 		MaxConnsPerHost:       batch.MaxConn,
 		ServerFriendly:        false,
 		RequestDelay:          500 * time.Millisecond,

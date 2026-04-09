@@ -51,6 +51,9 @@ interface RunInternal {
   completedAt?: string;
   logs: string[];
   status: RunState['status'];
+  lastByteSampleAt?: number;
+  lastByteSampleValue?: number;
+  bytesPerSecond?: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -385,6 +388,42 @@ export class DownloadStatusService implements OnDestroy {
       }
     }
 
+    const now = Date.now();
+    if (hasByteSample) {
+      const previousBytes = run.lastByteSampleValue;
+      const previousAt = run.lastByteSampleAt;
+
+      if (typeof previousBytes === 'number' && typeof previousAt === 'number') {
+        const deltaBytes = bytesDownloaded - previousBytes;
+        const deltaSeconds = (now - previousAt) / 1000;
+
+        if (deltaBytes > 0 && deltaSeconds > 0) {
+          const instantaneousRate = deltaBytes / deltaSeconds;
+          run.bytesPerSecond =
+            typeof run.bytesPerSecond === 'number'
+              ? run.bytesPerSecond * 0.65 + instantaneousRate * 0.35
+              : instantaneousRate;
+          run.lastByteSampleValue = bytesDownloaded;
+          run.lastByteSampleAt = now;
+        } else if ((overview.active <= 0 || run.isPaused || run.status !== 'running') && deltaSeconds >= 0) {
+          run.bytesPerSecond = undefined;
+          run.lastByteSampleValue = bytesDownloaded;
+          run.lastByteSampleAt = now;
+        } else if (deltaSeconds >= 1.5) {
+          run.bytesPerSecond = 0;
+          run.lastByteSampleValue = bytesDownloaded;
+          run.lastByteSampleAt = now;
+        }
+      } else {
+        run.lastByteSampleValue = bytesDownloaded;
+        run.lastByteSampleAt = now;
+      }
+    } else {
+      run.bytesPerSecond = undefined;
+      run.lastByteSampleValue = undefined;
+      run.lastByteSampleAt = undefined;
+    }
+
     return {
       runId: run.runId,
       inputFilePath: run.inputFilePath,
@@ -399,6 +438,7 @@ export class DownloadStatusService implements OnDestroy {
       startedAt: run.startedAt,
       completedAt: run.completedAt,
       bytesDownloaded: hasByteSample ? bytesDownloaded : undefined,
+      bytesPerSecond: run.bytesPerSecond,
     };
   }
 

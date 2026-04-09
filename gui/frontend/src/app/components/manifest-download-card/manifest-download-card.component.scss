@@ -157,10 +157,16 @@
   gap: 8px;
 }
 
-.transfer-bytes {
+.completion-fraction {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary, #333);
+}
+
+.transfer-rate {
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-primary, #333);
+  color: #5f6f82;
 }
 
 .bytes-info {

@@ -20,4 +20,5 @@ export interface RunState {
   startedAt: string;
   completedAt?: string;
   bytesDownloaded?: number;
+  bytesPerSecond?: number;
 }

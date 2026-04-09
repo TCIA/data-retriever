@@ -110,8 +110,14 @@ export class ManifestDownloadCardComponent {
     return (this.run?.overview?.active ?? 0) > 0;
   }
 
-  get hasTransferBytes(): boolean {
-    return typeof this.run?.bytesDownloaded === 'number';
+  get completedSeriesFraction(): string {
+    const completed = this.run?.overview?.completed ?? 0;
+    const total = this.run?.overview?.total ?? 0;
+    return `${completed} / ${total} completed`;
+  }
+
+  get hasTransferRate(): boolean {
+    return typeof this.run?.bytesPerSecond === 'number' && this.run.bytesPerSecond >= 0;
   }
 
   get canOpenOutputDirectory(): boolean {

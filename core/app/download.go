@@ -38,6 +38,7 @@ type progressReader struct {
 	read         int64
 	onProgress   ProgressFunc
 	lastReported float64
+	lastBytes     int64
 	lastTime     time.Time
 }
 
@@ -68,12 +69,24 @@ func (pr *progressReader) Read(p []byte) (int, error) {
 
 		now := time.Now()
 
-		// Report progress at least every 50ms OR if changed by >= 0.5%
-		if (now.Sub(pr.lastTime) >= 50*time.Millisecond && (pr.total <= 0 || percent-pr.lastReported >= 0.5)) || err == io.EOF {
+		byteDelta := pr.read - pr.lastBytes
+		shouldReport := err == io.EOF
+		if !shouldReport {
+			shouldReport = now.Sub(pr.lastTime) >= 200*time.Millisecond
+		}
+		if !shouldReport && byteDelta >= 256*1024 {
+			shouldReport = true
+		}
+		if !shouldReport && pr.total > 0 && percent-pr.lastReported >= 0.1 {
+			shouldReport = true
+		}
+
+		if shouldReport {
 			// Emit progress to frontend including bytes
 			pr.onProgress(percent, pr.read, pr.total)
 
 			pr.lastReported = percent
+			pr.lastBytes = pr.read
 			pr.lastTime = now
 		}
 	}
