@@ -32,9 +32,15 @@ type Callbacks struct {
 	Stderr   func(string)
 	Series   func(SeriesEvent)
 	Manifest func(ManifestPayload)
+  EmitEvent func(name string, data ...interface{}) 
+
 }
 
-
+func (cb Callbacks) emitEvent(name string, data ...interface{}) {
+    if cb.EmitEvent != nil {
+        cb.EmitEvent(name, data...)
+    }
+}
 
 func (cb Callbacks) emitStdout(msg string) {
 	if cb.Stdout != nil {
@@ -271,6 +277,8 @@ type WorkerContext struct {
 	WorkerID   int
 	Callbacks  Callbacks
 	EventGate  *SeriesEventGate
+  AuthGate  *AuthGate
+  EmitEvent func(string, ...interface{}) // wrap runtime.EventsEmit
 }
 
 // SeriesEventGate throttles interim per-series events while always allowing
@@ -432,8 +440,11 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 	// Create Gen3 Auth Manager
 	gen3Auth, err := NewGen3AuthManager(client, options.Auth)
 	if err != nil {
-		Logger.Fatalf("Failed to initialize Gen3 auth manager: %v", err)
+		Logger.Warnf("Failed to initialize Gen3 auth manager: %v", err)
+		gen3Auth = &Gen3AuthManager{}
 	}
+
+
 
 	workerCtx := WorkerContext{
 		Context:    ctx,
@@ -443,6 +454,7 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 		Stats:      stats,
 		Callbacks:  callbacks,
 		EventGate:  NewSeriesEventGate(options.InterimUpdateInterval),
+    AuthGate:  &AuthGate{},
 	}
 
 	summary := &Summary{Total: int32(len(files))}
@@ -636,13 +648,54 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 		wc.emitSeries(evt)
 	}
 
-	err := fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.Options, onProgress, onDecompress, wc.Gen3Auth)
+	localAuth := *wc.Gen3Auth
+
+  err := fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.Options, onProgress, onDecompress, &localAuth)
+
+	if err != nil && isAuthError(err) && wc.Options.AuthGate != nil {
+	    // Distinguish format failure (already caught in Run) vs server rejection
+			Logger.Warnf("DEBUG auth check: err=%v, Auth=%q, isAuthErr=%v", err, wc.Options.Auth, isAuthError(err))
+
+	    if wc.Options.Auth != "" {
+	        if _, fmtErr := NewGen3AuthManager(wc.HTTPClient, wc.Options.Auth); fmtErr != nil {
+	            wc.Callbacks.emitEvent("auth-error", fmt.Sprintf("Auth file has invalid format: %s", fmtErr.Error()))
+	        } else {
+	            wc.Callbacks.emitEvent("auth-error", "Credentials file was rejected by the server (expired or insufficient permissions).")
+	        }
+	    }
+	}
+
+	for err != nil && isAuthError(err) && wc.Options.AuthGate != nil {
+	    resolvedPath := wc.Options.AuthGate.WaitForAuth(func() {
+	        wc.Callbacks.emitEvent("open:auth-modal")
+	    })
+	
+	    if resolvedPath == "" {
+	        break
+	    }
+	
+    	newAuth, authErr := NewGen3AuthManager(wc.HTTPClient, resolvedPath)
+    	if authErr != nil {
+    	    wc.Callbacks.emitEvent("auth-error", fmt.Sprintf("Invalid auth file: %s", authErr.Error()))
+    	    wc.Options.AuthGate.PrepareRetry()
+    	    continue
+    	}
+	
+	    localAuth = *newAuth
+	    err = fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.Options, onProgress, onDecompress, &localAuth)
+	  	if err != nil && isAuthError(err) {
+    	    wc.Callbacks.emitEvent("auth-error", "Credentials file was rejected by the server (expired or insufficient permissions).")
+    	    wc.Options.AuthGate.PrepareRetry()
+    	}
+	}
+
+	
 	if err != nil {
-		Logger.Warnf("[Worker %d] Download %s failed - %s", wc.WorkerID, fileInfo.SeriesInstanceUID, err)
-		atomic.AddInt32(&wc.Stats.Failed, 1)
-		updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
-		wc.emitSeriesEvent(fileInfo, "failed", err.Error(), 100)
-		return
+	    Logger.Warnf("[Worker %d] Download %s failed - %s", wc.WorkerID, fileInfo.SeriesInstanceUID, err)
+	    atomic.AddInt32(&wc.Stats.Failed, 1)
+	    updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
+	    wc.emitSeriesEvent(fileInfo, "failed", err.Error(), 100)
+	    return
 	}
 
 	if fileInfo.IsSyncJob {
@@ -795,4 +848,15 @@ func decodeInputFile(ctx context.Context, filePath string, client *http.Client, 
 	default:
 		return nil, 0, fmt.Errorf("unsupported input file format: %s", ext)
 	}
+}
+
+func isAuthError(err error) bool {
+    if err == nil {
+        return false
+    }
+    s := err.Error()
+    return strings.Contains(s, "401") ||
+        strings.Contains(s, "403") ||
+        strings.Contains(s, "Unauthorized") ||
+        strings.Contains(s, "Forbidden")
 }
