@@ -158,9 +158,12 @@
 }
 
 .completion-fraction {
+  margin-top: 10px;
   font-size: 12px;
   font-weight: 700;
   color: var(--text-primary, #333);
+  text-align: center;
+  line-height: 1.3;
 }
 
 .transfer-rate {
