@@ -713,6 +713,20 @@
   min-width: 0;
 }
 
+.auth-label {
+  font-size: 13px;
+  color: #666;
+  min-width: 0;
+  margin-bottom: 16px;
+}
+
+.error-label {
+  color: #c0392b;
+  font-size: 13px;
+  min-width: 0;
+  margin-bottom: 16px;
+}
+
 .setting-input {
   width: 100%;
   max-width: 150px;
@@ -931,8 +945,13 @@
   }
   
   .file-label,
+  .auth-label,
   .setting-label {
     color: #999;
+  }
+
+  .error-label {
+    color: #ff6b6b;
   }
   
   .checkbox-label {

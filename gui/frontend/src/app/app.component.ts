@@ -10,6 +10,8 @@ import {
   IsMac,
   GetPendingFileOpen,
   FrontendReady,
+  ResolveAuth,   
+  CancelAuth,   
 } from '../../wailsjs/go/main/App';
 import { DownloadStatusService } from './services/download-status.service';
 import { RunState } from './models/run-state.model';
@@ -28,13 +30,21 @@ export class AppComponent implements OnInit, OnDestroy {
   defaultDownloadDir = '';
   directoryMode: 'classic' | 'descriptive' = 'classic';
   isMac = false;
+  pendingAuthRunId: string | null = null
+  authErrorMessage: string = ''
 
-  // Track the last path that was auto-set so we can avoid overwriting manual edits
   private lastAutoSetOutputPath = '';
 
   // ── Advanced options ──────────────────────────────────────────────────────
   showAdvancedModal = false;
   showManifestModal = false;
+  showAuthModal = false;
+
+  // Set to true when Go is blocked waiting for auth credentials.
+  // When true, the advanced modal shows an auth-required prompt and
+  // closing/cancelling calls CancelAuth() instead of just dismissing.
+  authRequired = false;
+
   maxConnections = 8;
   maxRetries = 3;
   simultaneousDownloads = 8;
@@ -44,7 +54,7 @@ export class AppComponent implements OnInit, OnDestroy {
   // ── Dark mode ─────────────────────────────────────────────────────────────
   isDarkMode = false;
 
-  // ── Runs (one entry per manifest) ─────────────────────────────────────────
+  // ── Runs ──────────────────────────────────────────────────────────────────
   runs: RunState[] = [];
   private runsSubscription?: Subscription;
 
@@ -54,7 +64,6 @@ export class AppComponent implements OnInit, OnDestroy {
   ) {}
 
   async ngOnInit() {
-    // Detect system theme
     if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) {
       this.isDarkMode = true;
     }
@@ -62,19 +71,16 @@ export class AppComponent implements OnInit, OnDestroy {
       this.isDarkMode = e.matches;
     });
 
-    // Detect platform
     try {
       this.isMac = await IsMac();
     } catch (err) {
       console.error('Error detecting macOS:', err);
     }
 
-    // Set default output directory
     this.defaultDownloadDir = await GetDefaultOutputDirectory();
     if (this.isMac) this.defaultDownloadDir = '';
     this.outputDirPath = this.defaultDownloadDir;
 
-    // Subscribe to all runs
     this.runsSubscription = this.downloadStatus.runs$.subscribe(runs => {
       this.runs = runs;
     });
@@ -93,7 +99,20 @@ export class AppComponent implements OnInit, OnDestroy {
       });
     });
 
-    // Check for a file that was opened before the frontend was ready (cold launch)
+    EventsOn('open:auth-modal', (runId: string) => {
+      this.ngZone.run(() => {
+        this.pendingAuthRunId = runId;  // store it
+        this.authRequired = true;
+        this.showAuthModal = true;
+      });
+    });
+    EventsOn('auth-error', (runId: string, message: string) => {
+  console.log('auth-error raw:', JSON.stringify(message));
+  this.ngZone.run(() => {
+    this.authErrorMessage = message;
+  });
+});
+
     try {
       const pendingPath = await GetPendingFileOpen();
       if (pendingPath) {
@@ -114,8 +133,6 @@ export class AppComponent implements OnInit, OnDestroy {
     }
 
     FrontendReady();
-
-
   }
 
   ngOnDestroy() {
@@ -138,7 +155,6 @@ export class AppComponent implements OnInit, OnDestroy {
     return { total, queued, active, completed, failed, skipped, cancelled };
   }
 
-
   // ── UI helpers ─────────────────────────────────────────────────────────────
 
   trackByRunId(_: number, run: RunState): bigint {
@@ -153,18 +169,45 @@ export class AppComponent implements OnInit, OnDestroy {
     this.showAdvancedModal = true;
   }
 
+
+  confirmAuth() {
+    if (!this.authFilePath || this.pendingAuthRunId === null) return;
+    const runId = this.pendingAuthRunId;
+    const path = this.authFilePath;
+    this.authErrorMessage = '';
+    ResolveAuth(runId, path).catch(err => console.error('ResolveAuth error:', err));
+  }
+  
   closeAdvancedModal() {
+    if (this.authRequired && this.pendingAuthRunId !== null) {
+      const runId = this.pendingAuthRunId;
+      this.authRequired = false;
+      this.pendingAuthRunId = null;
+      CancelAuth(runId).catch(err => console.error('CancelAuth error:', err));
+    }
     this.showAdvancedModal = false;
+  }
+
+  closeAuthModal() {
+    if (this.authRequired && this.pendingAuthRunId !== null) {
+      const runId = this.pendingAuthRunId;
+      this.authRequired = false;
+      this.pendingAuthRunId = null;
+      CancelAuth(runId).catch(err => console.error('CancelAuth error:', err));
+    }
+    this.showAuthModal = false;
+  }
+  
+  @HostListener('document:keydown.escape')
+  handleEscapeKey() {
+    if (this.showAuthModal) this.closeAuthModal();
+    if (this.showAdvancedModal) this.closeAdvancedModal();
+    if (this.showManifestModal) this.closeManifestModal();
   }
 
   openManifestModal() { this.showManifestModal = true; }
   closeManifestModal() { this.showManifestModal = false; }
 
-  @HostListener('document:keydown.escape')
-  handleEscapeKey() {
-    if (this.showAdvancedModal) this.closeAdvancedModal();
-    if (this.showManifestModal) this.closeManifestModal();
-  }
 
   // ── File / directory pickers ───────────────────────────────────────────────
 
@@ -173,29 +216,22 @@ export class AppComponent implements OnInit, OnDestroy {
       .then((filePath: string) => {
         if (!filePath) return;
         this.inputFilePath = filePath;
-
         const baseName = this.baseNameOf(filePath);
-
         if (!this.isMac) {
-          // Only auto-set if user hasn't diverged from the last auto-set value
           if (!this.outputDirPath || this.outputDirPath === this.lastAutoSetOutputPath) {
             this.outputDirPath = `${this.defaultDownloadDir}/${baseName}`;
             this.lastAutoSetOutputPath = this.outputDirPath;
           }
         } else {
-          if (this.outputDirPath ) {
+          if (this.outputDirPath) {
             const parts = this.outputDirPath.split('/');
             parts[parts.length - 1] = baseName;
             this.outputDirPath = parts.join('/');
             this.lastAutoSetOutputPath = this.outputDirPath;
           }
-          // If outputDirPath is empty or was set manually, leave it alone
         }
       })
-      .catch(err => {
-        // No active runId yet — log to console; file picker errors are non-critical
-        console.error('Error selecting input file:', err);
-      });
+      .catch(err => console.error('Error selecting input file:', err));
   }
 
   onSelectOutputDirectory() {
@@ -222,24 +258,17 @@ export class AppComponent implements OnInit, OnDestroy {
 
   onFetchFiles() {
     if (!this.inputFilePath || !this.outputDirPath) {
-      // No active runId yet; create a temporary log entry via the first run or a toast
       console.warn('Please select both an input file and an output directory.');
       return;
     }
 
-    // Generate a random uint64 ID (matches Go backend's uint64 type).
-    // Combine two random uint32s into one uint64 via BigInt.
     const buf = new Uint32Array(2);
     crypto.getRandomValues(buf);
     const runId: bigint = (BigInt(buf[0]) << 32n) | BigInt(buf[1]);
 
-    // Register the run immediately so the card appears
     this.downloadStatus.beginRun(runId, this.inputFilePath, this.outputDirPath);
-
-    // Close the modal so the user can see the new card appear
     this.closeManifestModal();
 
-    // Build CLI command string for the log
     const parts: string[] = [
       '../nbia-data-retriever-cli',
       '-i', `"${this.inputFilePath}"`,
@@ -252,7 +281,6 @@ export class AppComponent implements OnInit, OnDestroy {
     this.downloadStatus.appendManifestLog(runId, 'Running: ' + parts.join(' '));
     this.downloadStatus.appendManifestLog(runId, 'Started');
 
-    // Kick off the download — pass runId so Go can tag events back to us
     RunCLIFetch(
       this.inputFilePath,
       this.outputDirPath,
@@ -270,13 +298,11 @@ export class AppComponent implements OnInit, OnDestroy {
       });
     });
 
-    // Reset the form fields so the user can immediately add another manifest
     this.inputFilePath = '';
     this.lastAutoSetOutputPath = '';
-    // Leave outputDirPath as-is as a convenience starting point for the next run
   }
 
-  // ── Per-run controls (called from download-card via events) ───────────────
+  // ── Per-run controls ───────────────────────────────────────────────────────
 
   onCancelDownload(runId: bigint) {
     this.downloadStatus.cancelRun(runId);

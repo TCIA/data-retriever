@@ -54,6 +54,9 @@
                   <span class="material-icons-outlined">folder_open</span>
                 </button>
               </div>
+              <button *ngIf="authRequired" (click)="confirmAuth()" [disabled]="!authFilePath">
+  Confirm
+</button>
             </div>
           </section>
 
@@ -73,6 +76,46 @@
               </div>
             </div>
           </section>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Standalone Auth Modal -->
+  <div class="advanced-settings-overlay" *ngIf="showAuthModal"
+       (click)="closeAuthModal()"
+       role="dialog" aria-modal="true" aria-label="Authentication Required">
+    <div class="advanced-settings-modal" (click)="$event.stopPropagation()">
+      <div class="advanced-settings-header">
+        <span>Authentication Required</span>
+        <button class="advanced-settings-close" (click)="closeAuthModal()" title="Close">
+          <span class="material-icons-outlined">close</span>
+        </button>
+      </div>
+      <div class="advanced-settings-body">
+        <div class="auth-required-banner auth-label">
+          Authentication is required to continue. Please select your credentials file.
+        </div>
+        <div *ngIf="authErrorMessage" class="auth-error-notice error-label">
+          {{ authErrorMessage }}
+        </div>
+        <div class="setting-file-row">
+          <div class="file-input-group">
+            <input [disabled]="isMac" id="auth-modal-file-path" type="text"
+                   [(ngModel)]="authFilePath" class="file-input"
+                   placeholder="Path/to/the/CRDC/auth/file">
+            <button (click)="onSelectAuthFile()" class="browse-btn" title="Browse">
+              <span class="material-icons-outlined">folder_open</span>
+            </button>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button (click)="confirmAuth()" class="fetch-btn" [disabled]="!authFilePath">
+              Confirm
+            </button>
+            <button (click)="closeAuthModal()" class="fetch-btn">
+              Cancel
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -127,7 +170,6 @@
               <span class="material-icons-outlined">folder_open</span>
             </button>
           </div>
-          <span class="file-label">*If you are downloading restricted data, use the settings (gear icon) to provide an authentication file.</span>
         </div>
         <div class="action-bar">
           <button (click)="onFetchFiles()" class="fetch-btn"

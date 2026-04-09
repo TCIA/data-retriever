@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	stdRuntime "runtime"
 	"strings"
+	"strconv"
 	"sync"
 	"time"
 
@@ -236,6 +237,11 @@ func (b *App) runBatch(batch *DownloadBatch) {
 	}
 	pass := os.Getenv("NBIA_PASS")
 
+  gate := &app.AuthGate{}
+  b.authGates.Store(uint64(batch.ID), gate)
+  defer b.authGates.Delete(uint64(batch.ID))
+
+
 	options := &app.Options{
 		Input:                 batch.Manifest,
 		Output:                batch.OutputDir,
@@ -268,6 +274,7 @@ func (b *App) runBatch(batch *DownloadBatch) {
 		DirectoryMode:         batch.DirectoryMode,
 		IDCParquetPath:				 b.parquetPaths.IDCIndex,
 		PriorParquetPath:			 b.parquetPaths.PriorVersions,
+		AuthGate:							 gate,
 	}
 
 	logTimestamp := time.Now().Format("20060102-150405")
@@ -310,6 +317,11 @@ func (b *App) runBatch(batch *DownloadBatch) {
 			}
 			wailsRuntime.EventsEmit(b.ctx, "manifest-series-metadata", p)
 		},
+	  EmitEvent: func(name string, data ...interface{}) {
+			 // Prepend runId so the frontend knows which run needs auth
+       args := append([]interface{}{fmt.Sprintf("%d", uint64(batch.ID))}, data...)
+       wailsRuntime.EventsEmit(b.ctx, name, args...)
+    },
 	}
 
 	// Run the CLI download (blocking inside goroutine)
@@ -341,6 +353,30 @@ func (b *App) runBatch(batch *DownloadBatch) {
 	}
 	wailsRuntime.EventsEmit(b.ctx, "cli-finished", summaryText)
 }
+
+func (a *App) ResolveAuth(runIdStr string, authFilePath string) error {
+    runId, err := strconv.ParseUint(runIdStr, 10, 64)
+    if err != nil {
+        return fmt.Errorf("invalid runId: %w", err)
+    }
+    if v, ok := a.authGates.Load(runId); ok {
+        v.(*app.AuthGate).Resolve(authFilePath)
+    }
+    return nil
+}
+
+func (a *App) CancelAuth(runIdStr string) error {
+    runId, err := strconv.ParseUint(runIdStr, 10, 64)
+    if err != nil {
+        return fmt.Errorf("invalid runId: %w", err)
+    }
+    if v, ok := a.authGates.Load(runId); ok {
+        v.(*app.AuthGate).Resolve("")
+    }
+    return nil
+}
+
+
 
 func (b *App) CancelDownload() {
 	b.mu.Lock()
@@ -403,6 +439,7 @@ type App struct {
 	parquetPaths	app.ParquetPaths
 	pendingFileOpen string
 	frontendReady	chan struct{}
+	authGates sync.Map
 }
 
 func NewApp() *App {

@@ -58,6 +58,8 @@ type Options struct {
 	DirectoryMode         string
 	IDCParquetPath				string
 	PriorParquetPath			string
+	AuthGate 							*AuthGate
+	CLI										bool
 
 	opt *getoptions.GetOpt
 }
@@ -121,6 +123,7 @@ func ParseOptions(args []string, promptReader io.Reader) (*Options, error) {
 		opt.opt.Description("path to JSON API key file for Gen3 authentication"))
 	opt.opt.StringVar(&opt.DirectoryMode, "directory-mode", "",
 		opt.opt.Description("Directory structure of saved files: classic or descriptive"))
+	opt.opt.BoolVar(&opt.CLI, "cli", false, opt.opt.Description("Run in CLI mode"))
 
 	if _, err := opt.opt.Parse(args); err != nil {
 		return opt, err
