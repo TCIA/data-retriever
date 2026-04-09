@@ -18,7 +18,6 @@ const TERMINAL_STATUSES = new Set<SeriesDownloadSnapshot['status']>([
 ]);
 
 const ACTIVE_STATUSES = new Set<SeriesDownloadSnapshot['status']>([
-  'queued',
   'metadata',
   'downloading',
   'decompressing',
@@ -26,6 +25,7 @@ const ACTIVE_STATUSES = new Set<SeriesDownloadSnapshot['status']>([
 
 const EMPTY_OVERVIEW: DownloadOverviewSnapshot = {
   total: 0,
+  queued: 0,
   active: 0,
   completed: 0,
   failed: 0,
@@ -368,32 +368,22 @@ export class DownloadStatusService implements OnDestroy {
   private toRunState(run: RunInternal): RunState {
     const series = Array.from(run.seriesMap.values());
     const overview = this.buildOverview(run);
-
-    // Aggregate bytes
     let bytesDownloaded = 0;
-    let bytesTotal = 0;
-    for (const s of series) {
-      const total =
-        typeof s.uncompressedTotal === 'number' && s.uncompressedTotal > 0
-          ? s.uncompressedTotal
-          : typeof s.bytesTotal === 'number' && s.bytesTotal > 0
-          ? s.bytesTotal
-          : 0;
+    let hasByteSample = false;
 
-      if (total > 0) {
-        const fraction = Math.min(1, Math.max(0, (s.progress ?? 0) / 100));
-        bytesDownloaded += Math.round(total * fraction);
-        bytesTotal += total;
-      } else {
-        if (typeof s.bytesDownloaded === 'number') bytesDownloaded += s.bytesDownloaded;
-        if (typeof s.bytesTotal === 'number' && s.bytesTotal > 0) bytesTotal += s.bytesTotal;
+    for (const s of series) {
+      let sample: number | undefined;
+      if (typeof s.uncompressedBytes === 'number' && s.uncompressedBytes >= 0) {
+        sample = s.uncompressedBytes;
+      } else if (typeof s.bytesDownloaded === 'number' && s.bytesDownloaded >= 0) {
+        sample = s.bytesDownloaded;
+      }
+
+      if (typeof sample === 'number') {
+        hasByteSample = true;
+        bytesDownloaded += sample;
       }
     }
-
-    const displayTotal =
-      run.manifestInitialBytesTotal > 0
-        ? Math.max(run.manifestInitialBytesTotal, bytesTotal)
-        : bytesTotal;
 
     return {
       runId: run.runId,
@@ -408,17 +398,18 @@ export class DownloadStatusService implements OnDestroy {
       hasAutoExpanded: run.hasAutoExpanded,
       startedAt: run.startedAt,
       completedAt: run.completedAt,
-      bytesDownloaded,
-      bytesTotal: displayTotal > 0 ? displayTotal : undefined,
+      bytesDownloaded: hasByteSample ? bytesDownloaded : undefined,
     };
   }
 
   private buildOverview(run: RunInternal): DownloadOverviewSnapshot {
     const snapshots = Array.from(run.seriesMap.values());
     const total = snapshots.length;
-    let completed = 0, failed = 0, skipped = 0, cancelled = 0;
+    let queued = 0, active = 0, completed = 0, failed = 0, skipped = 0, cancelled = 0;
     for (const s of snapshots) {
-      if (s.status === 'succeeded') completed++;
+      if (s.status === 'queued') queued++;
+      else if (s.status === 'metadata' || s.status === 'downloading' || s.status === 'decompressing') active++;
+      else if (s.status === 'succeeded') completed++;
       else if (s.status === 'failed') failed++;
       else if (s.status === 'skipped') skipped++;
       else if (s.status === 'cancelled') cancelled++;
@@ -426,7 +417,8 @@ export class DownloadStatusService implements OnDestroy {
     const done = completed + failed + skipped + cancelled;
     return {
       total,
-      active: total - done,
+      queued,
+      active,
       completed,
       failed,
       skipped,

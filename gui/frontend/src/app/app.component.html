@@ -150,12 +150,13 @@
         </div>
         <div class="downloads-meta"
              *ngIf="runs.length > 0"
-             [title]="globalOverview.completed + ' completed, ' + globalOverview.failed + ' failed, ' + globalOverview.skipped + ' skipped, ' + globalOverview.cancelled + ' cancelled, ' + globalOverview.active + ' in progress'"
-             [attr.aria-label]="globalOverview.completed + ' completed, ' + globalOverview.failed + ' failed, ' + globalOverview.skipped + ' skipped, ' + globalOverview.cancelled + ' cancelled, ' + globalOverview.active + ' in progress'">
+             [title]="globalOverview.completed + ' completed, ' + globalOverview.failed + ' failed, ' + globalOverview.skipped + ' skipped, ' + globalOverview.cancelled + ' cancelled, ' + globalOverview.queued + ' queued, ' + globalOverview.active + ' in progress'"
+             [attr.aria-label]="globalOverview.completed + ' completed, ' + globalOverview.failed + ' failed, ' + globalOverview.skipped + ' skipped, ' + globalOverview.cancelled + ' cancelled, ' + globalOverview.queued + ' queued, ' + globalOverview.active + ' in progress'">
           <span>{{ globalOverview.completed }} completed</span>
           <span>{{ globalOverview.failed }} failed</span>
           <span>{{ globalOverview.skipped }} skipped</span>
           <span>{{ globalOverview.cancelled }} cancelled</span>
+          <span>{{ globalOverview.queued }} queued</span>
           <span>{{ globalOverview.active }} in progress</span>
         </div>
       </div>

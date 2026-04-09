@@ -35,6 +35,7 @@ export class ManifestDownloadCardComponent {
     const m = this.run?.overview;
     if (!m) return '';
     const total = this.run.overview.total ?? 0;
+    const queued = m.queued ?? 0;
     const active = m.active ?? 0;
     const completed = m.completed ?? 0;
     const failed = m.failed ?? 0;
@@ -45,23 +46,16 @@ export class ManifestDownloadCardComponent {
     if (failed) segments.push(`${failed} failed`);
     if (skipped) segments.push(`${skipped} skipped`);
     if (cancelled) segments.push(`${cancelled} cancelled`);
+    if (queued) segments.push(`${queued} queued`);
     segments.push(`${active} in progress`);
     return `${total} series • ${segments.join(' · ')}`;
   }
 
   /**
-   * Byte-accurate progress for the ring fill.
-   * Falls back to series-count-based percent from overview.
+   * Series-count-based progress for the ring fill.
    */
   get progressValue(): number {
-    const downloaded = this.run?.bytesDownloaded ?? null;
-    const total = this.run?.bytesTotal ?? null;
-    let percent: number;
-    if (typeof downloaded === 'number' && typeof total === 'number' && total > 0) {
-      percent = Math.round((downloaded / total) * 100);
-    } else {
-      percent = Math.round(this.run?.overview?.progressPercent ?? 0);
-    }
+    const percent = Math.round(this.run?.overview?.progressPercent ?? 0);
     return Math.max(0, Math.min(100, percent));
   }
 
@@ -109,6 +103,15 @@ export class ManifestDownloadCardComponent {
 
   get isCollapsed(): boolean {
     return this.run?.collapsed ?? false;
+  }
+
+  get showTransferSpinner(): boolean {
+    if (this.isPaused || this.isTerminal) return false;
+    return (this.run?.overview?.active ?? 0) > 0;
+  }
+
+  get hasTransferBytes(): boolean {
+    return typeof this.run?.bytesDownloaded === 'number';
   }
 
   get canOpenOutputDirectory(): boolean {

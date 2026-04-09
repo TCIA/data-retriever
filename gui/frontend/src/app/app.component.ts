@@ -125,16 +125,17 @@ export class AppComponent implements OnInit, OnDestroy {
   // ── Aggregates across all runs ────────────────────────────────────────────
 
   get globalOverview() {
-    let total = 0, active = 0, completed = 0, failed = 0, skipped = 0, cancelled = 0;
+    let total = 0, queued = 0, active = 0, completed = 0, failed = 0, skipped = 0, cancelled = 0;
     for (const run of this.runs) {
       total     += run.overview.total;
+      queued    += run.overview.queued;
       active    += run.overview.active;
       completed += run.overview.completed;
       failed    += run.overview.failed;
       skipped   += run.overview.skipped;
       cancelled += run.overview.cancelled;
     }
-    return { total, active, completed, failed, skipped, cancelled };
+    return { total, queued, active, completed, failed, skipped, cancelled };
   }
 
 
