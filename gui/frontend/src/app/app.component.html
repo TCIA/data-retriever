@@ -46,7 +46,8 @@
           <section class="settings-group" aria-labelledby="advanced-auth-group">
             <h3 id="advanced-auth-group" class="settings-group-title">Authentication File</h3>
             <div class="setting-file-row">
-              <label class="setting-label" for="auth-file-path-input">CRDC auth path</label>
+              <label class="setting-label" for="auth-file-path-input">CRDC auth path.  For more information: <span class="link" (click)="openNIHLink()">NIH Controlled Data Access Policy</span>
+</label>
               <div class="file-input-group">
                 <input [disabled]="isMac" id="auth-file-path-input" type="text" [(ngModel)]="authFilePath"
                        class="file-input" placeholder="Path/to/the/CRDC/auth/file">
@@ -94,7 +95,7 @@
       </div>
       <div class="advanced-settings-body">
         <div class="auth-required-banner auth-label">
-          Authentication is required to continue. Please select your credentials file.
+          Authentication is required to continue. Please select your credentials file. For more information: <span class="link" (click)="openNIHLink()">NIH Controlled Data Access Policy</span>
         </div>
         <div *ngIf="authErrorMessage" class="auth-error-notice error-label">
           {{ authErrorMessage }}
@@ -108,6 +109,7 @@
               <span class="material-icons-outlined">folder_open</span>
             </button>
           </div>
+          <div class="action-bar" style="display: flex; justify-content: flex-end;">
           <div style="display: flex; gap: 8px;">
             <button (click)="confirmAuth()" class="fetch-btn" [disabled]="!authFilePath">
               Confirm
@@ -115,6 +117,7 @@
             <button (click)="closeAuthModal()" class="fetch-btn">
               Cancel
             </button>
+          </div>
           </div>
         </div>
       </div>
@@ -171,12 +174,17 @@
             </button>
           </div>
         </div>
-        <div class="action-bar">
-          <button (click)="onFetchFiles()" class="fetch-btn"
-                  [disabled]="!inputFilePath || !outputDirPath">
-            <span class="material-icons-outlined">file_download</span>
-            Fetch Files
-          </button>
+        <div class="action-bar" style="justify-content: flex-end">
+          <div style="display: flex; gap: 8px; justify-content: flex-end;">
+            <button (click)="onFetchFiles()" class="fetch-btn"
+                    [disabled]="!inputFilePath || !outputDirPath">
+              <span class="material-icons-outlined">file_download</span>
+              Fetch Files
+            </button>
+            <button (click)="closeManifestModal()" class="fetch-btn">
+              Cancel
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -219,7 +227,7 @@
             <span class="material-icons-outlined">hourglass_empty</span>
             <p>No downloads queued.</p>
             <small>Select a manifest and start a download to see progress.</small>
-            <button class="fetch-manifest-btn" (click)="openManifestModal()" title="Add a Manifest">
+            <button class="fetch-manifest-btn" style="margin-top: 12px;" (click)="openManifestModal()" title="Add a Manifest">
               <span class="material-icons">add</span>
             </button>
           </div>

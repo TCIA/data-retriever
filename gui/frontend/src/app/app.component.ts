@@ -15,7 +15,7 @@ import {
 } from '../../wailsjs/go/main/App';
 import { DownloadStatusService } from './services/download-status.service';
 import { RunState } from './models/run-state.model';
-import { EventsOn } from '../../wailsjs/runtime/runtime';
+import { EventsOn, BrowserOpenURL } from '../../wailsjs/runtime/runtime';
 
 @Component({
   selector: 'app-root',
@@ -299,6 +299,10 @@ export class AppComponent implements OnInit, OnDestroy {
 
     this.inputFilePath = '';
     this.lastAutoSetOutputPath = '';
+  }
+
+  openNIHLink() {
+    BrowserOpenURL('https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/');
   }
 
   // ── Per-run controls ───────────────────────────────────────────────────────
