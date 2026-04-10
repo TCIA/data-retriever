@@ -402,3 +402,9 @@
     }
   }
 }
+:host-context(.dark-mode) .transfer-status {
+  border-top-color: #444;
+}
+:host-context(.dark-mode) .completion-fraction {
+  color: #e0e0e0;
+}
