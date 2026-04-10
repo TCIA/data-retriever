@@ -19,7 +19,7 @@
           class="ring"
           [style.--size]="'48px'"
           [style.--thickness]="'6px'"
-          [style.--value]="bytesProgressValue"
+          [style.--value]="progressValue"
           [style.--accent]="accentColor"
           [style.--track]="'var(--ring-track)'"
           [style.--bg]="'var(--card-bg)'"
@@ -27,17 +27,9 @@
           role="img"
         >
           <div class="ring-inner"></div>
-          <div class="ring-label">{{ bytesProgressValue }}%</div>
+          <div class="ring-label">{{ progressValue }}%</div>
         </div>
       </ng-template>
-      <div class="progress-caption">
-        <ng-container *ngIf="displayBytesDownloaded as downloaded">
-          <span>{{ downloaded | bytes }}</span>
-          <ng-container *ngIf="displayBytesTotal as total">
-            <span> / {{ total | bytes }}</span>
-          </ng-container>
-        </ng-container>
-      </div>
     </div>
 
     <div class="card-output">

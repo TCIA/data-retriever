@@ -148,6 +148,30 @@
   text-transform: capitalize;
 }
 
+.transfer-status {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid #e6e6e6;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.completion-fraction {
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary, #333);
+  text-align: center;
+  line-height: 1.3;
+}
+
+.transfer-rate {
+  font-size: 12px;
+  font-weight: 600;
+  color: #5f6f82;
+}
+
 .bytes-info {
   margin-top: 8px;
   padding-top: 8px;
@@ -162,8 +186,8 @@
 
 /* Spinner replacing the progress ring */
 .spinner {
-  --size: 32px;
-  --thickness: 3px;
+  --size: 14px;
+  --thickness: 2px;
   --track: #e6e6e6;
   --accent: #2196f3;
   width: var(--size);

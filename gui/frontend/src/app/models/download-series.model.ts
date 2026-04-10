@@ -59,6 +59,7 @@ export interface SeriesDownloadEventPayload {
 
 export interface DownloadOverviewSnapshot {
   total: number;
+  queued: number;
   active: number;
   completed: number;
   failed: number;
@@ -71,6 +72,7 @@ export interface ManifestDownloadSnapshot {
   manifestPath: string;
   outputDirPath?: string;
   total: number;
+  queued: number;
   active: number;
   completed: number;
   failed: number;
