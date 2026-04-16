@@ -27,6 +27,11 @@ import (
 	"time"
 )
 
+const (
+    StatusSuccess = "success"
+    StatusSkipped = "skipped"
+)
+
 // ProgressFunc is a callback for reporting download progress.
 // percent: 0-100, bytesDownloaded: number of bytes read so far, bytesTotal: total bytes if known (>0)
 type ProgressFunc func(percent float64, bytesDownloaded int64, bytesTotal int64)
@@ -166,10 +171,9 @@ func (m *MetadataStats) updateProgress(action string, seriesID string) {
 }
 
 var (
-	// Directory creation mutex
 	dirMutex sync.Mutex
-	// Metadata cache mutex
 	metaMutex sync.Mutex
+	statusMu  sync.Mutex
 )
 
 // getMetadataCachePath returns the path for cached metadata
@@ -459,16 +463,26 @@ func decodeTCIA(ctx context.Context, path string, httpClient *http.Client, optio
 	for _, row := range records[1:] {
 		file := &FileInfo{}
 		v := reflect.ValueOf(file).Elem()
+
 		for colIdx, colName := range headers {
-			fieldIdx, ok := fieldMap[colName]
-			if !ok || colIdx >= len(row) {
-				continue
-			}
-			field := v.Field(fieldIdx)
-			if field.CanSet() && field.Kind() == reflect.String {
-				field.SetString(row[colIdx])
-			}
+		    fieldIdx, ok := fieldMap[colName]
+		    if !ok || colIdx >= len(row) {
+		        continue
+		    }
+		    field := v.Field(fieldIdx)
+		    if !field.CanSet() {
+		        continue
+		    }
+		    switch field.Kind() {
+		    case reflect.String:
+		        field.SetString(row[colIdx])
+		    case reflect.Int64:
+		        if n, err := strconv.ParseInt(row[colIdx], 10, 64); err == nil {
+		            field.SetInt(n)
+		        }
+		    }
 		}
+
 		files = append(files, file)
 	}
 
@@ -479,6 +493,7 @@ func decodeTCIA(ctx context.Context, path string, httpClient *http.Client, optio
 	} else {
 		callbacks.emitStdout(fmt.Sprintf("Saved metadata for %d files to %s\n", len(files), csvPath))
 	}
+	InitCompletionStatus(options.Output, files)
 
 	return files
 }
@@ -524,12 +539,23 @@ type FileInfo struct {
 	DateReleased                        string `csv:"DateReleased"`
 	ThirdPartyAnalysis                  string `csv:"ThirdPartyAnalysis"`
 	Authorized                          string `csv:"Authorized"`
+	AnalysisResultID     string `csv:"analysis_result_id" json:"analysis_result_id,omitempty"`
+	SOPClassUID          string `csv:"SOPClassUID" json:"SOPClassUID,omitempty"`
+	SOPClassName         string `csv:"sop_class_name" json:"sop_class_name,omitempty"`
+	TransferSyntaxUID    string `csv:"TransferSyntaxUID" json:"TransferSyntaxUID,omitempty"`
+	TransferSyntaxName   string `csv:"transfer_syntax_name" json:"transfer_syntax_name,omitempty"`
+	InstanceCount        int64  `csv:"instanceCount" json:"instanceCount,omitempty"`
+	LicenseShortName     string `csv:"license_short_name" json:"license_short_name,omitempty"`
+	AWSBucket            string `csv:"aws_bucket" json:"aws_bucket,omitempty"`
+	CRDCSeriesUUID       string `csv:"crdc_series_uuid" json:"crdc_series_uuid,omitempty"`
+	SourceDOI            string `csv:"source_DOI" json:"source_DOI,omitempty"`
 	DownloadURL                         string
 	DRSURI                              string `json:"drs_uri,omitempty"`
 	S5cmdManifestPath                   string `json:"s5cmd_manifest_path,omitempty"`
 	FileName                            string `json:"file_name,omitempty"`
 	OriginalS5cmdURI                    string `json:"original_s5cmd_uri,omitempty"`
 	IsSyncJob                           bool   `json:"is_sync_job,omitempty"`
+
 }
 
 // GetOutput construct the output directory (thread-safe)
@@ -924,11 +950,13 @@ func (info *FileInfo) DownloadWithRetry(ctx context.Context, output string, http
 		}
 
 		if ctx.Err() != nil {
+	    AppendCompletionStatus(output, info.SeriesInstanceUID, ctx.Err(), false)
 			return ctx.Err()
 		}
 
 		err := info.doDownload(ctx, output, httpClient, options, onProgress, onDecompress, gen3Auth)
 		if err == nil {
+	    AppendCompletionStatus(output, info.SeriesInstanceUID, nil, false)
 			return nil
 		}
 
@@ -938,11 +966,14 @@ func (info *FileInfo) DownloadWithRetry(ctx context.Context, output string, http
 		// Check if error is retryable
 		if !isRetryableError(err) {
 			logger.Errorf("Non-retryable error for %s: %v", info.SeriesInstanceUID, err)
+	    AppendCompletionStatus(output, info.SeriesInstanceUID, err, false)
 			return err
 		}
 	}
 
-	return fmt.Errorf("download failed after %d attempts: %v", options.MaxRetries+1, lastErr)
+	finalErr := fmt.Errorf("download failed after %d attempts: %v", options.MaxRetries+1, lastErr)
+	AppendCompletionStatus(output, info.SeriesInstanceUID, finalErr, false)
+	return finalErr
 }
 
 // isRetryableError checks if an error is retryable
@@ -1803,3 +1834,4 @@ func SeriesUpToDate(seriesDir string) bool {
 
 	return true
 }
+

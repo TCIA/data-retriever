@@ -21,15 +21,32 @@ import (
 
 type SeriesMetadata struct {
 	SeriesInstanceUID   string
-	series_aws_url			string
-	series_size_MB			float64
-	collection_id				string
-	PatientID						string
-	StudyInstanceUID		string
-	StudyDate						string
-	StudyDescription		string
-	SeriesNumber				string
-	SeriesDescription		string
+	series_aws_url      string
+	series_size_MB      float64
+	collection_id       string
+	analysis_result_id  string
+	PatientID           string
+	PatientAge          string
+	PatientSex          string
+	StudyInstanceUID    string
+	StudyDate           string
+	StudyDescription    string
+	BodyPartExamined    string
+	Modality            string
+	SOPClassUID         string
+	sop_class_name      string
+	TransferSyntaxUID   string
+	transfer_syntax_name string
+	Manufacturer        string
+	ManufacturerModelName string
+	SeriesDate          string
+	SeriesDescription   string
+	SeriesNumber        string
+	instanceCount       int64
+	license_short_name  string
+	aws_bucket          string
+	crdc_series_uuid    string
+	source_DOI          string
 }
 
 //go:embed parquet/prior_versions_index.parquet
@@ -64,6 +81,23 @@ func stringVal(col *array.String, i int) string {
 
 // float64Val returns nil if the column is missing or the cell is null.
 func float64Val(col *array.Float64, i int) *float64 {
+	if col == nil || col.IsNull(i) {
+		return nil
+	}
+	v := col.Value(i)
+	return &v
+}
+
+func safeInt64Col(schema *arrow.Schema, cols []arrow.Array, name string) *array.Int64 {
+	idxs := schema.FieldIndices(name)
+	if len(idxs) == 0 {
+		return nil
+	}
+	col, _ := cols[idxs[0]].(*array.Int64)
+	return col
+}
+
+func int64Val(col *array.Int64, i int) *int64 {
 	if col == nil || col.IsNull(i) {
 		return nil
 	}
@@ -165,16 +199,33 @@ func loadSeriesMetadataFromParquet(
 		schema := rec.Schema()
 		cols := rec.Columns()
 
-		uidCol         := safeStringCol(schema, cols, "SeriesInstanceUID")
-		urlCol         := safeStringCol(schema, cols, "series_aws_url")
-		fileSizeCol    := safeFloat64Col(schema, cols, "series_size_MB")
-		patientIDCol   := safeStringCol(schema, cols, "PatientID")
-		studyUIDCol    := safeStringCol(schema, cols, "StudyInstanceUID")
-		collectionIDCol := safeStringCol(schema, cols, "collection_id")
-		studyDateCol   := safeStringCol(schema, cols, "StudyDate")
-		studyDescCol   := safeStringCol(schema, cols, "StudyDescription")
-		seriesNumCol   := safeStringCol(schema, cols, "SeriesNumber")
-		seriesDescCol  := safeStringCol(schema, cols, "SeriesDescription")
+		uidCol                := safeStringCol(schema, cols, "SeriesInstanceUID")
+		urlCol                := safeStringCol(schema, cols, "series_aws_url")
+		fileSizeCol           := safeFloat64Col(schema, cols, "series_size_MB")
+		collectionIDCol       := safeStringCol(schema, cols, "collection_id")
+		analysisResultCol     := safeStringCol(schema, cols, "analysis_result_id")
+		patientIDCol          := safeStringCol(schema, cols, "PatientID")
+		patientAgeCol         := safeStringCol(schema, cols, "PatientAge")
+		patientSexCol         := safeStringCol(schema, cols, "PatientSex")
+		studyUIDCol           := safeStringCol(schema, cols, "StudyInstanceUID")
+		studyDateCol          := safeStringCol(schema, cols, "StudyDate")
+		studyDescCol          := safeStringCol(schema, cols, "StudyDescription")
+		bodyPartCol           := safeStringCol(schema, cols, "BodyPartExamined")
+		modalityCol           := safeStringCol(schema, cols, "Modality")
+		sopClassUIDCol        := safeStringCol(schema, cols, "SOPClassUID")
+		sopClassNameCol       := safeStringCol(schema, cols, "sop_class_name")
+		transferSyntaxUIDCol  := safeStringCol(schema, cols, "TransferSyntaxUID")
+		transferSyntaxNameCol := safeStringCol(schema, cols, "transfer_syntax_name")
+		manufacturerCol       := safeStringCol(schema, cols, "Manufacturer")
+		manufacturerModelCol  := safeStringCol(schema, cols, "ManufacturerModelName")
+		seriesDateCol         := safeStringCol(schema, cols, "SeriesDate")
+		seriesNumCol          := safeStringCol(schema, cols, "SeriesNumber")
+		seriesDescCol         := safeStringCol(schema, cols, "SeriesDescription")
+		instanceCountCol      := safeInt64Col(schema, cols, "instanceCount")
+		licenseCol            := safeStringCol(schema, cols, "license_short_name")
+		awsBucketCol          := safeStringCol(schema, cols, "aws_bucket")
+		crdcUUIDCol           := safeStringCol(schema, cols, "crdc_series_uuid")
+		sourceDOICol          := safeStringCol(schema, cols, "source_DOI")
 
 		rows := int(rec.NumRows())
 		for i := 0; i < rows; i++ {
@@ -190,20 +241,42 @@ func loadSeriesMetadataFromParquet(
 			}
 
 			fileSize     := float64Val(fileSizeCol, i)
+			instanceCnt  := int64Val(instanceCountCol, i)
+			
 			entry := SeriesMetadata{
-				SeriesInstanceUID: uid,
-				series_aws_url:    url,
-				PatientID:         stringVal(patientIDCol, i),
-				StudyInstanceUID:  stringVal(studyUIDCol, i),
-				collection_id:     stringVal(collectionIDCol, i),
-				StudyDate:         stringVal(studyDateCol, i),
-				StudyDescription:  stringVal(studyDescCol, i),
-				SeriesNumber:      stringVal(seriesNumCol, i),
-				SeriesDescription: stringVal(seriesDescCol, i),
+			    SeriesInstanceUID:     uid,
+			    series_aws_url:        url,
+			    collection_id:         stringVal(collectionIDCol, i),
+			    analysis_result_id:    stringVal(analysisResultCol, i),
+			    PatientID:             stringVal(patientIDCol, i),
+			    PatientAge:            stringVal(patientAgeCol, i),
+			    PatientSex:            stringVal(patientSexCol, i),
+			    StudyInstanceUID:      stringVal(studyUIDCol, i),
+			    StudyDate:             stringVal(studyDateCol, i),
+			    StudyDescription:      stringVal(studyDescCol, i),
+			    BodyPartExamined:      stringVal(bodyPartCol, i),
+			    Modality:              stringVal(modalityCol, i),
+			    SOPClassUID:           stringVal(sopClassUIDCol, i),
+			    sop_class_name:        stringVal(sopClassNameCol, i),
+			    TransferSyntaxUID:     stringVal(transferSyntaxUIDCol, i),
+			    transfer_syntax_name:  stringVal(transferSyntaxNameCol, i),
+			    Manufacturer:          stringVal(manufacturerCol, i),
+			    ManufacturerModelName: stringVal(manufacturerModelCol, i),
+			    SeriesDate:            stringVal(seriesDateCol, i),
+			    SeriesNumber:          stringVal(seriesNumCol, i),
+			    SeriesDescription:     stringVal(seriesDescCol, i),
+			    license_short_name:    stringVal(licenseCol, i),
+			    aws_bucket:            stringVal(awsBucketCol, i),
+			    crdc_series_uuid:      stringVal(crdcUUIDCol, i),
+			    source_DOI:            stringVal(sourceDOICol, i),
 			}
 			if fileSize != nil {
-				entry.series_size_MB = *fileSize
+			    entry.series_size_MB = *fileSize
 			}
+			if instanceCnt != nil {
+			    entry.instanceCount = *instanceCnt
+			}
+
 			meta[url] = &entry
 			metaFromSeries[uid] = url
 		}
@@ -296,6 +369,9 @@ func decodeS5cmd(filePath string, outputDir string, processedSeries map[string]s
 
 	seriesMeta := make(map[string]*SeriesMetadata)
 	nbiaLookup := make(map[string]string)
+	
+	logger.Warnf("PARQUET: ")
+	logger.Warnf(options.IDCParquetPath)
 
 	loadSeriesMetadataFromParquet(
 		options.IDCParquetPath, "parquet/idc_index.parquet",
@@ -358,18 +434,32 @@ func decodeS5cmd(filePath string, outputDir string, processedSeries map[string]s
 
 	//  Attach Parquet metadata if available
 	if meta, ok := seriesMeta[originalURI]; ok {
-		fi.SeriesInstanceUID= meta.SeriesInstanceUID
-		fi.FileSize = strconv.FormatInt(
-			int64(meta.series_size_MB*1000*1000),
-			10,
-		)
-		fi.PatientID = meta.PatientID
-		fi.StudyInstanceUID = meta.StudyInstanceUID
-		fi.Collection = meta.collection_id
-		fi.StudyDate = meta.StudyDate
-		fi.StudyDesc = meta.StudyDescription
-		fi.SeriesNumber = meta.SeriesNumber
-		fi.SeriesDescription = meta.SeriesDescription
+	    fi.SeriesInstanceUID   = meta.SeriesInstanceUID
+	    fi.FileSize            = strconv.FormatInt(int64(meta.series_size_MB*1000*1000), 10)
+	    fi.PatientID           = meta.PatientID
+	    fi.PatientAge          = meta.PatientAge
+	    fi.PatientSex          = meta.PatientSex
+	    fi.StudyInstanceUID    = meta.StudyInstanceUID
+	    fi.Collection          = meta.collection_id
+	    fi.StudyDate           = meta.StudyDate
+	    fi.StudyDesc           = meta.StudyDescription
+	    fi.BodyPartExamined    = meta.BodyPartExamined
+	    fi.Modality            = meta.Modality
+	    fi.SOPClassUID         = meta.SOPClassUID
+	    fi.SOPClassName        = meta.sop_class_name
+	    fi.TransferSyntaxUID   = meta.TransferSyntaxUID
+	    fi.TransferSyntaxName  = meta.transfer_syntax_name
+	    fi.Manufacturer        = meta.Manufacturer
+	    fi.ManufacturerModelName = meta.ManufacturerModelName
+	    fi.SeriesDate          = meta.SeriesDate
+	    fi.SeriesNumber        = meta.SeriesNumber
+	    fi.SeriesDescription   = meta.SeriesDescription
+	    fi.InstanceCount       = meta.instanceCount
+	    fi.LicenseShortName    = meta.license_short_name
+	    fi.AWSBucket           = meta.aws_bucket
+	    fi.CRDCSeriesUUID      = meta.crdc_series_uuid
+	    fi.SourceDOI           = meta.source_DOI
+	    fi.AnalysisResultID    = meta.analysis_result_id
 	} else {
 		logger.Warnf("No parquet metadata found for series %s", originalURI)
 		continue;
@@ -410,6 +500,7 @@ if err := WriteAllMetadataToCSV(jobsToProcess, csvPath); err != nil {
 } else {
 	callbacks.emitStdout(fmt.Sprintf("Saved metadata for %d files to %s\n", len(jobsToProcess), csvPath))
 }
+InitCompletionStatus(outputDir, jobsToProcess)
 
 logger.Infof("Found %d s5cmd jobs to process (%d new, %d existing)", len(jobsToProcess), newJobs, len(jobsToProcess)-newJobs)
 return jobsToProcess, newJobs

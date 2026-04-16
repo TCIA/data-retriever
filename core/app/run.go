@@ -14,6 +14,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"encoding/csv"
 )
 
 // Summary captures the outcome of a download run.
@@ -418,6 +419,7 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 		if err := copyFile(options.Input, destPath); err != nil {
 			Logger.Warnf("Failed to copy spreadsheet to metadata folder: %v", err)
 		}
+		InitCompletionStatus(options.Output, files)
 	}
 
 	stats := &DownloadStats{Total: int32(len(files)), StartTime: time.Now()}
@@ -489,6 +491,8 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 	}
 	close(inputChan)
 	wg.Wait()
+
+	MergeCompletionStatus(options.Output)
 
 	callbacks.emitProgress(stats, "Complete", options.Debug)
 	if !options.Debug {
@@ -567,6 +571,7 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 			atomic.AddInt32(&wc.Stats.Skipped, 1)
 			updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
 			wc.emitSeriesEvent(fileInfo, "skipped", "Series already present (skip existing)", 100)
+			AppendCompletionStatus(wc.Options.Output, fileInfo.SeriesInstanceUID, nil, true)
 			return
 		}
 
@@ -575,6 +580,7 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 			atomic.AddInt32(&wc.Stats.Skipped, 1)
 			updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
 			wc.emitSeriesEvent(fileInfo, "skipped", "Series already present with expected size", 100)
+			AppendCompletionStatus(wc.Options.Output, fileInfo.SeriesInstanceUID, nil, true)
 			return
 		}
 	} else {
@@ -859,4 +865,91 @@ func isAuthError(err error) bool {
         strings.Contains(s, "403") ||
         strings.Contains(s, "Unauthorized") ||
         strings.Contains(s, "Forbidden")
+}
+
+// MergeCompletionStatus merges completion_status.csv into metadata.csv and removes the sidecar.
+func MergeCompletionStatus(outDir string) error {
+    metadataPath := filepath.Join(outDir, "metadata", "metadata.csv")
+    statusPath := filepath.Join(outDir, "metadata", "completion_status.csv")
+
+    // Read completion statuses into a map
+    sf, err := os.Open(statusPath)
+    if err != nil {
+        return fmt.Errorf("could not open completion status CSV: %w", err)
+    }
+    statusRecords, err := csv.NewReader(sf).ReadAll()
+    sf.Close()
+    if err != nil {
+        return fmt.Errorf("could not read completion status CSV: %w", err)
+    }
+
+    statusMap := make(map[string]string) // seriesUID -> status
+    for _, row := range statusRecords[1:] { // skip header
+        if len(row) >= 2 {
+            statusMap[row[0]] = row[1]
+        }
+    }
+
+    // Read metadata CSV
+    mf, err := os.Open(metadataPath)
+    if err != nil {
+        return fmt.Errorf("could not open metadata CSV: %w", err)
+    }
+    records, err := csv.NewReader(mf).ReadAll()
+    mf.Close()
+    if err != nil {
+        return fmt.Errorf("could not read metadata CSV: %w", err)
+    }
+    if len(records) == 0 {
+        return fmt.Errorf("metadata CSV is empty")
+    }
+
+    // Find SeriesInstanceUID column
+    header := records[0]
+    uidCol := -1
+    for i, h := range header {
+        if h == "SeriesInstanceUID" {
+            uidCol = i
+            break
+        }
+    }
+    if uidCol == -1 {
+        return fmt.Errorf("SeriesInstanceUID column not found in metadata CSV")
+    }
+
+    // Add completion_status column to header and rows
+    records[0] = append(header, "completion_status")
+    for i, row := range records[1:] {
+        uid := ""
+        if len(row) > uidCol {
+            uid = row[uidCol]
+        }
+        records[i+1] = append(row, statusMap[uid]) // empty string if not found
+    }
+
+    // Write back atomically
+    tmpPath := metadataPath + ".tmp"
+    out, err := os.Create(tmpPath)
+    if err != nil {
+        return fmt.Errorf("could not create temp file: %w", err)
+    }
+    w := csv.NewWriter(out)
+    if err := w.WriteAll(records); err != nil {
+        out.Close()
+        os.Remove(tmpPath)
+        return fmt.Errorf("could not write merged metadata CSV: %w", err)
+    }
+    w.Flush()
+    out.Close()
+
+    if err := os.Rename(tmpPath, metadataPath); err != nil {
+        return fmt.Errorf("could not replace metadata CSV: %w", err)
+    }
+
+    // Remove sidecar now that it's merged
+    if err := os.Remove(statusPath); err != nil {
+        logger.Warnf("Could not remove completion status sidecar: %v", err)
+    }
+
+    return nil
 }

@@ -100,14 +100,35 @@ func WriteAllMetadataToCSV(files []*FileInfo, outPath string) error {
 
 	// Build header from struct tags
 	fileType := reflect.TypeOf(FileInfo{})
-	header := []string{}
-	for i := 0; i < fileType.NumField(); i++ {
-		field := fileType.Field(i)
-		name := field.Tag.Get("csv")
-		if name == "" {
-			name = field.Name
+	numFields := fileType.NumField()
+
+	// First pass: determine which columns have at least one non-empty value
+	nonEmpty := make([]bool, numFields)
+	for _, file := range files {
+		v := reflect.ValueOf(file).Elem()
+		for i := 0; i < numFields; i++ {
+			if !nonEmpty[i] {
+				field := v.Field(i)
+				if field.Kind() == reflect.String && field.String() != "" {
+					nonEmpty[i] = true
+				}
+			}
 		}
-		header = append(header, name)
+	}
+
+	// Build filtered header using only non-empty columns
+	header := []string{}
+	activeIndices := []int{}
+	for i := 0; i < numFields; i++ {
+		if nonEmpty[i] {
+			field := fileType.Field(i)
+			name := field.Tag.Get("csv")
+			if name == "" {
+				name = field.Name
+			}
+			header = append(header, name)
+			activeIndices = append(activeIndices, i)
+		}
 	}
 
 	// Write header
@@ -115,16 +136,16 @@ func WriteAllMetadataToCSV(files []*FileInfo, outPath string) error {
 		return err
 	}
 
-	// Write data rows
+	// Write data rows using only active (non-empty) columns
 	for _, file := range files {
 		v := reflect.ValueOf(file).Elem()
 		row := []string{}
-		for i := 0; i < fileType.NumField(); i++ {
+		for _, i := range activeIndices {
 			field := v.Field(i)
 			if field.Kind() == reflect.String {
 				row = append(row, field.String())
 			} else {
-				row = append(row, "") // skip non-string fields for now
+				row = append(row, "")
 			}
 		}
 		if err := writer.Write(row); err != nil {
@@ -134,6 +155,7 @@ func WriteAllMetadataToCSV(files []*FileInfo, outPath string) error {
 
 	return nil
 }
+
 
 // writeMetadataToCSV writes/appends a slice of FileInfo structs to a CSV file.
 func writeMetadataToCSV(filePath string, fileInfos []*FileInfo) error {
@@ -207,4 +229,85 @@ func writeMetadataToCSV(filePath string, fileInfos []*FileInfo) error {
 	}
 
 	return nil
+}
+
+// InitCompletionStatus creates the completion status CSV with all series set to "incomplete".
+func InitCompletionStatus(outDir string, files []*FileInfo) error {
+    statusMu.Lock()
+    defer statusMu.Unlock()
+
+    filePath := filepath.Join(outDir, "metadata", "completion_status.csv")
+
+    f, err := os.Create(filePath)
+    if err != nil {
+        return fmt.Errorf("could not create completion status file: %w", err)
+    }
+    defer f.Close()
+
+    w := csv.NewWriter(f)
+    defer w.Flush()
+
+    if err := w.Write([]string{"SeriesInstanceUID", "completion_status"}); err != nil {
+        return fmt.Errorf("failed to write header: %w", err)
+    }
+
+    for _, file := range files {
+        if err := w.Write([]string{file.SeriesInstanceUID, "incomplete"}); err != nil {
+            return fmt.Errorf("failed to write row for %s: %w", file.SeriesInstanceUID, err)
+        }
+    }
+
+    return nil
+}
+
+func AppendCompletionStatus(outDir string, seriesUID string, dlErr error, skipped bool) error {
+    statusMu.Lock()
+    defer statusMu.Unlock()
+
+    var status string
+    switch {
+    case skipped:
+        status = StatusSkipped
+    case dlErr == nil:
+        status = StatusSuccess
+    default:
+        status = fmt.Sprintf("error: %v", dlErr)
+    }
+
+    filePath := filepath.Join(outDir, "metadata", "completion_status.csv")
+
+    f, err := os.Open(filePath)
+    if err != nil {
+        return fmt.Errorf("could not open completion status file: %w", err)
+    }
+    records, err := csv.NewReader(f).ReadAll()
+    f.Close()
+    if err != nil {
+        return fmt.Errorf("could not read completion status file: %w", err)
+    }
+
+    // Find and update the matching row
+    for i, row := range records[1:] {
+        if len(row) >= 1 && row[0] == seriesUID {
+            records[i+1][1] = status
+            break
+        }
+    }
+
+    // Write back atomically
+    tmpPath := filePath + ".tmp"
+    out, err := os.Create(tmpPath)
+    if err != nil {
+        return fmt.Errorf("could not create temp file: %w", err)
+    }
+    w := csv.NewWriter(out)
+    if err := w.WriteAll(records); err != nil {
+        out.Close()
+        os.Remove(tmpPath)
+        return fmt.Errorf("could not write completion status file: %w", err)
+    }
+    w.Flush()
+    out.Close()
+
+    return os.Rename(tmpPath, filePath)
 }
