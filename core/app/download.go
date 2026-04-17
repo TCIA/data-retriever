@@ -562,9 +562,7 @@ type FileInfo struct {
 func (info *FileInfo) getOutput(output string, options *Options) string {
 
 	var outputDir string
-	if options.DirectoryMode == "classic" {
-		outputDir = filepath.Join(output, info.Collection, info.PatientID, info.StudyInstanceUID, info.SeriesInstanceUID)
-	} else {
+	if options.DirectoryMode == "descriptive" {
 		cleanStudyDesc := strings.ReplaceAll(info.StudyDesc, "/", "")
 		cleanSeriesDesc := strings.ReplaceAll(info.SeriesDescription, "/", "")
 		studyUID := info.StudyInstanceUID
@@ -576,10 +574,11 @@ func (info *FileInfo) getOutput(output string, options *Options) string {
 			seriesUID = seriesUID[len(seriesUID)-5:]
 		}
 
-		outputDir = filepath.Join(output, info.Collection, info.PatientID, 
-		info.StudyDate + cleanStudyDesc[:min(54, len(cleanStudyDesc))] + studyUID,
-		info.SeriesNumber + cleanSeriesDesc[:min(54, len(cleanSeriesDesc))] + seriesUID)
-
+		outputDir = filepath.Join(output, info.Collection, info.PatientID,
+    	joinParts(info.StudyDate, cleanStudyDesc[:min(54, len(cleanStudyDesc))], studyUID),
+    	joinParts(info.SeriesNumber, cleanSeriesDesc[:min(54, len(cleanSeriesDesc))], seriesUID))
+	} else {
+		outputDir = filepath.Join(output, info.Collection, info.PatientID, info.StudyInstanceUID, info.SeriesInstanceUID)
 	}
 
 
@@ -1835,3 +1834,12 @@ func SeriesUpToDate(seriesDir string) bool {
 	return true
 }
 
+func joinParts(parts ...string) string {
+    var nonEmpty []string
+    for _, p := range parts {
+        if p != "" {
+            nonEmpty = append(nonEmpty, p)
+        }
+    }
+    return strings.Join(nonEmpty, "-")
+}
