@@ -466,16 +466,22 @@ func decodeS5cmd(filePath string, outputDir string, processedSeries map[string]s
 	}
 
 	var finalDirPath string
-	if options.DirectoryMode == "classic" {
-		finalDirPath = filepath.Join(outputDir, fi.Collection, fi.PatientID, fi.StudyInstanceUID, fi.SeriesInstanceUID)
-	} else {
-
+	if options.DirectoryMode == "descriptive" {
 		cleanStudyDesc := strings.ReplaceAll(fi.StudyDesc, "/", "")
 		cleanSeriesDesc := strings.ReplaceAll(fi.SeriesDescription, "/", "")
-
-		finalDirPath = filepath.Join(outputDir, fi.Collection, fi.PatientID, 
-		fi.StudyDate + cleanStudyDesc[:min(54, len(cleanStudyDesc))] + fi.StudyInstanceUID[len(fi.StudyInstanceUID) - 5:],
-		fi.SeriesNumber + cleanSeriesDesc[:min(54, len(cleanSeriesDesc))] + fi.SeriesInstanceUID[len(fi.SeriesInstanceUID) - 5:])
+		studyUID := fi.StudyInstanceUID
+		if len(studyUID) > 5 {
+			studyUID = studyUID[len(studyUID)-5:]
+		}
+		seriesUID := fi.SeriesInstanceUID
+		if len(seriesUID) > 5 {
+			seriesUID = seriesUID[len(seriesUID)-5:]
+		}
+		finalDirPath = filepath.Join(outputDir, fi.Collection, fi.PatientID,
+			joinParts(fi.StudyDate, cleanStudyDesc[:min(54, len(cleanStudyDesc))], studyUID),
+			joinParts(fi.SeriesNumber, cleanSeriesDesc[:min(54, len(cleanSeriesDesc))], seriesUID))
+	} else {
+		finalDirPath = filepath.Join(outputDir, fi.Collection, fi.PatientID, fi.StudyInstanceUID, fi.SeriesInstanceUID)
 	}
 
 	if err := os.MkdirAll(finalDirPath, 0755); err != nil {

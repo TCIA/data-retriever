@@ -28,8 +28,11 @@ import (
 )
 
 const (
-    StatusSuccess = "success"
-    StatusSkipped = "skipped"
+	StatusSuccess = "success"
+	StatusSkipped = "skipped"
+
+	tciaBatchSize         = 50 // series IDs per metadata request
+	tciaConcurrentBatches = 3  // max concurrent metadata requests
 )
 
 // ProgressFunc is a callback for reporting download progress.
@@ -376,62 +379,38 @@ func FetchMetadataForSeriesUIDs(ctx context.Context, seriesIDs []string, httpCli
 	return results, nil
 }
 
-func decodeTCIA(ctx context.Context, path string, httpClient *http.Client, options *Options, callbacks Callbacks) []*FileInfo {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	logger.Debugf("decoding tcia file: %s", path)
-
-	f, err := os.Open(path)
-	if err != nil {
-		logger.Fatal(err)
-	}
-	defer f.Close()
-
-	// Collect all series IDs
-	seriesIDs := make([]string, 0)
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if !strings.ContainsAny(line, "=") {
-			seriesIDs = append(seriesIDs, line)
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		logger.Errorf("error reading tcia file: %v", err)
-	}
-	callbacks.emitStdout(fmt.Sprintf("Found %d series to fetch metadata for\n", len(seriesIDs)))
-
-	if len(seriesIDs) == 0 {
-		return nil
-	}
-
-	// Prepare POST request with all series IDs (comma-separated)
+// fetchTCIABatch sends a single POST for the given series IDs and returns the parsed FileInfos.
+func fetchTCIABatch(ctx context.Context, ids []string, httpClient *http.Client) []*FileInfo {
 	data := url.Values{}
-	data.Set("list", strings.Join(seriesIDs, ","))
+	data.Set("list", strings.Join(ids, ","))
 	data.Set("format", "csv")
 
 	req, err := http.NewRequest("POST", MetaUrl, strings.NewReader(data.Encode()))
 	if err != nil {
-		logger.Errorf("Failed to create request: %v", err)
+		logger.Errorf("Failed to create metadata request: %v", err)
 		return nil
 	}
+	req = req.WithContext(ctx)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	resp, err := doRequest(httpClient, req)
 	if err != nil {
-		logger.Errorf("Request failed: %v", err)
+		logger.Errorf("Metadata request failed: %v", err)
 		return nil
 	}
 	defer resp.Body.Close()
 
 	content, err := io.ReadAll(resp.Body)
 	if err != nil {
-		logger.Errorf("Failed to read response data: %v", err)
+		logger.Errorf("Failed to read metadata response: %v", err)
 		return nil
 	}
 
-	// Parse CSV
+	return parseMetadataCSV(content)
+}
+
+// parseMetadataCSV parses the CSV body returned by the TCIA metadata endpoint.
+func parseMetadataCSV(content []byte) []*FileInfo {
 	reader := csv.NewReader(bytes.NewReader(content))
 	records, err := reader.ReadAll()
 	if err != nil {
@@ -440,13 +419,11 @@ func decodeTCIA(ctx context.Context, path string, httpClient *http.Client, optio
 		return nil
 	}
 	if len(records) < 2 {
-		logger.Errorf("CSV response contains no data rows")
 		return nil
 	}
 
 	headers := records[0]
 
-	// Build header → struct field map
 	fileInfoType := reflect.TypeOf(FileInfo{})
 	fieldMap := make(map[string]int)
 	for i := 0; i < fileInfoType.NumField(); i++ {
@@ -458,36 +435,159 @@ func decodeTCIA(ctx context.Context, path string, httpClient *http.Client, optio
 		fieldMap[name] = i
 	}
 
-	// Populate structs
 	files := make([]*FileInfo, 0, len(records)-1)
 	for _, row := range records[1:] {
 		file := &FileInfo{}
 		v := reflect.ValueOf(file).Elem()
-
 		for colIdx, colName := range headers {
-		    fieldIdx, ok := fieldMap[colName]
-		    if !ok || colIdx >= len(row) {
-		        continue
-		    }
-		    field := v.Field(fieldIdx)
-		    if !field.CanSet() {
-		        continue
-		    }
-		    switch field.Kind() {
-		    case reflect.String:
-		        field.SetString(row[colIdx])
-		    case reflect.Int64:
-		        if n, err := strconv.ParseInt(row[colIdx], 10, 64); err == nil {
-		            field.SetInt(n)
-		        }
-		    }
+			fieldIdx, ok := fieldMap[colName]
+			if !ok || colIdx >= len(row) {
+				continue
+			}
+			field := v.Field(fieldIdx)
+			if !field.CanSet() {
+				continue
+			}
+			switch field.Kind() {
+			case reflect.String:
+				field.SetString(row[colIdx])
+			case reflect.Int64:
+				if n, err := strconv.ParseInt(row[colIdx], 10, 64); err == nil {
+					field.SetInt(n)
+				}
+			}
 		}
-
 		files = append(files, file)
 	}
+	return files
+}
 
-	// Save all to a single CSV file
-	csvPath := filepath.Join(options.Output, "metadata",  "metadata.csv")
+// readTCIASeriesIDs parses a .tcia file and returns the series ID lines.
+func readTCIASeriesIDs(path string) ([]string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	var ids []string
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if !strings.ContainsAny(line, "=") {
+			ids = append(ids, line)
+		}
+	}
+	return ids, scanner.Err()
+}
+
+// decodeTCIAStreaming reads the series IDs from a .tcia file and returns the
+// total count plus a channel that receives *FileInfo values as metadata is
+// fetched in concurrent batches. The channel is closed when all batches have
+// been processed. Call this instead of decodeTCIA to let download workers start
+// on the first batch while the remaining batches are still in-flight.
+func decodeTCIAStreaming(ctx context.Context, path string, httpClient *http.Client, options *Options, callbacks Callbacks) (int, <-chan *FileInfo, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	seriesIDs, err := readTCIASeriesIDs(path)
+	if err != nil {
+		return 0, nil, fmt.Errorf("error reading tcia file: %w", err)
+	}
+
+	total := len(seriesIDs)
+	callbacks.emitStdout(fmt.Sprintf("Found %d series to fetch metadata for\n", total))
+
+	out := make(chan *FileInfo, tciaBatchSize)
+
+	if total == 0 {
+		close(out)
+		return 0, out, nil
+	}
+
+	// Build batch slices
+	batches := make([][]string, 0, (total+tciaBatchSize-1)/tciaBatchSize)
+	for i := 0; i < total; i += tciaBatchSize {
+		end := i + tciaBatchSize
+		if end > total {
+			end = total
+		}
+		batches = append(batches, seriesIDs[i:end])
+	}
+
+	go func() {
+		defer close(out)
+
+		sem := make(chan struct{}, tciaConcurrentBatches)
+		var wg sync.WaitGroup
+		var mu sync.Mutex
+		allFiles := make([]*FileInfo, 0, total)
+
+		for batchIdx, batch := range batches {
+			select {
+			case <-ctx.Done():
+				return
+			case sem <- struct{}{}:
+			}
+
+			wg.Add(1)
+			go func(idx int, ids []string) {
+				defer wg.Done()
+				defer func() { <-sem }()
+
+				batchFiles := fetchTCIABatch(ctx, ids, httpClient)
+
+				mu.Lock()
+				allFiles = append(allFiles, batchFiles...)
+				mu.Unlock()
+
+				callbacks.emitStdout(fmt.Sprintf("Fetched metadata batch %d/%d\n", idx+1, len(batches)))
+
+				for _, f := range batchFiles {
+					select {
+					case <-ctx.Done():
+						return
+					case out <- f:
+					}
+				}
+			}(batchIdx, batch)
+		}
+
+		wg.Wait()
+
+		csvPath := filepath.Join(options.Output, "metadata", "metadata.csv")
+		if err := WriteAllMetadataToCSV(allFiles, csvPath); err != nil {
+			logger.Errorf("Failed to save combined CSV: %v", err)
+		} else {
+			callbacks.emitStdout(fmt.Sprintf("Saved metadata for %d files to %s\n", len(allFiles), csvPath))
+		}
+		InitCompletionStatus(options.Output, allFiles)
+	}()
+
+	return total, out, nil
+}
+
+func decodeTCIA(ctx context.Context, path string, httpClient *http.Client, options *Options, callbacks Callbacks) []*FileInfo {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	logger.Debugf("decoding tcia file: %s", path)
+
+	seriesIDs, err := readTCIASeriesIDs(path)
+	if err != nil {
+		logger.Errorf("error reading tcia file: %v", err)
+		return nil
+	}
+	callbacks.emitStdout(fmt.Sprintf("Found %d series to fetch metadata for\n", len(seriesIDs)))
+
+	if len(seriesIDs) == 0 {
+		return nil
+	}
+
+	files := fetchTCIABatch(ctx, seriesIDs, httpClient)
+
+	csvPath := filepath.Join(options.Output, "metadata", "metadata.csv")
 	if err := WriteAllMetadataToCSV(files, csvPath); err != nil {
 		logger.Errorf("Failed to save combined CSV: %v", err)
 	} else {
