@@ -172,3 +172,14 @@ func setupCloseHandler(cancel context.CancelFunc) {
 		cancel()
 	}()
 }
+
+func (a *App) AgreeToLicense() {
+	// You can persist acceptance here (e.g. write a flag file) if you want
+	// to skip the dialog on subsequent launches. For now it's session-only.
+}
+
+// DeclineLicense is called by the frontend when the user clicks "Decline".
+// It exits the process cleanly.
+func (a *App) DeclineLicense() {
+	os.Exit(0)
+}

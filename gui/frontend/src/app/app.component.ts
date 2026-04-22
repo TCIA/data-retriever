@@ -10,8 +10,9 @@ import {
   IsMac,
   GetPendingFileOpen,
   FrontendReady,
-  ResolveAuth,   
-  CancelAuth,   
+  ResolveAuth,
+  CancelAuth,
+  DeclineLicense,
 } from '../../wailsjs/go/main/App';
 import { DownloadStatusService } from './services/download-status.service';
 import { RunState } from './models/run-state.model';
@@ -23,6 +24,10 @@ import { EventsOn, BrowserOpenURL } from '../../wailsjs/runtime/runtime';
   styleUrls: ['./app.component.scss'],
 })
 export class AppComponent implements OnInit, OnDestroy {
+  // ── License ───────────────────────────────────────────────────────────────
+  licenseAgreed = false;
+
+
   // ── Form state (shared across all runs) ──────────────────────────────────
   inputFilePath = '';
   outputDirPath = '';
@@ -30,8 +35,8 @@ export class AppComponent implements OnInit, OnDestroy {
   defaultDownloadDir = '';
   directoryMode: 'classic' | 'descriptive' = 'classic';
   isMac = false;
-  pendingAuthRunId: string | null = null
-  authErrorMessage: string = ''
+  pendingAuthRunId: string | null = null;
+  authErrorMessage: string = '';
 
   private lastAutoSetOutputPath = '';
 
@@ -40,9 +45,6 @@ export class AppComponent implements OnInit, OnDestroy {
   showManifestModal = false;
   showAuthModal = false;
 
-  // Set to true when Go is blocked waiting for auth credentials.
-  // When true, the advanced modal shows an auth-required prompt and
-  // closing/cancelling calls CancelAuth() instead of just dismissing.
   authRequired = false;
 
   maxConnections = 8;
@@ -101,17 +103,18 @@ export class AppComponent implements OnInit, OnDestroy {
 
     EventsOn('open:auth-modal', (runId: string) => {
       this.ngZone.run(() => {
-        this.pendingAuthRunId = runId;  // store it
+        this.pendingAuthRunId = runId;
         this.authRequired = true;
         this.showAuthModal = true;
       });
     });
+
     EventsOn('auth-error', (runId: string, message: string) => {
-  console.log('auth-error raw:', JSON.stringify(message));
-  this.ngZone.run(() => {
-    this.authErrorMessage = message;
-  });
-});
+      console.log('auth-error raw:', JSON.stringify(message));
+      this.ngZone.run(() => {
+        this.authErrorMessage = message;
+      });
+    });
 
     try {
       const pendingPath = await GetPendingFileOpen();
@@ -137,6 +140,17 @@ export class AppComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.runsSubscription?.unsubscribe();
+  }
+
+  // ── License ───────────────────────────────────────────────────────────────
+
+
+  onLicenseDeclined() {
+    DeclineLicense();
+  }
+
+  onLicenseAgreed() {
+    this.licenseAgreed = true;
   }
 
   // ── Aggregates across all runs ────────────────────────────────────────────
@@ -169,7 +183,6 @@ export class AppComponent implements OnInit, OnDestroy {
     this.showAdvancedModal = true;
   }
 
-
   confirmAuth() {
     if (!this.authFilePath || this.pendingAuthRunId === null) return;
     const runId = this.pendingAuthRunId;
@@ -177,7 +190,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.authErrorMessage = '';
     ResolveAuth(runId, path).catch(err => console.error('ResolveAuth error:', err));
   }
-  
+
   closeAdvancedModal() {
     if (this.authRequired && this.pendingAuthRunId !== null) {
       const runId = this.pendingAuthRunId;
@@ -197,7 +210,7 @@ export class AppComponent implements OnInit, OnDestroy {
     }
     this.showAuthModal = false;
   }
-  
+
   @HostListener('document:keydown.escape')
   handleEscapeKey() {
     if (this.showAuthModal) this.closeAuthModal();
@@ -207,7 +220,6 @@ export class AppComponent implements OnInit, OnDestroy {
 
   openManifestModal() { this.showManifestModal = true; }
   closeManifestModal() { this.showManifestModal = false; }
-
 
   // ── File / directory pickers ───────────────────────────────────────────────
 
