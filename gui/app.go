@@ -42,6 +42,12 @@ func (b *App) HandleFileOpen(filePath string) {
 
 }
 
+func isWindowsSystemPath(p string) bool {
+	lower := strings.ToLower(filepath.ToSlash(p))
+	return strings.Contains(lower, "/windows/system32") ||
+		strings.Contains(lower, "/windows/syswow64")
+}
+
 func dirExists(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && info.IsDir()
@@ -79,7 +85,16 @@ func (b *App) GetDefaultOutputDirectory() string {
 
 	switch stdRuntime.GOOS {
 	case "windows":
-		// Windows: %USERPROFILE%\Downloads (standard since Win 7)
+		// Prefer USERPROFILE over os.UserHomeDir, which can resolve to a
+		// system profile (e.g. C:\Windows\system32\config\systemprofile)
+		// when the process is spawned by an installer or service account.
+		if up := os.Getenv("USERPROFILE"); up != "" && !isWindowsSystemPath(up) {
+			home = up
+		} else if isWindowsSystemPath(home) {
+			// Last resort: walk up to a drive root rather than leaving
+			// the user stuck in a Windows system directory.
+			return ""
+		}
 		downloads := filepath.Join(home, "Downloads")
 		if dirExists(downloads) {
 			return downloads
@@ -148,19 +163,13 @@ func (b *App) OpenInputFileDialog() (string, error) {
 func (b *App) OpenOutputDirectoryDialog(inputFile string) (string, error) {
 	var result string
 	var err error
-	if (stdRuntime.GOOS == "darwin"){
-		defaultDir := b.GetDefaultOutputDirectory()
-
-		result, err = wailsRuntime.OpenDirectoryDialog(b.ctx, wailsRuntime.OpenDialogOptions{
-			Title:            "Download Directory",
-			DefaultDirectory: defaultDir,
-		})
+	defaultDir := b.GetDefaultOutputDirectory()
+	result, err = wailsRuntime.OpenDirectoryDialog(b.ctx, wailsRuntime.OpenDialogOptions{
+		Title:            "Download Directory",
+		DefaultDirectory: defaultDir,
+	})
+	if stdRuntime.GOOS == "darwin" {
 		result = filepath.Join(result, inputFile)
-
-	} else {
-		result, err = wailsRuntime.OpenDirectoryDialog(b.ctx, wailsRuntime.OpenDialogOptions{
-			Title: "Download Directory",
-		})
 	}
 	if err != nil {
 		return "", err
