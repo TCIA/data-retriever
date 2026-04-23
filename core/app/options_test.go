@@ -119,8 +119,8 @@ func TestParseOptions_Defaults(t *testing.T) {
 	if opt.Username != "nbia_guest" || opt.DirectoryMode != "" || opt.Auth != "" {
 		t.Fatalf("unexpected user/default string values: %+v", opt)
 	}
-	if ImageUrl != "https://services.cancerimagingarchive.net/nbia-api/services/v2/getImageWithMD5Hash" {
-		t.Fatalf("expected md5 endpoint by default, got %q", ImageUrl)
+	if ImageUrl != "https://services.cancerimagingarchive.net/nbia-api/services/v4/getImage" {
+		t.Fatalf("expected v4 image endpoint by default, got %q", ImageUrl)
 	}
 }
 
