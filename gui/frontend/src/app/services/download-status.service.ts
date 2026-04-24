@@ -54,6 +54,7 @@ interface RunInternal {
   lastByteSampleAt?: number;
   lastByteSampleValue?: number;
   bytesPerSecond?: number;
+  errorMessage?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -178,7 +179,10 @@ export class DownloadStatusService implements OnDestroy {
           const { run, message } = this.resolveRunAndMessage(payload, 'error');
           if (!run) return;
           run.status = 'error';
-          if (message) this.appendLog(run, `ERROR: ${message}`);
+          if (message) {
+            run.errorMessage = message;
+            this.appendLog(run, `ERROR: ${message}`);
+          }
           this.publishRun(run);
         });
       }
@@ -439,6 +443,7 @@ export class DownloadStatusService implements OnDestroy {
       completedAt: run.completedAt,
       bytesDownloaded: hasByteSample ? bytesDownloaded : undefined,
       bytesPerSecond: run.bytesPerSecond,
+      errorMessage: run.errorMessage,
     };
   }
 

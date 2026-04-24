@@ -519,6 +519,10 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 		return nil, fmt.Errorf("failed to decode input file: %w", err)
 	}
 
+	if spaceErr := checkDiskSpace(options.Output, files); spaceErr != nil {
+		return nil, spaceErr
+	}
+
 	seenQueued := make(map[string]struct{})
 	for _, f := range files {
 		if f == nil || f.SeriesInstanceUID == "" {

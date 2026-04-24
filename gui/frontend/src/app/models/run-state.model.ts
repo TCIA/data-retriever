@@ -21,4 +21,5 @@ export interface RunState {
   completedAt?: string;
   bytesDownloaded?: number;
   bytesPerSecond?: number;
+  errorMessage?: string;
 }

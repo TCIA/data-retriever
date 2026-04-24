@@ -61,14 +61,25 @@
   font-size: 13px;
   font-weight: 600;
   color: #666;
-  
+
   &.downloading {
     color: #2196f3;
   }
-  
+
   &.paused {
     color: #9e9e9e;
   }
+
+  &.error {
+    color: #e53935;
+  }
+}
+
+.card-error-message {
+  font-size: 11px;
+  color: #e53935;
+  margin-top: 2px;
+  word-break: break-word;
 }
 
 .card-path {
@@ -359,6 +370,14 @@
 
 :host-context(.dark-mode) .card-status.downloading {
   color: #64b5f6;
+}
+
+:host-context(.dark-mode) .card-status.error {
+  color: #ef9a9a;
+}
+
+:host-context(.dark-mode) .card-error-message {
+  color: #ef9a9a;
 }
 
 :host-context(.dark-mode) .bytes-info {

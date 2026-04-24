@@ -44,8 +44,12 @@
           <div class="card-title" [title]="title">{{ title }}</div>
           <div class="card-status"
                [class.downloading]="statusLabel === 'Downloading'"
-               [class.paused]="isPaused">
+               [class.paused]="isPaused"
+               [class.error]="run.status === 'error'">
             {{ statusLabel }}
+          </div>
+          <div class="card-error-message" *ngIf="run.status === 'error' && run.errorMessage">
+            {{ run.errorMessage }}
           </div>
           <div class="card-path" [title]="run.inputFilePath">{{ run.inputFilePath }}</div>
         </div>
