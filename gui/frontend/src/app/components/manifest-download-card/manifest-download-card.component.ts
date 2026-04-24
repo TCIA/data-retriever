@@ -126,10 +126,6 @@ export class ManifestDownloadCardComponent {
     return `${completed} / ${total} completed`;
   }
 
-  get hasTransferRate(): boolean {
-    return typeof this.run?.bytesPerSecond === 'number' && this.run.bytesPerSecond >= 0;
-  }
-
   get currentActiveSeries(): SeriesDownloadSnapshot | null {
     const series = this.run?.series ?? [];
     let latest: SeriesDownloadSnapshot | null = null;

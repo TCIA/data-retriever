@@ -102,10 +102,9 @@
         </div>
       </div>
 
-      <div class="transfer-status" *ngIf="showTransferSpinner || hasTransferRate || transferStatusText">
+      <div class="transfer-status" *ngIf="showTransferSpinner || transferStatusText">
         <span class="spinner" *ngIf="showTransferSpinner" aria-hidden="true"></span>
         <span class="transfer-detail" *ngIf="transferStatusText" [title]="transferStatusText">{{ transferStatusText }}</span>
-        <span class="transfer-rate" *ngIf="hasTransferRate">{{ (run.bytesPerSecond ?? 0) | bytes:2 }}/s</span>
       </div>
 
     </div>
