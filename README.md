@@ -163,10 +163,9 @@ Launch with `--cli` (or `-cli`) to skip the GUI entirely:
 | `--metadata-workers` | | `20` | Parallel metadata fetch workers |
 | `--server-friendly` | | off | Conservative settings to avoid rate-limiting |
 | `--proxy` | `-x` | — | HTTP or SOCKS5 proxy URL |
-| `--user` | `-u` | `nbia_guest` | NBIA username |
-| `--passwd` | | — | NBIA password |
 | `--prompt` | `-w` | off | Prompt for password interactively |
 | `--save-log` | | off | Write progress log to file |
+| `--accept-data-policy` | | off | Accept the TCIA data usage policy without interactive prompt |
 | `--debug` | | off | Verbose debug output |
 | `--version` | `-v` | | Print version info |
 | `--help` | `-h` | | Show help |
