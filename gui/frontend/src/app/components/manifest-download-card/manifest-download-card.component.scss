@@ -172,6 +172,16 @@
   color: #5f6f82;
 }
 
+.transfer-detail {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4a5a6b;
+  max-width: 420px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .bytes-info {
   margin-top: 8px;
   padding-top: 8px;
@@ -404,6 +414,9 @@
 }
 :host-context(.dark-mode) .transfer-status {
   border-top-color: #444;
+}
+:host-context(.dark-mode) .transfer-detail {
+  color: #b9c7d8;
 }
 :host-context(.dark-mode) .completion-fraction {
   color: #e0e0e0;

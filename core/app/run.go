@@ -3,6 +3,7 @@ package app
 import (
 	"bufio"
 	"context"
+	"encoding/csv"
 	"errors"
 	"fmt"
 	"math"
@@ -14,7 +15,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	"encoding/csv"
 )
 
 // Summary captures the outcome of a download run.
@@ -29,18 +29,17 @@ type Summary struct {
 
 // Callbacks allows callers to intercept CLI-style output.
 type Callbacks struct {
-	Stdout   func(string)
-	Stderr   func(string)
-	Series   func(SeriesEvent)
-	Manifest func(ManifestPayload)
-  EmitEvent func(name string, data ...interface{}) 
-
+	Stdout    func(string)
+	Stderr    func(string)
+	Series    func(SeriesEvent)
+	Manifest  func(ManifestPayload)
+	EmitEvent func(name string, data ...interface{})
 }
 
 func (cb Callbacks) emitEvent(name string, data ...interface{}) {
-    if cb.EmitEvent != nil {
-        cb.EmitEvent(name, data...)
-    }
+	if cb.EmitEvent != nil {
+		cb.EmitEvent(name, data...)
+	}
 }
 
 func (cb Callbacks) emitStdout(msg string) {
@@ -112,7 +111,37 @@ const (
 	seriesPhaseDecompress = "decompress"
 	seriesPhaseComplete   = "complete"
 	seriesPhaseFailure    = "failed"
+
+	seriesStatusQueued            = "queued"
+	seriesStatusWorkerInitiated   = "worker-initiated"
+	seriesStatusPreCheck          = "pre-check"
+	seriesStatusMetadata          = "metadata"
+	seriesStatusDownloadInitiated = "download-initiated"
+	seriesStatusDownloading       = "downloading"
+	seriesStatusDecompressing     = "decompressing"
+	seriesStatusSucceeded         = "succeeded"
+	seriesStatusFailed            = "failed"
+	seriesStatusCancelled         = "cancelled"
+	seriesStatusSkipped           = "skipped"
+
+	downloadHeartbeatInterval = 5 * time.Second
 )
+
+func seriesDisplayLabel(file *FileInfo) string {
+	if file == nil {
+		return "series"
+	}
+
+	if description := strings.TrimSpace(file.SeriesDescription); description != "" {
+		return description
+	}
+
+	if seriesUID := strings.TrimSpace(file.SeriesInstanceUID); seriesUID != "" {
+		return seriesUID
+	}
+
+	return "series"
+}
 
 func emitManifestMetadata(callbacks Callbacks, manifestPath string, files []*FileInfo) {
 	if callbacks.Manifest == nil || len(files) == 0 {
@@ -194,7 +223,7 @@ func newSeriesEvent(file *FileInfo, status, message string, progress float64) Se
 			Progress: progress,
 			Phase:    resolvePhase(status),
 			PhaseProgress: func() float64 {
-				if status == "succeeded" || status == "failed" || status == "cancelled" || status == "skipped" {
+				if isTerminalSeriesStatus(status) {
 					return 100
 				}
 				return progress
@@ -213,7 +242,7 @@ func newSeriesEvent(file *FileInfo, status, message string, progress float64) Se
 		Progress:          progress,
 		Phase:             resolvePhase(status),
 		PhaseProgress: func() float64 {
-			if status == "succeeded" || status == "failed" || status == "cancelled" || status == "skipped" {
+			if isTerminalSeriesStatus(status) {
 				return 100
 			}
 			return progress
@@ -225,17 +254,17 @@ func newSeriesEvent(file *FileInfo, status, message string, progress float64) Se
 
 func resolvePhase(status string) string {
 	switch status {
-	case "queued":
+	case seriesStatusQueued, seriesStatusWorkerInitiated, seriesStatusPreCheck:
 		return seriesPhaseQueued
-	case "metadata":
+	case seriesStatusMetadata:
 		return seriesPhaseMetadata
-	case "downloading":
+	case seriesStatusDownloadInitiated, seriesStatusDownloading:
 		return seriesPhaseDownload
-	case "decompressing":
+	case seriesStatusDecompressing:
 		return seriesPhaseDecompress
-	case "succeeded", "skipped":
+	case seriesStatusSucceeded, seriesStatusSkipped:
 		return seriesPhaseComplete
-	case "failed", "cancelled":
+	case seriesStatusFailed, seriesStatusCancelled:
 		return seriesPhaseFailure
 	default:
 		return ""
@@ -278,8 +307,8 @@ type WorkerContext struct {
 	WorkerID   int
 	Callbacks  Callbacks
 	EventGate  *SeriesEventGate
-  AuthGate  *AuthGate
-  EmitEvent func(string, ...interface{}) // wrap runtime.EventsEmit
+	AuthGate   *AuthGate
+	EmitEvent  func(string, ...interface{}) // wrap runtime.EventsEmit
 }
 
 // SeriesEventGate throttles interim per-series events while always allowing
@@ -335,7 +364,7 @@ func (g *SeriesEventGate) Allow(evt SeriesEvent) bool {
 
 func isInterimSeriesStatus(status string) bool {
 	switch status {
-	case "metadata", "downloading", "decompressing":
+	case seriesStatusMetadata, seriesStatusDownloading, seriesStatusDecompressing:
 		return true
 	default:
 		return false
@@ -344,7 +373,7 @@ func isInterimSeriesStatus(status string) bool {
 
 func isTerminalSeriesStatus(status string) bool {
 	switch status {
-	case "succeeded", "failed", "cancelled", "skipped":
+	case seriesStatusSucceeded, seriesStatusFailed, seriesStatusCancelled, seriesStatusSkipped:
 		return true
 	default:
 		return false
@@ -356,7 +385,20 @@ func alwaysEmitSeriesEvent(evt SeriesEvent) bool {
 		return true
 	}
 
-	return evt.Status == "downloading" && strings.Contains(strings.ToLower(evt.Message), "download started")
+	if evt.Status == seriesStatusDownloading && strings.Contains(strings.ToLower(evt.Message), "in progress") {
+		return true
+	}
+
+	switch evt.Status {
+	case seriesStatusQueued,
+		seriesStatusWorkerInitiated,
+		seriesStatusPreCheck,
+		seriesStatusMetadata,
+		seriesStatusDownloadInitiated:
+		return true
+	default:
+		return false
+	}
 }
 
 // Run executes the shared download workflow.
@@ -406,7 +448,7 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 			continue
 		}
 		seenQueued[f.SeriesInstanceUID] = struct{}{}
-		callbacks.emitSeries(newSeriesEvent(f, "queued", "Queued for download", 0))
+		callbacks.emitSeries(newSeriesEvent(f, seriesStatusQueued, fmt.Sprintf("Queued for download: %s", seriesDisplayLabel(f)), 0))
 	}
 
 	ext := strings.ToLower(filepath.Ext(options.Input))
@@ -446,8 +488,6 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 		gen3Auth = &Gen3AuthManager{}
 	}
 
-
-
 	workerCtx := WorkerContext{
 		Context:    ctx,
 		HTTPClient: client,
@@ -456,7 +496,7 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 		Stats:      stats,
 		Callbacks:  callbacks,
 		EventGate:  NewSeriesEventGate(options.InterimUpdateInterval),
-    AuthGate:  &AuthGate{},
+		AuthGate:   &AuthGate{},
 	}
 
 	summary := &Summary{Total: int32(len(files))}
@@ -552,16 +592,19 @@ func (wc *WorkerContext) emitSeries(evt SeriesEvent) {
 
 func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 	updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
+	displayName := seriesDisplayLabel(fileInfo)
+
+	wc.emitSeriesEvent(fileInfo, seriesStatusWorkerInitiated, fmt.Sprintf("[Worker %d] Worker initiated for %s", wc.WorkerID, displayName), 5)
 
 	isSpreadsheetInput := fileInfo.DownloadURL != "" || fileInfo.DRSURI != "" || fileInfo.S5cmdManifestPath != ""
 
 	if wc.Options.Meta {
-		wc.emitSeriesEvent(fileInfo, "metadata", fmt.Sprintf("[Worker %d] Fetching metadata", wc.WorkerID), 25)
+		wc.emitSeriesEvent(fileInfo, seriesStatusMetadata, fmt.Sprintf("[Worker %d] Metadata fetch initiated for %s", wc.WorkerID, displayName), 25)
 		wc.handleMetadataOnly(fileInfo, isSpreadsheetInput)
 		return
 	}
 
-	wc.emitSeriesEvent(fileInfo, "downloading", fmt.Sprintf("[Worker %d] Preparing download", wc.WorkerID), 25)
+	wc.emitSeriesEvent(fileInfo, seriesStatusPreCheck, fmt.Sprintf("[Worker %d] Running pre-checks for %s", wc.WorkerID, displayName), 15)
 
 	//handle needs download so that all s5cmd downloads need download.  that way they can sync properly instead of being skipped
 
@@ -570,7 +613,7 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 			Logger.Debugf("[Worker %d] Skip existing %s", wc.WorkerID, fileInfo.SeriesInstanceUID)
 			atomic.AddInt32(&wc.Stats.Skipped, 1)
 			updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
-			wc.emitSeriesEvent(fileInfo, "skipped", "Series already present (skip existing)", 100)
+			wc.emitSeriesEvent(fileInfo, seriesStatusSkipped, fmt.Sprintf("Series already present (skip existing): %s", displayName), 100)
 			AppendCompletionStatus(wc.Options.Output, fileInfo.SeriesInstanceUID, nil, true)
 			return
 		}
@@ -579,7 +622,7 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 			Logger.Debugf("[Worker %d] Skip %s (already exists with correct size/checksum)", wc.WorkerID, fileInfo.SeriesInstanceUID)
 			atomic.AddInt32(&wc.Stats.Skipped, 1)
 			updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
-			wc.emitSeriesEvent(fileInfo, "skipped", "Series already present with expected size", 100)
+			wc.emitSeriesEvent(fileInfo, seriesStatusSkipped, fmt.Sprintf("Series already present with expected size: %s", displayName), 100)
 			AppendCompletionStatus(wc.Options.Output, fileInfo.SeriesInstanceUID, nil, true)
 			return
 		}
@@ -588,13 +631,14 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 	}
 
 	if wc.Context.Err() != nil {
-		wc.emitSeriesEvent(fileInfo, "cancelled", "Download cancelled", 100)
+		wc.emitSeriesEvent(fileInfo, seriesStatusCancelled, fmt.Sprintf("Download cancelled: %s", displayName), 100)
 		return
 	}
 
-	wc.emitSeriesEvent(fileInfo, "downloading", fmt.Sprintf("[Worker %d] Download started", wc.WorkerID), 0)
+	wc.emitSeriesEvent(fileInfo, seriesStatusDownloadInitiated, fmt.Sprintf("[Worker %d] Download initiated for %s", wc.WorkerID, displayName), 30)
 
 	var lastCompressedTotal int64
+	var lastDownloadHeartbeat time.Time
 	// Create progress callback that emits series events with bytes info during download phase
 	onProgress := func(percent float64, bytesDownloaded int64, bytesTotal int64) {
 		if bytesTotal > 0 {
@@ -604,19 +648,28 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 		} else if bytesDownloaded > lastCompressedTotal {
 			lastCompressedTotal = bytesDownloaded
 		}
+
+		now := time.Now()
+		message := ""
+		if lastDownloadHeartbeat.IsZero() || now.Sub(lastDownloadHeartbeat) >= downloadHeartbeatInterval {
+			message = fmt.Sprintf("[Worker %d] Download of %s in progress", wc.WorkerID, displayName)
+			lastDownloadHeartbeat = now
+		}
+
 		evt := SeriesEvent{
 			SeriesInstanceUID: fileInfo.SeriesInstanceUID,
 			StudyInstanceUID:  fileInfo.StudyInstanceUID,
 			PatientID:         fileInfo.PatientID,
 			SeriesDescription: fileInfo.SeriesDescription,
 			Modality:          fileInfo.Modality,
-			Status:            "downloading",
+			Status:            seriesStatusDownloading,
 			Progress:          clampProgress(percent),
 			Phase:             seriesPhaseDownload,
 			PhaseProgress:     clampProgress(percent),
 			BytesDownloaded:   bytesDownloaded,
 			BytesTotal:        bytesTotal,
-			Timestamp:         time.Now(),
+			Message:           message,
+			Timestamp:         now,
 		}
 		wc.emitSeries(evt)
 	}
@@ -641,7 +694,7 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 			PatientID:         fileInfo.PatientID,
 			SeriesDescription: fileInfo.SeriesDescription,
 			Modality:          fileInfo.Modality,
-			Status:            "decompressing",
+			Status:            seriesStatusDecompressing,
 			Progress:          clampProgress(percent),
 			Phase:             seriesPhaseDecompress,
 			PhaseProgress:     clampProgress(percent),
@@ -656,52 +709,51 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 
 	localAuth := *wc.Gen3Auth
 
-  err := fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.Options, onProgress, onDecompress, &localAuth)
+	err := fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.Options, onProgress, onDecompress, &localAuth)
 
 	if err != nil && isAuthError(err) && wc.Options.AuthGate != nil {
-	    // Distinguish format failure (already caught in Run) vs server rejection
-			Logger.Warnf("DEBUG auth check: err=%v, Auth=%q, isAuthErr=%v", err, wc.Options.Auth, isAuthError(err))
+		// Distinguish format failure (already caught in Run) vs server rejection
+		Logger.Warnf("DEBUG auth check: err=%v, Auth=%q, isAuthErr=%v", err, wc.Options.Auth, isAuthError(err))
 
-	    if wc.Options.Auth != "" {
-	        if _, fmtErr := NewGen3AuthManager(wc.HTTPClient, wc.Options.Auth); fmtErr != nil {
-	            wc.Callbacks.emitEvent("auth-error", fmt.Sprintf("Auth file has invalid format: %s", fmtErr.Error()))
-	        } else {
-	            wc.Callbacks.emitEvent("auth-error", "Credentials file was rejected by the server (expired or insufficient permissions).")
-	        }
-	    }
+		if wc.Options.Auth != "" {
+			if _, fmtErr := NewGen3AuthManager(wc.HTTPClient, wc.Options.Auth); fmtErr != nil {
+				wc.Callbacks.emitEvent("auth-error", fmt.Sprintf("Auth file has invalid format: %s", fmtErr.Error()))
+			} else {
+				wc.Callbacks.emitEvent("auth-error", "Credentials file was rejected by the server (expired or insufficient permissions).")
+			}
+		}
 	}
 
 	for err != nil && isAuthError(err) && wc.Options.AuthGate != nil {
-	    resolvedPath := wc.Options.AuthGate.WaitForAuth(func() {
-	        wc.Callbacks.emitEvent("open:auth-modal")
-	    })
-	
-	    if resolvedPath == "" {
-	        break
-	    }
-	
-    	newAuth, authErr := NewGen3AuthManager(wc.HTTPClient, resolvedPath)
-    	if authErr != nil {
-    	    wc.Callbacks.emitEvent("auth-error", fmt.Sprintf("Invalid auth file: %s", authErr.Error()))
-    	    wc.Options.AuthGate.PrepareRetry()
-    	    continue
-    	}
-	
-	    localAuth = *newAuth
-	    err = fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.Options, onProgress, onDecompress, &localAuth)
-	  	if err != nil && isAuthError(err) {
-    	    wc.Callbacks.emitEvent("auth-error", "Credentials file was rejected by the server (expired or insufficient permissions).")
-    	    wc.Options.AuthGate.PrepareRetry()
-    	}
+		resolvedPath := wc.Options.AuthGate.WaitForAuth(func() {
+			wc.Callbacks.emitEvent("open:auth-modal")
+		})
+
+		if resolvedPath == "" {
+			break
+		}
+
+		newAuth, authErr := NewGen3AuthManager(wc.HTTPClient, resolvedPath)
+		if authErr != nil {
+			wc.Callbacks.emitEvent("auth-error", fmt.Sprintf("Invalid auth file: %s", authErr.Error()))
+			wc.Options.AuthGate.PrepareRetry()
+			continue
+		}
+
+		localAuth = *newAuth
+		err = fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.Options, onProgress, onDecompress, &localAuth)
+		if err != nil && isAuthError(err) {
+			wc.Callbacks.emitEvent("auth-error", "Credentials file was rejected by the server (expired or insufficient permissions).")
+			wc.Options.AuthGate.PrepareRetry()
+		}
 	}
 
-	
 	if err != nil {
-	    Logger.Warnf("[Worker %d] Download %s failed - %s", wc.WorkerID, fileInfo.SeriesInstanceUID, err)
-	    atomic.AddInt32(&wc.Stats.Failed, 1)
-	    updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
-	    wc.emitSeriesEvent(fileInfo, "failed", err.Error(), 100)
-	    return
+		Logger.Warnf("[Worker %d] Download %s failed - %s", wc.WorkerID, fileInfo.SeriesInstanceUID, err)
+		atomic.AddInt32(&wc.Stats.Failed, 1)
+		updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
+		wc.emitSeriesEvent(fileInfo, seriesStatusFailed, err.Error(), 100)
+		return
 	}
 
 	if fileInfo.IsSyncJob {
@@ -711,30 +763,32 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 	}
 
 	updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
-	wc.emitSeriesEvent(fileInfo, "succeeded", "Download completed", 100)
+	wc.emitSeriesEvent(fileInfo, seriesStatusSucceeded, fmt.Sprintf("Download completed: %s", displayName), 100)
 }
 
 func (wc *WorkerContext) handleMetadataOnly(fileInfo *FileInfo, isSpreadsheetInput bool) {
+	displayName := seriesDisplayLabel(fileInfo)
+
 	if isSpreadsheetInput {
 		Logger.Debugf("[Worker %d] Skipping metadata for item %s", wc.WorkerID, fileInfo.SeriesInstanceUID)
 		atomic.AddInt32(&wc.Stats.Skipped, 1)
 		updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
-		wc.emitSeriesEvent(fileInfo, "skipped", "Spreadsheet inputs do not expose metadata", 100)
+		wc.emitSeriesEvent(fileInfo, seriesStatusSkipped, fmt.Sprintf("Spreadsheet inputs do not expose metadata: %s", displayName), 100)
 		return
 	}
 
-	wc.emitSeriesEvent(fileInfo, "metadata", fmt.Sprintf("[Worker %d] Saving metadata", wc.WorkerID), 60)
+	wc.emitSeriesEvent(fileInfo, seriesStatusMetadata, fmt.Sprintf("[Worker %d] Saving metadata for %s", wc.WorkerID, displayName), 60)
 	if err := fileInfo.GetMeta(wc.Context, wc.Options.Output); err != nil {
 		Logger.Warnf("[Worker %d] Save meta info %s failed - %s", wc.WorkerID, fileInfo.SeriesInstanceUID, err)
 		atomic.AddInt32(&wc.Stats.Failed, 1)
-		wc.emitSeriesEvent(fileInfo, "failed", err.Error(), 100)
+		wc.emitSeriesEvent(fileInfo, seriesStatusFailed, err.Error(), 100)
 	} else {
 		if fileInfo.IsSyncJob {
 			atomic.AddInt32(&wc.Stats.Synced, 1)
 		} else {
 			atomic.AddInt32(&wc.Stats.Downloaded, 1)
 		}
-		wc.emitSeriesEvent(fileInfo, "succeeded", "Metadata saved", 100)
+		wc.emitSeriesEvent(fileInfo, seriesStatusSucceeded, fmt.Sprintf("Metadata saved: %s", displayName), 100)
 	}
 	updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
 }
@@ -857,99 +911,99 @@ func decodeInputFile(ctx context.Context, filePath string, client *http.Client, 
 }
 
 func isAuthError(err error) bool {
-    if err == nil {
-        return false
-    }
-    s := err.Error()
-    return strings.Contains(s, "401") ||
-        strings.Contains(s, "403") ||
-        strings.Contains(s, "Unauthorized") ||
-        strings.Contains(s, "Forbidden")
+	if err == nil {
+		return false
+	}
+	s := err.Error()
+	return strings.Contains(s, "401") ||
+		strings.Contains(s, "403") ||
+		strings.Contains(s, "Unauthorized") ||
+		strings.Contains(s, "Forbidden")
 }
 
 // MergeCompletionStatus merges completion_status.csv into metadata.csv and removes the sidecar.
 func MergeCompletionStatus(outDir string) error {
-    metadataPath := filepath.Join(outDir, "metadata", "metadata.csv")
-    statusPath := filepath.Join(outDir, "metadata", "completion_status.csv")
+	metadataPath := filepath.Join(outDir, "metadata", "metadata.csv")
+	statusPath := filepath.Join(outDir, "metadata", "completion_status.csv")
 
-    // Read completion statuses into a map
-    sf, err := os.Open(statusPath)
-    if err != nil {
-        return fmt.Errorf("could not open completion status CSV: %w", err)
-    }
-    statusRecords, err := csv.NewReader(sf).ReadAll()
-    sf.Close()
-    if err != nil {
-        return fmt.Errorf("could not read completion status CSV: %w", err)
-    }
+	// Read completion statuses into a map
+	sf, err := os.Open(statusPath)
+	if err != nil {
+		return fmt.Errorf("could not open completion status CSV: %w", err)
+	}
+	statusRecords, err := csv.NewReader(sf).ReadAll()
+	sf.Close()
+	if err != nil {
+		return fmt.Errorf("could not read completion status CSV: %w", err)
+	}
 
-    statusMap := make(map[string]string) // seriesUID -> status
-    for _, row := range statusRecords[1:] { // skip header
-        if len(row) >= 2 {
-            statusMap[row[0]] = row[1]
-        }
-    }
+	statusMap := make(map[string]string)    // seriesUID -> status
+	for _, row := range statusRecords[1:] { // skip header
+		if len(row) >= 2 {
+			statusMap[row[0]] = row[1]
+		}
+	}
 
-    // Read metadata CSV
-    mf, err := os.Open(metadataPath)
-    if err != nil {
-        return fmt.Errorf("could not open metadata CSV: %w", err)
-    }
-    records, err := csv.NewReader(mf).ReadAll()
-    mf.Close()
-    if err != nil {
-        return fmt.Errorf("could not read metadata CSV: %w", err)
-    }
-    if len(records) == 0 {
-        return fmt.Errorf("metadata CSV is empty")
-    }
+	// Read metadata CSV
+	mf, err := os.Open(metadataPath)
+	if err != nil {
+		return fmt.Errorf("could not open metadata CSV: %w", err)
+	}
+	records, err := csv.NewReader(mf).ReadAll()
+	mf.Close()
+	if err != nil {
+		return fmt.Errorf("could not read metadata CSV: %w", err)
+	}
+	if len(records) == 0 {
+		return fmt.Errorf("metadata CSV is empty")
+	}
 
-    // Find SeriesInstanceUID column
-    header := records[0]
-    uidCol := -1
-    for i, h := range header {
-        if h == "SeriesInstanceUID" {
-            uidCol = i
-            break
-        }
-    }
-    if uidCol == -1 {
-        return fmt.Errorf("SeriesInstanceUID column not found in metadata CSV")
-    }
+	// Find SeriesInstanceUID column
+	header := records[0]
+	uidCol := -1
+	for i, h := range header {
+		if h == "SeriesInstanceUID" {
+			uidCol = i
+			break
+		}
+	}
+	if uidCol == -1 {
+		return fmt.Errorf("SeriesInstanceUID column not found in metadata CSV")
+	}
 
-    // Add completion_status column to header and rows
-    records[0] = append(header, "completion_status")
-    for i, row := range records[1:] {
-        uid := ""
-        if len(row) > uidCol {
-            uid = row[uidCol]
-        }
-        records[i+1] = append(row, statusMap[uid]) // empty string if not found
-    }
+	// Add completion_status column to header and rows
+	records[0] = append(header, "completion_status")
+	for i, row := range records[1:] {
+		uid := ""
+		if len(row) > uidCol {
+			uid = row[uidCol]
+		}
+		records[i+1] = append(row, statusMap[uid]) // empty string if not found
+	}
 
-    // Write back atomically
-    tmpPath := metadataPath + ".tmp"
-    out, err := os.Create(tmpPath)
-    if err != nil {
-        return fmt.Errorf("could not create temp file: %w", err)
-    }
-    w := csv.NewWriter(out)
-    if err := w.WriteAll(records); err != nil {
-        out.Close()
-        os.Remove(tmpPath)
-        return fmt.Errorf("could not write merged metadata CSV: %w", err)
-    }
-    w.Flush()
-    out.Close()
+	// Write back atomically
+	tmpPath := metadataPath + ".tmp"
+	out, err := os.Create(tmpPath)
+	if err != nil {
+		return fmt.Errorf("could not create temp file: %w", err)
+	}
+	w := csv.NewWriter(out)
+	if err := w.WriteAll(records); err != nil {
+		out.Close()
+		os.Remove(tmpPath)
+		return fmt.Errorf("could not write merged metadata CSV: %w", err)
+	}
+	w.Flush()
+	out.Close()
 
-    if err := os.Rename(tmpPath, metadataPath); err != nil {
-        return fmt.Errorf("could not replace metadata CSV: %w", err)
-    }
+	if err := os.Rename(tmpPath, metadataPath); err != nil {
+		return fmt.Errorf("could not replace metadata CSV: %w", err)
+	}
 
-    // Remove sidecar now that it's merged
-    if err := os.Remove(statusPath); err != nil {
-        logger.Warnf("Could not remove completion status sidecar: %v", err)
-    }
+	// Remove sidecar now that it's merged
+	if err := os.Remove(statusPath); err != nil {
+		logger.Warnf("Could not remove completion status sidecar: %v", err)
+	}
 
-    return nil
+	return nil
 }
