@@ -1,6 +1,9 @@
 export type SeriesDownloadStatus =
   | 'queued'
+  | 'worker-initiated'
+  | 'pre-check'
   | 'metadata'
+  | 'download-initiated'
   | 'downloading'
   | 'decompressing'
   | 'skipped'

@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -13,7 +14,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"io"
 )
 
 var ansiEscapePattern = regexp.MustCompile(`\x1b\[[0-9;]*[A-Za-z]`)
@@ -56,15 +56,15 @@ func NewTextEventLogger(filePath string, runStart time.Time, interval time.Durat
 	}
 
 	multi := io.MultiWriter(f, os.Stdout)
-	
+
 	l := &TextEventLogger{
-	    file:     f,
-	    writer:   bufio.NewWriter(multi),
-	    runStart: runStart,
-	    interval: interval,
-	    statuses: make(map[string]string),
-	    stopCh:   make(chan struct{}),
-	    doneCh:   make(chan struct{}),
+		file:     f,
+		writer:   bufio.NewWriter(multi),
+		runStart: runStart,
+		interval: interval,
+		statuses: make(map[string]string),
+		stopCh:   make(chan struct{}),
+		doneCh:   make(chan struct{}),
 	}
 
 	l.writeLineLocked(runStart, "INFO", "run", "run", "run started", map[string]string{})
@@ -303,7 +303,7 @@ func (l *TextEventLogger) writeSnapshot(reason string) {
 		case "cancelled":
 			cancelled++
 			completed++
-		case "metadata", "downloading", "decompressing":
+		case "worker-initiated", "pre-check", "metadata", "download-initiated", "downloading", "decompressing":
 			active++
 		}
 	}

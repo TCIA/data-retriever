@@ -34,8 +34,14 @@ export class DownloadCardComponent {
     switch (status) {
       case 'queued':
         return 'Queued';
+      case 'worker-initiated':
+        return 'Worker Initiated';
+      case 'pre-check':
+        return 'Running Pre-checks';
       case 'metadata':
         return 'Fetching Metadata';
+      case 'download-initiated':
+        return 'Download Initiated';
       case 'downloading':
         return 'Downloading';
       case 'decompressing':

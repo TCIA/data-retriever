@@ -18,7 +18,10 @@ const TERMINAL_STATUSES = new Set<SeriesDownloadSnapshot['status']>([
 ]);
 
 const ACTIVE_STATUSES = new Set<SeriesDownloadSnapshot['status']>([
+  'worker-initiated',
+  'pre-check',
   'metadata',
+  'download-initiated',
   'downloading',
   'decompressing',
 ]);
@@ -453,7 +456,14 @@ export class DownloadStatusService implements OnDestroy {
     let queued = 0, active = 0, completed = 0, failed = 0, skipped = 0, cancelled = 0;
     for (const s of snapshots) {
       if (s.status === 'queued') queued++;
-      else if (s.status === 'metadata' || s.status === 'downloading' || s.status === 'decompressing') active++;
+      else if (
+        s.status === 'worker-initiated' ||
+        s.status === 'pre-check' ||
+        s.status === 'metadata' ||
+        s.status === 'download-initiated' ||
+        s.status === 'downloading' ||
+        s.status === 'decompressing'
+      ) active++;
       else if (s.status === 'succeeded') completed++;
       else if (s.status === 'failed') failed++;
       else if (s.status === 'skipped') skipped++;
@@ -611,7 +621,13 @@ export class DownloadStatusService implements OnDestroy {
       return this.clampProgress(proposed);
     }
     const statusDefaults: Record<SeriesDownloadSnapshot['status'], number> = {
-      queued: 0, metadata: 10, downloading: 0, decompressing: 80,
+      queued: 0,
+      'worker-initiated': 5,
+      'pre-check': 15,
+      metadata: 25,
+      'download-initiated': 30,
+      downloading: 35,
+      decompressing: 80,
       skipped: 100, succeeded: 100, failed: 100, cancelled: 100,
     };
     return this.clampProgress(statusDefaults[status] ?? current ?? 0);
@@ -641,7 +657,11 @@ export class DownloadStatusService implements OnDestroy {
     if (incomingPhase) return incomingPhase;
     switch (status) {
       case 'queued': return 'queued';
+      case 'worker-initiated':
+      case 'pre-check':
+        return 'queued';
       case 'metadata': return 'metadata';
+      case 'download-initiated':
       case 'downloading': return 'download';
       case 'decompressing': return 'decompress';
       case 'succeeded': case 'skipped': return 'complete';

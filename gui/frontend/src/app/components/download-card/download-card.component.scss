@@ -19,7 +19,11 @@
   }
 
   &[data-status='downloading'],
-  &[data-status='metadata'] {
+  &[data-status='download-initiated'],
+  &[data-status='metadata'],
+  &[data-status='decompressing'],
+  &[data-status='worker-initiated'],
+  &[data-status='pre-check'] {
     border-color: rgba(33, 150, 243, 0.45);
   }
 }
@@ -75,7 +79,11 @@
   }
 
   &.status-metadata,
-  &.status-downloading {
+  &.status-downloading,
+  &.status-download-initiated,
+  &.status-decompressing,
+  &.status-worker-initiated,
+  &.status-pre-check {
     background: rgba(33, 150, 243, 0.18);
     color: #0d47a1;
   }

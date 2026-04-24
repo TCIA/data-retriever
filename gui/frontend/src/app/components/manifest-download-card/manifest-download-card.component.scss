@@ -177,10 +177,14 @@
   line-height: 1.3;
 }
 
-.transfer-rate {
+.transfer-detail {
   font-size: 12px;
   font-weight: 600;
-  color: #5f6f82;
+  color: #4a5a6b;
+  max-width: 420px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .bytes-info {
@@ -423,6 +427,9 @@
 }
 :host-context(.dark-mode) .transfer-status {
   border-top-color: #444;
+}
+:host-context(.dark-mode) .transfer-detail {
+  color: #b9c7d8;
 }
 :host-context(.dark-mode) .completion-fraction {
   color: #e0e0e0;

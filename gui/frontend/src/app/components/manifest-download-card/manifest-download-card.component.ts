@@ -6,7 +6,17 @@ import {
   Output,
 } from '@angular/core';
 import { OpenDirectory } from '../../../../wailsjs/go/main/App';
+import { SeriesDownloadSnapshot, SeriesDownloadStatus } from '../../models/download-series.model';
 import { RunState } from '../../models/run-state.model';
+
+const ACTIVE_SERIES_STATUSES = new Set<SeriesDownloadStatus>([
+  'worker-initiated',
+  'pre-check',
+  'metadata',
+  'download-initiated',
+  'downloading',
+  'decompressing',
+]);
 
 @Component({
   selector: 'app-manifest-download-card',
@@ -116,8 +126,54 @@ export class ManifestDownloadCardComponent {
     return `${completed} / ${total} completed`;
   }
 
-  get hasTransferRate(): boolean {
-    return typeof this.run?.bytesPerSecond === 'number' && this.run.bytesPerSecond >= 0;
+  get currentActiveSeries(): SeriesDownloadSnapshot | null {
+    const series = this.run?.series ?? [];
+    let latest: SeriesDownloadSnapshot | null = null;
+
+    for (const snapshot of series) {
+      if (!ACTIVE_SERIES_STATUSES.has(snapshot.status)) {
+        continue;
+      }
+
+      if (!latest) {
+        latest = snapshot;
+        continue;
+      }
+
+      const snapshotTime = snapshot.lastUpdatedAt ? Date.parse(snapshot.lastUpdatedAt) : 0;
+      const latestTime = latest.lastUpdatedAt ? Date.parse(latest.lastUpdatedAt) : 0;
+      if (snapshotTime >= latestTime) {
+        latest = snapshot;
+      }
+    }
+
+    return latest;
+  }
+
+  get transferStatusText(): string {
+    const active = this.currentActiveSeries;
+    if (!active) {
+      return '';
+    }
+
+    const title = active.seriesDescription?.trim() || active.seriesUID || 'Series';
+
+    switch (active.status) {
+      case 'worker-initiated':
+        return `Worker Initiated: ${title}`;
+      case 'pre-check':
+        return `Running Pre-checks: ${title}`;
+      case 'metadata':
+        return `Fetching Metadata: ${title}`;
+      case 'download-initiated':
+        return `Download Initiated: ${title}`;
+      case 'downloading':
+        return `Downloading: ${title}`;
+      case 'decompressing':
+        return `Decompressing: ${title}`;
+      default:
+        return '';
+    }
   }
 
   get canOpenOutputDirectory(): boolean {
