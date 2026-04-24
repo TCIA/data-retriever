@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"embed"
 	"errors"
@@ -10,6 +11,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -101,6 +103,13 @@ func runCLI() {
 	options := app.InitOptions()
 	appLogger := app.Logger
 
+	if !options.AcceptDataPolicy {
+		if !promptDataPolicy() {
+			fmt.Fprintln(os.Stderr, "Data usage policy not accepted. Exiting.")
+			os.Exit(1)
+		}
+	}
+
 	if options.Version {
 		appLogger.Infof("Current version: %s", version)
 		appLogger.Infof("Git Commit Hash: %s", gitHash)
@@ -163,6 +172,67 @@ func runCLI() {
 	_ = summary
 }
 
+const duaText = `
+=== Data Usage Agreement ===
+
+Any user accessing TCIA data must agree to:
+
+- Not use the requested datasets, either alone or in concert with any other
+  information, to identify or contact individual participants from whom data
+  and/or samples were collected and follow all other conditions specified in
+  the TCIA Site Disclaimer. Approved Users also agree not to generate and use
+  information (e.g., facial images or comparable representations) in a manner
+  that could allow the identities of research participants to be readily
+  ascertained. These provisions do not apply to research investigators
+  operating with specific IRB approval, pursuant to 45 CFR 46, to contact
+  individuals within datasets or to obtain and use identifying information
+  under an IRB-approved research protocol. All investigators including any
+  Approved User conducting "human subjects research" within the scope of
+  45 CFR 46 must comply with the requirements contained therein.
+
+- Acknowledge in all oral or written presentations, disclosures, or
+  publications the specific dataset(s) or applicable accession number(s) and
+  the NIH-designated data repositories through which the investigator accessed
+  any data. Citation guidelines for doing this are outlined below.
+
+- If you are considering mirroring a copy of our publicly available datasets
+  or providing direct access to any of the TCIA data via another tool or
+  website using the REST API (https://wiki.cancerimagingarchive.net/x/NIIiAQ)
+  please review our Data Analysis Centers (DACs) page
+  (https://wiki.cancerimagingarchive.net/x/x49XAQ) for more information. DACs
+  must provide attribution and links back to this TCIA data use policy and
+  must require downstream users to do the same.
+
+The summary page for every TCIA dataset includes a Citations & Data Usage
+Policy tab. Please consult the Citation & Data Usage Policy for each
+Collection before using them.
+
+- Most data are freely available to browse, download, and use for commercial,
+  scientific and educational purposes as outlined in the Creative Commons
+  Attribution 3.0 Unported License or the Creative Commons Attribution 4.0
+  International License. In rare circumstances commercial use may be
+  prohibited using Attribution-NonCommercial 3.0 Unported (CC BY-NC 3.0) or
+  Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0).
+
+- Most data are immediately accessible and do not require account
+  registration. A small subset of collections do require registration and
+  special permission to gain access. Refer to the "Access" column on
+  https://www.cancerimagingarchive.net/collections/ for more details.
+
+=================================
+`
+
+func promptDataPolicy() bool {
+	fmt.Fprint(os.Stdout, duaText)
+	fmt.Fprint(os.Stdout, "Do you agree to the TCIA Data Usage Agreement? [y/N]: ")
+	scanner := bufio.NewScanner(os.Stdin)
+	if scanner.Scan() {
+		answer := strings.TrimSpace(strings.ToLower(scanner.Text()))
+		return answer == "y" || answer == "yes"
+	}
+	return false
+}
+
 func setupCloseHandler(cancel context.CancelFunc) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -171,4 +241,15 @@ func setupCloseHandler(cancel context.CancelFunc) {
 		fmt.Println("\r- Ctrl+C pressed in Terminal")
 		cancel()
 	}()
+}
+
+func (a *App) AgreeToLicense() {
+	// You can persist acceptance here (e.g. write a flag file) if you want
+	// to skip the dialog on subsequent launches. For now it's session-only.
+}
+
+// DeclineLicense is called by the frontend when the user clicks "Decline".
+// It exits the process cleanly.
+func (a *App) DeclineLicense() {
+	os.Exit(0)
 }

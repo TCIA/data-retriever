@@ -60,6 +60,7 @@ type Options struct {
 	PriorParquetPath			string
 	AuthGate 							*AuthGate
 	CLI										bool
+	AcceptDataPolicy      bool
 
 	opt *getoptions.GetOpt
 }
@@ -124,6 +125,7 @@ func ParseOptions(args []string, promptReader io.Reader) (*Options, error) {
 	opt.opt.StringVar(&opt.DirectoryMode, "directory-mode", "",
 		opt.opt.Description("Directory structure of saved files: classic or descriptive"))
 	opt.opt.BoolVar(&opt.CLI, "cli", false, opt.opt.Description("Run in CLI mode"))
+	opt.opt.BoolVar(&opt.AcceptDataPolicy, "accept-data-policy", false, opt.opt.Description("accept the TCIA data usage policy without interactive prompt"))
 
 	if _, err := opt.opt.Parse(args); err != nil {
 		return opt, err
@@ -163,9 +165,6 @@ func ParseOptions(args []string, promptReader io.Reader) (*Options, error) {
 	if opt.ImageUrl != ImageUrl && opt.ImageUrl != "" {
 		ImageUrl = opt.ImageUrl
 		Logger.Infof("Using custom image url: %s", ImageUrl)
-	} else if !opt.NoMD5 {
-		ImageUrl = "https://services.cancerimagingarchive.net/nbia-api/services/v2/getImageWithMD5Hash"
-		Logger.Infof("Using MD5 validation endpoint (v2 with v1 fallback)")
 	}
 
 	if opt.Prompt {

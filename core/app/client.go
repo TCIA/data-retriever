@@ -24,12 +24,12 @@ func newClient(proxy string, maxConnsPerHost int) *http.Client {
 		DisableKeepAlives:     false,
 		DisableCompression:    true,
 		ForceAttemptHTTP2:     false,
-		ResponseHeaderTimeout: 30 * time.Second,
+		ResponseHeaderTimeout: 300 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
 		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 			dialer := &net.Dialer{
-				Timeout:   30 * time.Second,
+				Timeout:   300 * time.Second,
 				KeepAlive: 30 * time.Second,
 			}
 			return dialer.DialContext(ctx, network, addr)
