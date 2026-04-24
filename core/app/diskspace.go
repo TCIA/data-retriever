@@ -34,7 +34,6 @@ func checkDiskSpace(outputDir string, files []*FileInfo) error {
 		Logger.Warnf("Could not check available disk space: %v", err)
 		return nil
 	}
-	available = 1 // TODO: remove - force failure for testing
 
 	requiredMB := uint64(totalBytes) / (1024 * 1024)
 	availableMB := available / (1024 * 1024)
