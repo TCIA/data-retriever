@@ -2,6 +2,8 @@ import { Component, OnInit, OnDestroy, NgZone, HostListener } from '@angular/cor
 import { Subscription } from 'rxjs';
 import {
   CancelDownload,
+  CheckForUpdate,
+  GetVersion,
   OpenAuthFileDialog,
   OpenInputFileDialog,
   OpenOutputDirectoryDialog,
@@ -52,6 +54,13 @@ export class AppComponent implements OnInit, OnDestroy {
   simultaneousDownloads = 8;
   skipExisting = true;
   downloadInParallel = true;
+
+  // ── Version / update ─────────────────────────────────────────────────────
+  appVersion = '';
+  updateAvailable = false;
+  updateVersion = '';
+  updateUrl = '';
+  showUpdateBanner = false;
 
   // ── Dark mode ─────────────────────────────────────────────────────────────
   isDarkMode = false;
@@ -136,6 +145,19 @@ export class AppComponent implements OnInit, OnDestroy {
     }
 
     FrontendReady();
+
+    GetVersion().then(v => { this.appVersion = v; }).catch(() => {});
+
+    CheckForUpdate().then(info => {
+      if (info?.available) {
+        this.ngZone.run(() => {
+          this.updateAvailable = true;
+          this.updateVersion = info.latestVersion;
+          this.updateUrl = info.url;
+          this.showUpdateBanner = true;
+        });
+      }
+    }).catch(() => {});
   }
 
   ngOnDestroy() {
@@ -312,6 +334,14 @@ export class AppComponent implements OnInit, OnDestroy {
 
     this.inputFilePath = '';
     this.lastAutoSetOutputPath = '';
+  }
+
+  dismissUpdateBanner() {
+    this.showUpdateBanner = false;
+  }
+
+  openUpdateUrl() {
+    BrowserOpenURL(this.updateUrl);
   }
 
   openNIHLink() {

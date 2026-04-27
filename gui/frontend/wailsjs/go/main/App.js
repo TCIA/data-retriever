@@ -14,6 +14,10 @@ export function CancelDownload() {
   return window['go']['main']['App']['CancelDownload']();
 }
 
+export function CheckForUpdate() {
+  return window['go']['main']['App']['CheckForUpdate']();
+}
+
 export function DeclineLicense() {
   return window['go']['main']['App']['DeclineLicense']();
 }
@@ -32,6 +36,10 @@ export function GetDefaultOutputDirectory() {
 
 export function GetPendingFileOpen() {
   return window['go']['main']['App']['GetPendingFileOpen']();
+}
+
+export function GetVersion() {
+  return window['go']['main']['App']['GetVersion']();
 }
 
 export function Greet(arg1) {

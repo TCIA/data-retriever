@@ -161,6 +161,7 @@ The summary page for every TCIA dataset includes a Citations & Data Usage Policy
   <div class="header">
     <div class="header-left">
       <img [src]="isDarkMode ? 'assets/app-title-dark.svg' : 'assets/app-title.svg'" alt="TCIA" class="app-icon">
+      <span *ngIf="appVersion" class="app-version">{{ appVersion }}</span>
     </div>
     <div class="header-right">
       <button class="theme-toggle" (click)="isDarkMode = !isDarkMode" title="Toggle theme">
@@ -221,6 +222,16 @@ The summary page for every TCIA dataset includes a Citations & Data Usage Policy
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- Update banner -->
+  <div class="update-banner" *ngIf="showUpdateBanner">
+    <span class="material-icons-outlined update-banner-icon">system_update_alt</span>
+    <span>{{ updateVersion }} is available.</span>
+    <button class="update-banner-link" (click)="openUpdateUrl()">Download</button>
+    <button class="update-banner-dismiss" (click)="dismissUpdateBanner()" title="Dismiss">
+      <span class="material-icons-outlined">close</span>
+    </button>
   </div>
 
   <div class="main-grid">

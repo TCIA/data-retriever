@@ -3,21 +3,75 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"os/user"
 	"path/filepath"
 	stdRuntime "runtime"
-	"strings"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/GrigoryEvko/NBIA_data_retriever_CLI/core/app"
 	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
+
+type UpdateInfo struct {
+	Available     bool   `json:"available"`
+	LatestVersion string `json:"latestVersion"`
+	URL           string `json:"url"`
+}
+
+func (a *App) GetVersion() string {
+	return version
+}
+
+func (a *App) CheckForUpdate() (UpdateInfo, error) {
+	if version == "" || version == "dev" {
+		return UpdateInfo{}, nil
+	}
+
+	const apiURL = "https://api.github.com/repos/TCIA/data-retriever/releases/latest"
+	client := &http.Client{Timeout: 10 * time.Second}
+	req, err := http.NewRequest("GET", apiURL, nil)
+	if err != nil {
+		return UpdateInfo{}, err
+	}
+	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("User-Agent", "TCIA/data-retriever/"+version)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return UpdateInfo{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return UpdateInfo{}, nil
+	}
+
+	var release struct {
+		TagName string `json:"tag_name"`
+		HTMLURL string `json:"html_url"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+		return UpdateInfo{}, err
+	}
+
+	current := strings.TrimPrefix(strings.TrimSpace(version), "v")
+	latest := strings.TrimPrefix(strings.TrimSpace(release.TagName), "v")
+
+	return UpdateInfo{
+		Available:     latest != "" && latest != current,
+		LatestVersion: release.TagName,
+		URL:           release.HTMLURL,
+	}, nil
+}
 
 func (b *App) GetPendingFileOpen() string {
     path := b.pendingFileOpen
