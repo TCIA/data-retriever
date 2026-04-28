@@ -183,8 +183,9 @@ export class ManifestDownloadCardComponent {
     const failed = o?.failed ?? 0;
     const skipped = o?.skipped ?? 0;
     const cancelled = o?.cancelled ?? 0;
+    const successfulTerminal = completed + skipped;
     const outputDirPath = this.run?.outputDirPath ?? '';
-    return total > 0 && completed === total && failed === 0 && skipped === 0 && cancelled === 0 && outputDirPath.length > 0;
+    return total > 0 && successfulTerminal === total && failed === 0 && cancelled === 0 && outputDirPath.length > 0;
   }
 
   get statusLabel(): string {

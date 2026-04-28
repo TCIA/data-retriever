@@ -6,7 +6,7 @@ toolchain go1.24.4
 
 require (
 	github.com/GrigoryEvko/NBIA_data_retriever_CLI v0.0.0
-	github.com/wailsapp/wails/v2 v2.11.0
+	github.com/wailsapp/wails/v2 v2.10.2
 )
 
 require (
