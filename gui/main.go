@@ -118,6 +118,17 @@ func runCLI() {
 		return
 	}
 
+	if info, err := (&App{}).CheckForUpdate(); err == nil && info.Available {
+		appLogger.Warnf("A new version is available: %s (you have %s). Download it at %s", info.LatestVersion, version, info.URL)
+	}
+
+	if paths, err := app.EnsureParquetsUpToDate(); err != nil {
+		appLogger.Warnf("parquet init failed: %v", err)
+	} else {
+		options.IDCParquetPath = paths.IDCIndex
+		options.PriorParquetPath = paths.PriorVersions
+	}
+
 	var eventLog *app.TextEventLogger
 	runStart := time.Now()
 
