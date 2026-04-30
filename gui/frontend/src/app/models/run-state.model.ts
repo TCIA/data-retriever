@@ -5,6 +5,16 @@ import {
 
 export type RunStatus = 'initializing' | 'running' | 'done' | 'error' | 'cancelled';
 
+export interface RunOptions {
+  maxConnections: number;
+  maxRetries: number;
+  simultaneousDownloads: number;
+  skipExisting: boolean;
+  downloadInParallel: boolean;
+  authFilePath: string;
+  directoryMode: string;
+}
+
 export interface RunState {
   /** uint64 represented as bigint — matches the Go backend's uint64 run ID. */
   runId: bigint;
@@ -22,4 +32,5 @@ export interface RunState {
   bytesDownloaded?: number;
   bytesPerSecond?: number;
   errorMessage?: string;
+  runOptions: RunOptions;
 }

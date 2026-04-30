@@ -30,6 +30,7 @@ export class ManifestDownloadCardComponent {
   @Output() pauseToggled = new EventEmitter<void>();
   @Output() cancelRequested = new EventEmitter<void>();
   @Output() removeRequested = new EventEmitter<void>();
+  @Output() retryRequested = new EventEmitter<void>();
   /** Emits the new collapsed state so the parent can persist it. */
   @Output() collapseToggled = new EventEmitter<boolean>();
 
@@ -176,6 +177,10 @@ export class ManifestDownloadCardComponent {
     }
   }
 
+  get hasFailedSeries(): boolean {
+    return (this.run?.overview?.failed ?? 0) > 0;
+  }
+
   get canOpenOutputDirectory(): boolean {
     const o = this.run?.overview;
     const total = o?.total ?? 0;
@@ -224,6 +229,11 @@ export class ManifestDownloadCardComponent {
   onRemove(event: MouseEvent): void {
     event.stopPropagation();
     this.removeRequested.emit();
+  }
+
+  onRetry(event: MouseEvent): void {
+    event.stopPropagation();
+    this.retryRequested.emit();
   }
 
   onToggleCollapse(): void {

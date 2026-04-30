@@ -17,7 +17,7 @@ import {
   DeclineLicense,
 } from '../../wailsjs/go/main/App';
 import { DownloadStatusService } from './services/download-status.service';
-import { RunState } from './models/run-state.model';
+import { RunState, RunOptions } from './models/run-state.model';
 import { EventsOn, BrowserOpenURL } from '../../wailsjs/runtime/runtime';
 
 @Component({
@@ -300,7 +300,16 @@ export class AppComponent implements OnInit, OnDestroy {
     crypto.getRandomValues(buf);
     const runId: bigint = (BigInt(buf[0]) << 32n) | BigInt(buf[1]);
 
-    this.downloadStatus.beginRun(runId, this.inputFilePath, this.outputDirPath);
+    const runOptions: RunOptions = {
+      maxConnections: this.maxConnections,
+      maxRetries: this.maxRetries,
+      simultaneousDownloads: this.simultaneousDownloads,
+      skipExisting: this.skipExisting,
+      downloadInParallel: this.downloadInParallel,
+      authFilePath: this.authFilePath,
+      directoryMode: this.directoryMode,
+    };
+    this.downloadStatus.beginRun(runId, this.inputFilePath, this.outputDirPath, runOptions);
     this.closeManifestModal();
 
     const parts: string[] = [
@@ -366,6 +375,37 @@ export class AppComponent implements OnInit, OnDestroy {
 
   onCollapseToggled(runId: bigint, collapsed: boolean) {
     this.downloadStatus.setCollapsed(runId, collapsed);
+  }
+
+  onRetryFailed(run: RunState) {
+    const buf = new Uint32Array(2);
+    crypto.getRandomValues(buf);
+    const newRunId: bigint = (BigInt(buf[0]) << 32n) | BigInt(buf[1]);
+
+    const opts = run.runOptions;
+    const retryOptions: RunOptions = { ...opts, skipExisting: true };
+
+    this.downloadStatus.beginRun(newRunId, run.inputFilePath, run.outputDirPath, retryOptions);
+    this.downloadStatus.appendManifestLog(newRunId, 'Retrying failed downloads (skip-existing enabled)');
+
+    this.downloadStatus.removeRun(run.runId);
+
+    RunCLIFetch(
+      run.inputFilePath,
+      run.outputDirPath,
+      opts.maxConnections,
+      opts.maxRetries,
+      opts.simultaneousDownloads,
+      true,
+      opts.downloadInParallel,
+      opts.authFilePath,
+      opts.directoryMode,
+      Number(newRunId),
+    ).catch(err => {
+      this.ngZone.run(() => {
+        this.downloadStatus.setRunError(newRunId, err);
+      });
+    });
   }
 
   // ── Convenience ───────────────────────────────────────────────────────────

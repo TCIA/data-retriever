@@ -65,6 +65,16 @@
           >
             Open Folder
           </button>
+          <button
+            *ngIf="isTerminal && hasFailedSeries"
+            class="retry-btn"
+            type="button"
+            (click)="onRetry($event)"
+            title="Retry failed downloads"
+            aria-label="Retry failed downloads"
+          >
+            Retry Failed
+          </button>
           <button 
                   class="download-card-close"
                   title="Dismiss"

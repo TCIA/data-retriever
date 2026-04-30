@@ -8,7 +8,7 @@ import {
   SeriesDownloadSnapshot,
   SeriesDownloadPhase,
 } from '../models/download-series.model';
-import { RunState } from '../models/run-state.model';
+import { RunState, RunOptions } from '../models/run-state.model';
 
 const TERMINAL_STATUSES = new Set<SeriesDownloadSnapshot['status']>([
   'succeeded',
@@ -58,6 +58,7 @@ interface RunInternal {
   lastByteSampleValue?: number;
   bytesPerSecond?: number;
   errorMessage?: string;
+  runOptions: RunOptions;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -218,7 +219,7 @@ export class DownloadStatusService implements OnDestroy {
   /**
    * Start tracking a new manifest run. Returns the runId.
    */
-  beginRun(runId: bigint, inputFilePath: string, outputDirPath: string): bigint {
+  beginRun(runId: bigint, inputFilePath: string, outputDirPath: string, options: RunOptions): bigint {
     const run: RunInternal = {
       runId,
       inputFilePath,
@@ -231,6 +232,7 @@ export class DownloadStatusService implements OnDestroy {
       startedAt: new Date().toISOString(),
       logs: [],
       status: 'initializing',
+      runOptions: options,
     };
     this.runsMap.set(runId, run);
     this.publishRun(run);
@@ -447,6 +449,7 @@ export class DownloadStatusService implements OnDestroy {
       bytesDownloaded: hasByteSample ? bytesDownloaded : undefined,
       bytesPerSecond: run.bytesPerSecond,
       errorMessage: run.errorMessage,
+      runOptions: run.runOptions,
     };
   }
 

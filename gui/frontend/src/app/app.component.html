@@ -263,6 +263,7 @@ The summary page for every TCIA dataset includes a Citations & Data Usage Policy
             (pauseToggled)="onPauseToggled(run.runId)"
             (cancelRequested)="onCancelDownload(run.runId)"
             (removeRequested)="onRemoveRun(run.runId)"
+            (retryRequested)="onRetryFailed(run)"
             (collapseToggled)="onCollapseToggled(run.runId, $event)">
           </app-manifest-download-card>
         </ng-container>
