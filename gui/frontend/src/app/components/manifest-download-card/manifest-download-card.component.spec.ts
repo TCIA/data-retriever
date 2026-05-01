@@ -1,0 +1,117 @@
+import { ManifestDownloadCardComponent } from './manifest-download-card.component';
+import { RunState } from '../../models/run-state.model';
+
+describe('ManifestDownloadCardComponent', () => {
+  function createRunState(overrides?: Partial<RunState>): RunState {
+    return {
+      runId: 1n,
+      inputFilePath: '/tmp/input.tcia',
+      outputDirPath: '/tmp/output',
+      status: 'done',
+      overview: {
+        total: 2,
+        queued: 0,
+        active: 0,
+        completed: 2,
+        failed: 0,
+        skipped: 0,
+        cancelled: 0,
+        progressPercent: 100,
+      },
+      series: [],
+      logs: [],
+      isPaused: false,
+      collapsed: false,
+      hasAutoExpanded: false,
+      startedAt: new Date(0).toISOString(),
+      completedAt: new Date(1000).toISOString(),
+      ...overrides,
+    };
+  }
+
+  it('shows Open Folder when all series are completed', () => {
+    const component = new ManifestDownloadCardComponent();
+    component.run = createRunState();
+
+    expect(component.canOpenOutputDirectory).toBeTrue();
+  });
+
+  it('shows Open Folder when all series are skipped', () => {
+    const component = new ManifestDownloadCardComponent();
+    component.run = createRunState({
+      overview: {
+        total: 3,
+        queued: 0,
+        active: 0,
+        completed: 0,
+        failed: 0,
+        skipped: 3,
+        cancelled: 0,
+        progressPercent: 100,
+      },
+    });
+
+    expect(component.canOpenOutputDirectory).toBeTrue();
+  });
+
+  it('shows Open Folder when completed + skipped equals total', () => {
+    const component = new ManifestDownloadCardComponent();
+    component.run = createRunState({
+      overview: {
+        total: 4,
+        queued: 0,
+        active: 0,
+        completed: 1,
+        failed: 0,
+        skipped: 3,
+        cancelled: 0,
+        progressPercent: 100,
+      },
+    });
+
+    expect(component.canOpenOutputDirectory).toBeTrue();
+  });
+
+  it('hides Open Folder when any series failed', () => {
+    const component = new ManifestDownloadCardComponent();
+    component.run = createRunState({
+      overview: {
+        total: 2,
+        queued: 0,
+        active: 0,
+        completed: 1,
+        failed: 1,
+        skipped: 0,
+        cancelled: 0,
+        progressPercent: 100,
+      },
+    });
+
+    expect(component.canOpenOutputDirectory).toBeFalse();
+  });
+
+  it('hides Open Folder when any series were cancelled', () => {
+    const component = new ManifestDownloadCardComponent();
+    component.run = createRunState({
+      overview: {
+        total: 2,
+        queued: 0,
+        active: 0,
+        completed: 2,
+        failed: 0,
+        skipped: 0,
+        cancelled: 1,
+        progressPercent: 100,
+      },
+    });
+
+    expect(component.canOpenOutputDirectory).toBeFalse();
+  });
+
+  it('hides Open Folder when output path is empty', () => {
+    const component = new ManifestDownloadCardComponent();
+    component.run = createRunState({ outputDirPath: '' });
+
+    expect(component.canOpenOutputDirectory).toBeFalse();
+  });
+});
