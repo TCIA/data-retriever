@@ -59,3 +59,39 @@ func DefaultLogFilePath(fileName string) string {
 	}
 	return filepath.Join(DefaultLogDir(), filepath.Base(name))
 }
+
+// DefaultAuthFilePath returns the platform-standard path for the saved authentication file.
+//
+// macOS:   ~/Library/Caches/net.cancerimagingarchive.tciadataretriever/saved_auth.json
+// Windows: %LOCALAPPDATA%/TCIA Data Retriever/saved_auth.json
+// Linux:   $XDG_STATE_HOME/tcia-data-retriever/saved_auth.json
+func DefaultAuthFilePath() string {
+	home, _ := os.UserHomeDir()
+
+	switch runtime.GOOS {
+	case "darwin":
+		base, _ := os.UserCacheDir()
+		if base != "" {
+			return filepath.Join(base, "net.cancerimagingarchive.tciadataretriever", "saved_auth.json")
+		}
+	case "windows":
+		if localAppData := strings.TrimSpace(os.Getenv("LOCALAPPDATA")); localAppData != "" {
+			return filepath.Join(localAppData, LogDirectoryAppName, "saved_auth.json")
+		}
+		if appData := strings.TrimSpace(os.Getenv("APPDATA")); appData != "" {
+			return filepath.Join(appData, LogDirectoryAppName, "saved_auth.json")
+		}
+		if home != "" {
+			return filepath.Join(home, "AppData", "Local", LogDirectoryAppName, "saved_auth.json")
+		}
+	default:
+		if xdgStateHome := strings.TrimSpace(os.Getenv("XDG_STATE_HOME")); xdgStateHome != "" {
+			return filepath.Join(xdgStateHome, logDirectoryLinuxAppName, "saved_auth.json")
+		}
+		if home != "" {
+			return filepath.Join(home, ".local", "state", logDirectoryLinuxAppName, "saved_auth.json")
+		}
+	}
+
+	return filepath.Join(".", "saved_auth.json")
+}

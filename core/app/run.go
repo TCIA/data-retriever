@@ -850,6 +850,18 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 	}
 
 	for err != nil && isAuthError(err) && wc.Options.AuthGate != nil {
+		// Try the saved auth file silently before opening the prompt.
+		if savedPath := LoadSavedAuthFilePath(); savedPath != "" && savedPath != wc.Options.Auth {
+			if silentAuth, silentErr := NewGen3AuthManager(wc.HTTPClient, savedPath); silentErr == nil {
+				wc.Options.Auth = savedPath
+				localAuth = *silentAuth
+				err = fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.Options, onProgress, onDecompress, &localAuth)
+				if err == nil || !isAuthError(err) {
+					continue
+				}
+			}
+		}
+
 		resolvedPath := wc.Options.AuthGate.WaitForAuth(func() {
 			wc.Callbacks.emitEvent("open:auth-modal")
 		})

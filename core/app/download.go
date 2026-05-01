@@ -1448,6 +1448,10 @@ func NewGen3AuthManager(client *http.Client, authFile string) (*Gen3AuthManager,
 		return nil, fmt.Errorf("'api_key' not found in JSON key file")
 	}
 
+	if saveErr := SaveAuthFile(authFile); saveErr != nil {
+		logger.Warnf("Failed to save auth file to safe location: %v", saveErr)
+	}
+
 	return &Gen3AuthManager{
 		client: client,
 		apiKey: strings.TrimSpace(apiKeyData.APIKey),

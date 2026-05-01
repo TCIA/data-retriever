@@ -333,7 +333,12 @@ func (b *App) runBatch(batch *DownloadBatch) {
 		NoDecompress:          false,
 		RefreshMetadata:       false,
 		MetadataWorkers:       20,
-		Auth:                  batch.AuthPath,
+		Auth: func() string {
+				if batch.AuthPath != "" {
+					return batch.AuthPath
+				}
+				return app.LoadSavedAuthFilePath()
+			}(),
 		DirectoryMode:         batch.DirectoryMode,
 		IDCParquetPath:				 b.parquetPaths.IDCIndex,
 		PriorParquetPath:			 b.parquetPaths.PriorVersions,
