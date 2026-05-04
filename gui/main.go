@@ -143,6 +143,7 @@ func runCLI() {
 		}
 	}
 
+	manifestReceived := false
 	callbacks := app.Callbacks{
 		Stdout: func(msg string) {
 			fmt.Fprint(os.Stdout, msg)
@@ -162,6 +163,7 @@ func runCLI() {
 			}
 		},
 		Manifest: func(payload app.ManifestPayload) {
+			manifestReceived = true
 			if eventLog != nil {
 				eventLog.HandleManifest(payload)
 			}
@@ -179,6 +181,8 @@ func runCLI() {
 		} else {
 			appLogger.Fatalf("Download failed: %v", err)
 		}
+	} else if !manifestReceived {
+		appLogger.Fatalf("No metadata can be found for this manifest: %s", options.Input)
 	}
 	_ = summary
 }

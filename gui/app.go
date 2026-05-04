@@ -362,6 +362,7 @@ func (b *App) runBatch(batch *DownloadBatch) {
 
 
 
+	manifestReceived := false
 	callbacks := app.Callbacks{
 		Stdout: func(line string) {
 			if eventLog != nil {
@@ -380,6 +381,7 @@ func (b *App) runBatch(batch *DownloadBatch) {
 			wailsRuntime.EventsEmit(b.ctx, "download-series-event", evt)
 		},
 		Manifest: func(p app.ManifestPayload) {
+			manifestReceived = true
 			if eventLog != nil {
 				eventLog.HandleManifest(p)
 			}
@@ -404,6 +406,11 @@ func (b *App) runBatch(batch *DownloadBatch) {
 			return
 		}
 		wailsRuntime.EventsEmit(b.ctx, "cli-error", fmt.Sprintf("download failed: %v", err))
+		return
+	}
+
+	if !manifestReceived {
+		wailsRuntime.EventsEmit(b.ctx, "cli-error", fmt.Sprintf("no metadata can be found for this manifest: %s", batch.Manifest))
 		return
 	}
 
