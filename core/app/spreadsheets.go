@@ -141,11 +141,11 @@ func decodeSpreadsheet(filePath string) ([]*FileInfo, error) {
 			nameIndex = i
 		case "collection", "collectionname":
 			collectionIndex = i
-		case "patient", "patientid", "subject", "subjectid":
+		case "patient", "patientid", "subject", "subjectid", "participantid":
 			patientIdIndex = i
 		case "studyuid", "studyid":
 			studyIdIndex = i
-		case "studydescription", "studydesc", "studyshortname":
+		case "studydescription", "studydesc", "studyshortname", "studyname":
 			studyDescIndex = i
 		case "studydate":
 			studyDateIndex = i
