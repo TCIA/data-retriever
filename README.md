@@ -34,7 +34,7 @@ TCIA Data Retriever is a desktop application for downloading datasets from the [
 - **Multiple manifest formats** — `.tcia`, `.s5cmd`, `.csv`, `.tsv`, `.xlsx`
 - **Parallel downloads** with configurable worker count and per-host connection limits
 - **Real-time progress** — per-series status (queued → downloading → complete), bytes transferred 
-- **Pause & resume** — pause an in-progress run and resume from where it left off using skip-existing logic
+- **Pause & resume** — pause an in-progress run and resume from where it left off using skip-existing logic, with resumed existing series counted as completed
 - **Multiple concurrent runs** — queue several manifests simultaneously, each shown in its own card
 - **CRDC / Gen3 authentication** — load a JSON credentials file for restricted datasets, with an in-app prompt if credentials are needed mid-run
 - **Directory modes** — `classic` or `descriptive` naming
@@ -152,7 +152,7 @@ Launch with `--cli` (or `-cli`) to skip the GUI entirely:
 | `--processes` | `-p` | `2` | Parallel download workers |
 | `--max-connections` | | `8` | Max connections per host |
 | `--max-retries` | | `3` | Retry attempts per series |
-| `--skip-existing` | | off | Skip already-downloaded series |
+| `--skip-existing` | | off | Reuse already-downloaded series and count them as completed (resume-friendly) |
 | `--force` | `-f` | off | Re-download even if files exist |
 | `--auth` | | — | Path to Gen3/CRDC JSON credentials |
 | `--directory-mode` | | — | `classic` or `descriptive` |

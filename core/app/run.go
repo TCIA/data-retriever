@@ -284,6 +284,28 @@ func clampProgress(value float64) float64 {
 	return value
 }
 
+type existingSeriesDisposition struct {
+	status            string
+	completionSkipped bool
+	countAsDownloaded bool
+}
+
+func resolveExistingSeriesDisposition(resumeMode bool) existingSeriesDisposition {
+	if resumeMode {
+		return existingSeriesDisposition{
+			status:            seriesStatusSucceeded,
+			completionSkipped: false,
+			countAsDownloaded: true,
+		}
+	}
+
+	return existingSeriesDisposition{
+		status:            seriesStatusSkipped,
+		completionSkipped: true,
+		countAsDownloaded: false,
+	}
+}
+
 // DownloadStats tracks download statistics across workers.
 type DownloadStats struct {
 	Total          int32
@@ -715,6 +737,18 @@ func (wc *WorkerContext) emitSeries(evt SeriesEvent) {
 	wc.Callbacks.emitSeries(evt)
 }
 
+func (wc *WorkerContext) applyExistingSeriesDisposition(fileInfo *FileInfo, disposition existingSeriesDisposition, message string) {
+	if disposition.countAsDownloaded {
+		atomic.AddInt32(&wc.Stats.Downloaded, 1)
+	} else {
+		atomic.AddInt32(&wc.Stats.Skipped, 1)
+	}
+
+	updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
+	wc.emitSeriesEvent(fileInfo, disposition.status, message, 100)
+	AppendCompletionStatus(wc.Options.Output, fileInfo.SeriesInstanceUID, nil, disposition.completionSkipped)
+}
+
 func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 	updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
 	displayName := seriesDisplayLabel(fileInfo)
@@ -735,20 +769,22 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 
 	if !fileInfo.IsSyncJob {
 		if wc.Options.SkipExisting && !fileInfo.NeedsDownload(wc.Options.Output, false, wc.Options.NoDecompress, wc.Options) {
-			Logger.Debugf("[Worker %d] Skip existing %s", wc.WorkerID, fileInfo.SeriesInstanceUID)
-			atomic.AddInt32(&wc.Stats.Skipped, 1)
-			updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
-			wc.emitSeriesEvent(fileInfo, seriesStatusSkipped, fmt.Sprintf("Series already present (skip existing): %s", displayName), 100)
-			AppendCompletionStatus(wc.Options.Output, fileInfo.SeriesInstanceUID, nil, true)
+			Logger.Debugf("[Worker %d] Resume hit existing %s", wc.WorkerID, fileInfo.SeriesInstanceUID)
+			wc.applyExistingSeriesDisposition(
+				fileInfo,
+				resolveExistingSeriesDisposition(true),
+				fmt.Sprintf("Series already present (resume complete): %s", displayName),
+			)
 			return
 		}
 
 		if !fileInfo.NeedsDownload(wc.Options.Output, wc.Options.Force, wc.Options.NoDecompress, wc.Options) {
 			Logger.Debugf("[Worker %d] Skip %s (already exists with correct size/checksum)", wc.WorkerID, fileInfo.SeriesInstanceUID)
-			atomic.AddInt32(&wc.Stats.Skipped, 1)
-			updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
-			wc.emitSeriesEvent(fileInfo, seriesStatusSkipped, fmt.Sprintf("Series already present with expected size: %s", displayName), 100)
-			AppendCompletionStatus(wc.Options.Output, fileInfo.SeriesInstanceUID, nil, true)
+			wc.applyExistingSeriesDisposition(
+				fileInfo,
+				resolveExistingSeriesDisposition(false),
+				fmt.Sprintf("Series already present with expected size: %s", displayName),
+			)
 			return
 		}
 	} else {
