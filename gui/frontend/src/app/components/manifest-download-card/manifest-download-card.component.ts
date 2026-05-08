@@ -194,17 +194,14 @@ export class ManifestDownloadCardComponent {
   }
 
   get statusLabel(): string {
-    switch (this.run?.status) {
-      case 'initializing':
-        return 'Initializing';
-      case 'cancelled':
-        return 'Cancelled';
-      case 'error':
-        return 'Error';
-      case 'done':
-        return 'Completed';
-    }
+    const status = this.run?.status;
+    if (status === 'initializing') return 'Initializing';
+    if (status === 'cancelled') return 'Cancelled';
+    if (status === 'error') return 'Error';
+    // Check isPaused before 'done': a pause-induced cancel sets status='done'
+    // via cli-finished before the paused flag is processed.
     if (this.isPaused) return 'Paused';
+    if (status === 'done') return 'Completed';
     const active = this.run?.overview?.active ?? 0;
     if (active > 0) return 'Downloading';
     const total = this.run?.overview?.total ?? 0;

@@ -167,6 +167,18 @@ export class DownloadStatusService implements OnDestroy {
           const run = this.resolveRunFromPausePayload(payload);
           if (!run) return;
           run.isPaused = false;
+          // Clear done status so isCompleted doesn't flash the checkmark before
+          // the backend has a chance to emit new queued events.
+          if (run.status === 'done') {
+            run.status = 'running';
+            run.completedAt = undefined;
+          }
+          // Reset terminal series to queued so done-count drops to 0 immediately.
+          for (const [uid, snapshot] of run.seriesMap) {
+            if (TERMINAL_STATUSES.has(snapshot.status)) {
+              run.seriesMap.set(uid, { ...snapshot, status: 'queued', progress: 0 });
+            }
+          }
           this.appendLog(run, 'Download resumed');
           this.publishRun(run);
         });
@@ -198,6 +210,14 @@ export class DownloadStatusService implements OnDestroy {
         this.ngZone.run(() => {
           const { run, message } = this.resolveRunAndMessage(payload, 'summary');
           if (!run) return;
+          // A pause triggers a context cancellation that causes cli-finished to
+          // fire with an empty summary.  Don't mark the run as done — it will be
+          // resumed.  The resumed handler resets state when the user unpauses.
+          if (run.isPaused) {
+            if (message) this.appendLog(run, message);
+            this.publishRun(run);
+            return;
+          }
           run.status = 'done';
           run.completedAt = new Date().toISOString();
           if (message) this.appendLog(run, message);
