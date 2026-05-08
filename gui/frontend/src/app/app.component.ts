@@ -210,6 +210,9 @@ export class AppComponent implements OnInit, OnDestroy {
     const runId = this.pendingAuthRunId;
     const path = this.authFilePath;
     this.authErrorMessage = '';
+    this.pendingAuthRunId = null;
+    this.authRequired = false;
+    this.showAuthModal = false;
     ResolveAuth(runId, path).catch(err => console.error('ResolveAuth error:', err));
   }
 

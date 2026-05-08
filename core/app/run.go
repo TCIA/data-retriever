@@ -913,6 +913,7 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 			continue
 		}
 
+		wc.Options.Auth = resolvedPath
 		localAuth = *newAuth
 		err = fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.Options, onProgress, onDecompress, &localAuth)
 		if err != nil && isAuthError(err) {
