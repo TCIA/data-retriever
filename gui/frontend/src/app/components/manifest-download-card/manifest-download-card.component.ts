@@ -122,9 +122,9 @@ export class ManifestDownloadCardComponent {
   }
 
   get completedSeriesFraction(): string {
-    const completed = this.run?.overview?.completed ?? 0;
+    const downloaded = (this.run?.overview?.completed ?? 0) + (this.run?.overview?.skipped ?? 0);
     const total = this.run?.overview?.total ?? 0;
-    return `${completed} / ${total} completed`;
+    return `${downloaded} / ${total} downloaded`;
   }
 
   get currentActiveSeries(): SeriesDownloadSnapshot | null {

@@ -3,7 +3,7 @@ import { RunState } from '../../models/run-state.model';
 
 describe('ManifestDownloadCardComponent', () => {
   function createRunState(overrides?: Partial<RunState>): RunState {
-    return {
+    const base: RunState = {
       runId: 1n,
       inputFilePath: '/tmp/input.tcia',
       outputDirPath: '/tmp/output',
@@ -25,7 +25,28 @@ describe('ManifestDownloadCardComponent', () => {
       hasAutoExpanded: false,
       startedAt: new Date(0).toISOString(),
       completedAt: new Date(1000).toISOString(),
+      runOptions: {
+        maxConnections: 2,
+        maxRetries: 3,
+        simultaneousDownloads: 2,
+        skipExisting: false,
+        downloadInParallel: true,
+        authFilePath: '',
+        directoryMode: 'classic',
+      },
+    };
+
+    return {
+      ...base,
       ...overrides,
+      overview: {
+        ...base.overview,
+        ...(overrides?.overview ?? {}),
+      },
+      runOptions: {
+        ...base.runOptions,
+        ...(overrides?.runOptions ?? {}),
+      },
     };
   }
 
@@ -113,5 +134,23 @@ describe('ManifestDownloadCardComponent', () => {
     component.run = createRunState({ outputDirPath: '' });
 
     expect(component.canOpenOutputDirectory).toBeFalse();
+  });
+
+  it('shows downloaded fraction as completed plus skipped over total', () => {
+    const component = new ManifestDownloadCardComponent();
+    component.run = createRunState({
+      overview: {
+        total: 5,
+        queued: 0,
+        active: 0,
+        completed: 2,
+        failed: 0,
+        skipped: 1,
+        cancelled: 0,
+        progressPercent: 60,
+      },
+    });
+
+    expect(component.completedSeriesFraction).toBe('3 / 5 downloaded');
   });
 });
