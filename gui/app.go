@@ -434,6 +434,11 @@ func (a *App) ResolveAuth(runIdStr string, authFilePath string) error {
     if err != nil {
         return fmt.Errorf("invalid runId: %w", err)
     }
+    if authFilePath != "" {
+        if saveErr := app.SaveAuthFile(authFilePath); saveErr != nil {
+            fmt.Fprintf(os.Stderr, "failed to save auth file: %v\n", saveErr)
+        }
+    }
     if v, ok := a.authGates.Load(runId); ok {
         v.(*app.AuthGate).Resolve(authFilePath)
     }
