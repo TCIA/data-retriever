@@ -35,7 +35,7 @@ export class AppComponent implements OnInit, OnDestroy {
   outputDirPath = '';
   authFilePath = '';
   defaultDownloadDir = '';
-  directoryMode: 'classic' | 'descriptive' = 'classic';
+  directoryMode: 'classic' | 'descriptive' = 'descriptive';
   isMac = false;
   pendingAuthRunId: string | null = null;
   authErrorMessage: string = '';

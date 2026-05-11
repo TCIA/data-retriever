@@ -122,7 +122,7 @@ func ParseOptions(args []string, promptReader io.Reader) (*Options, error) {
 	opt.opt.IntVar(&opt.MetadataWorkers, "metadata-workers", 20, opt.opt.Description("number of parallel metadata fetch workers"))
 	opt.opt.StringVar(&opt.Auth, "auth", "",
 		opt.opt.Description("path to JSON API key file for Gen3 authentication"))
-	opt.opt.StringVar(&opt.DirectoryMode, "directory-mode", "",
+	opt.opt.StringVar(&opt.DirectoryMode, "directory-mode", "descriptive",
 		opt.opt.Description("Directory structure of saved files: classic or descriptive"))
 	opt.opt.BoolVar(&opt.CLI, "cli", false, opt.opt.Description("Run in CLI mode"))
 	opt.opt.BoolVar(&opt.AcceptDataPolicy, "accept-data-policy", false, opt.opt.Description("accept the TCIA data usage policy without interactive prompt"))

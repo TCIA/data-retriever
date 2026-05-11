@@ -32,7 +32,7 @@ describe('ManifestDownloadCardComponent', () => {
         skipExisting: false,
         downloadInParallel: true,
         authFilePath: '',
-        directoryMode: 'classic',
+        directoryMode: 'descriptive',
       },
     };
 
