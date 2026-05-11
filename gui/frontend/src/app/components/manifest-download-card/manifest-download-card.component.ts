@@ -89,7 +89,6 @@ export class ManifestDownloadCardComponent {
 
   get isCompleted(): boolean {
     if (this.isPaused) return false;
-    if (this.run?.status === 'done') return true;
     const o = this.run?.overview;
     const total = o?.total ?? 0;
     const done = (o?.completed ?? 0) + (o?.failed ?? 0) + (o?.skipped ?? 0) + (o?.cancelled ?? 0);
@@ -194,26 +193,19 @@ export class ManifestDownloadCardComponent {
   }
 
   get statusLabel(): string {
-    switch (this.run?.status) {
-      case 'initializing':
-        return 'Initializing';
-      case 'cancelled':
-        return 'Cancelled';
-      case 'error':
-        return 'Error';
-      case 'done':
-        return 'Completed';
-    }
+    const status = this.run?.status;
+    if (status === 'initializing') return 'Initializing';
+    if (status === 'cancelled') return 'Cancelled';
+    if (status === 'error') return 'Error';
+
+    // Pause-induced cancellation can briefly set status to done before
+    // paused state is fully reflected in the UI.
     if (this.isPaused) return 'Paused';
+
     const active = this.run?.overview?.active ?? 0;
     if (active > 0) return 'Downloading';
-    const total = this.run?.overview?.total ?? 0;
-    const done =
-      (this.run?.overview?.completed ?? 0) +
-      (this.run?.overview?.failed ?? 0) +
-      (this.run?.overview?.skipped ?? 0) +
-      (this.run?.overview?.cancelled ?? 0);
-    if (total > 0 && done >= total) return 'Completed';
+
+    if (this.isCompleted) return 'Completed';
     return 'Queued';
   }
 

@@ -167,6 +167,28 @@ export class DownloadStatusService implements OnDestroy {
           const run = this.resolveRunFromPausePayload(payload);
           if (!run) return;
           run.isPaused = false;
+
+          // A paused run can still receive a stale done state from
+          // pause-driven cancellation completion.
+          if (run.status === 'done') {
+            run.status = 'running';
+            run.completedAt = undefined;
+          }
+
+          for (const [uid, snapshot] of run.seriesMap) {
+            if (TERMINAL_STATUSES.has(snapshot.status)) {
+              run.seriesMap.set(uid, {
+                ...snapshot,
+                status: 'queued',
+                progress: 0,
+                phase: 'queued',
+                phaseProgress: 0,
+                completedAt: undefined,
+                errorMessage: undefined,
+              });
+            }
+          }
+
           this.appendLog(run, 'Download resumed');
           this.publishRun(run);
         });
@@ -198,9 +220,24 @@ export class DownloadStatusService implements OnDestroy {
         this.ngZone.run(() => {
           const { run, message } = this.resolveRunAndMessage(payload, 'summary');
           if (!run) return;
+
+          // Pause triggers cancellation and can emit cli-finished with no
+          // summary while the run is intended to be resumed.
+          if (run.isPaused) {
+            if (message) this.appendLog(run, message);
+            this.publishRun(run);
+            return;
+          }
+
+          const summary = (message ?? '').trim();
+          if (!summary) {
+            this.publishRun(run);
+            return;
+          }
+
           run.status = 'done';
           run.completedAt = new Date().toISOString();
-          if (message) this.appendLog(run, message);
+          this.appendLog(run, summary);
           this.publishRun(run);
         });
       }
