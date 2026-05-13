@@ -360,6 +360,10 @@ export class AppComponent implements OnInit, OnDestroy {
     BrowserOpenURL('https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/');
   }
 
+  openDUALink() {
+    BrowserOpenURL('https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/');
+  }
+
   // ── Per-run controls ───────────────────────────────────────────────────────
 
   onCancelDownload(runId: bigint) {

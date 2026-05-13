@@ -496,6 +496,20 @@ func decodeTCIAStreaming(ctx context.Context, path string, httpClient *http.Clie
 		return 0, nil, fmt.Errorf("error reading tcia file: %w", err)
 	}
 
+	total, out := streamFilesFromSeriesIDs(ctx, seriesIDs, httpClient, options, callbacks)
+	return total, out, nil
+}
+
+// streamFilesFromSeriesIDs fetches FileInfo metadata for the provided series
+// IDs in concurrent batches of tciaBatchSize and emits each FileInfo on the
+// returned channel as soon as its batch completes. After all batches finish,
+// metadata.csv is written and completion status is initialized, then the
+// channel is closed.
+func streamFilesFromSeriesIDs(ctx context.Context, seriesIDs []string, httpClient *http.Client, options *Options, callbacks Callbacks) (int, <-chan *FileInfo) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	total := len(seriesIDs)
 	callbacks.emitStdout(fmt.Sprintf("Found %d series to fetch metadata for\n", total))
 
@@ -503,10 +517,9 @@ func decodeTCIAStreaming(ctx context.Context, path string, httpClient *http.Clie
 
 	if total == 0 {
 		close(out)
-		return 0, out, nil
+		return 0, out
 	}
 
-	// Build batch slices
 	batches := make([][]string, 0, (total+tciaBatchSize-1)/tciaBatchSize)
 	for i := 0; i < total; i += tciaBatchSize {
 		end := i + tciaBatchSize
@@ -565,7 +578,7 @@ func decodeTCIAStreaming(ctx context.Context, path string, httpClient *http.Clie
 		InitCompletionStatus(options.Output, allFiles)
 	}()
 
-	return total, out, nil
+	return total, out
 }
 
 func decodeTCIA(ctx context.Context, path string, httpClient *http.Client, options *Options, callbacks Callbacks) []*FileInfo {

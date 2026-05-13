@@ -467,115 +467,42 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 	if ext == ".tcia" {
 		s5Files, _ := decodeS5cmd(options.Input, options.Output, s5cmdMap, callbacks, options)
 		if len(s5Files) == 0 {
-			// Pure TCIA file — use the streaming path.
 			seriesCount, fileChan, serr := decodeTCIAStreaming(ctx, options.Input, client, options, callbacks)
 			if serr != nil {
 				return nil, fmt.Errorf("failed to decode tcia file: %w", serr)
 			}
-
-			if options.Debug {
-				Logger.Warnf("Starting streaming download of ~%d series with %d workers", seriesCount, options.Concurrent)
-			} else {
-				callbacks.emitStderr(fmt.Sprintf("\nDownloading ~%d series with %d workers...\n\n", seriesCount, options.Concurrent))
-			}
-
-			tciaGen3Auth, gaErr := NewGen3AuthManager(client, options.Auth)
-			if gaErr != nil {
-				Logger.Warnf("Failed to initialize Gen3 auth manager: %v", gaErr)
-				tciaGen3Auth = &Gen3AuthManager{}
-			}
-
-			tciaStats := &DownloadStats{Total: int32(seriesCount), StartTime: time.Now()}
-			tciaSummary := &Summary{Total: int32(seriesCount)}
-
-			tciaWorkerCtx := WorkerContext{
-				Context:    ctx,
-				HTTPClient: client,
-				Gen3Auth:   tciaGen3Auth,
-				Options:    options,
-				Stats:      tciaStats,
-				Callbacks:  callbacks,
-				EventGate:  NewSeriesEventGate(options.InterimUpdateInterval),
-				AuthGate:   &AuthGate{},
-			}
-
-			var tciaWg sync.WaitGroup
-			tciaInputChan := make(chan *FileInfo, seriesCount)
-
-			for i := 0; i < options.Concurrent; i++ {
-				wc := tciaWorkerCtx
-				wc.WorkerID = i + 1
-				tciaWg.Add(1)
-				go func(wc WorkerContext) {
-					defer tciaWg.Done()
-					wc.processFiles(tciaInputChan)
-				}(wc)
-			}
-
-			tciaSeen := make(map[string]struct{})
-			tciaAllFiles := make([]*FileInfo, 0, seriesCount)
-			var tciaQueued int32
-		tciaFeedLoop:
-			for {
-				select {
-				case <-ctx.Done():
-					callbacks.emitStderr("\nDownload cancelled by user\n")
-					go func() { for range fileChan {} }()
-					close(tciaInputChan)
-					tciaWg.Wait()
-					tciaStats.Failed += int32(tciaQueued) - tciaStats.Downloaded - tciaStats.Skipped - tciaStats.Failed
-					tciaSummary.Downloaded = tciaStats.Downloaded
-					tciaSummary.Skipped = tciaStats.Skipped
-					tciaSummary.Failed = tciaStats.Failed
-					tciaSummary.Elapsed = time.Since(tciaStats.StartTime)
-					return tciaSummary, ctx.Err()
-				case f, ok := <-fileChan:
-					if !ok {
-						break tciaFeedLoop
-					}
-					tciaAllFiles = append(tciaAllFiles, f)
-					if f != nil && f.SeriesInstanceUID != "" {
-						if _, seen := tciaSeen[f.SeriesInstanceUID]; !seen {
-							tciaSeen[f.SeriesInstanceUID] = struct{}{}
-							callbacks.emitSeries(newSeriesEvent(f, "queued", "Queued for download", 0))
-						}
-					}
-					tciaQueued++
-					tciaInputChan <- f
-				}
-			}
-			close(tciaInputChan)
-			tciaWg.Wait()
-
-			emitManifestMetadata(callbacks, options.Input, tciaAllFiles)
-			MergeCompletionStatus(options.Output)
-			callbacks.emitProgress(tciaStats, "Complete", options.Debug)
-			if !options.Debug {
-				callbacks.emitStderr("\n")
-			}
-			tciaSummary.Downloaded = tciaStats.Downloaded
-			tciaSummary.Synced = tciaStats.Synced
-			tciaSummary.Skipped = tciaStats.Skipped
-			tciaSummary.Failed = tciaStats.Failed
-			tciaSummary.Elapsed = time.Since(tciaStats.StartTime)
-			callbacks.emitStdout("\n=== Download Summary ===\n")
-			callbacks.emitStdout(fmt.Sprintf("Total items: %d\n", tciaSummary.Total))
-			callbacks.emitStdout(fmt.Sprintf("Downloaded: %d\n", tciaSummary.Downloaded))
-			callbacks.emitStdout(fmt.Sprintf("Synced: %d\n", tciaSummary.Synced))
-			callbacks.emitStdout(fmt.Sprintf("Skipped: %d\n", tciaSummary.Skipped))
-			callbacks.emitStdout(fmt.Sprintf("Failed: %d\n", tciaSummary.Failed))
-			callbacks.emitStdout(fmt.Sprintf("Total time: %s\n", tciaSummary.Elapsed.Round(time.Second)))
-			if tciaSummary.Total > 0 && tciaSummary.Elapsed > 0 {
-				rate := float64(tciaSummary.Downloaded+tciaSummary.Synced+tciaSummary.Skipped) / tciaSummary.Elapsed.Seconds()
-				callbacks.emitStdout(fmt.Sprintf("Average rate: %.1f items/second\n", rate))
-			}
-			if tciaSummary.Failed > 0 {
-				Logger.Warnf("Some downloads failed. Check the logs above for details.")
-			}
-			return tciaSummary, nil
+			return runTCIAStreamingDownload(ctx, client, options, callbacks, seriesCount, fileChan)
 		}
 		// IDC .tcia — fall through to the standard path; decodeInputFile will
 		// re-run decodeS5cmd against the already-built in-memory map.
+	}
+
+	// Spreadsheets with a SeriesInstanceUID column that are not IDC s5cmd
+	// manifests are treated like a TCIA manifest. Stream metadata in batches
+	// of tciaBatchSize so workers can start as the first batch arrives,
+	// matching the .tcia streaming behavior.
+	if ext == ".csv" || ext == ".tsv" || ext == ".xlsx" {
+		s5Files, _ := decodeS5cmd(options.Input, options.Output, s5cmdMap, callbacks, options)
+		if len(s5Files) == 0 {
+			seriesUIDs, suidErr := getSeriesInstanceUIDsFromSpreadsheet(options.Input)
+			if suidErr == nil {
+				metaDir := filepath.Join(options.Output, "metadata")
+				if mkErr := os.MkdirAll(metaDir, 0755); mkErr != nil {
+					return nil, fmt.Errorf("failed to create metadata directory: %w", mkErr)
+				}
+				destPath := filepath.Join(metaDir, filepath.Base(options.Input))
+				if copyErr := copyFile(options.Input, destPath); copyErr != nil {
+					Logger.Warnf("Failed to copy spreadsheet to metadata folder: %v", copyErr)
+				}
+
+				seriesCount, fileChan := streamFilesFromSeriesIDs(ctx, seriesUIDs, client, options, callbacks)
+				return runTCIAStreamingDownload(ctx, client, options, callbacks, seriesCount, fileChan)
+			} else if suidErr != ErrSeriesInstanceUIDColumnNotFound {
+				return nil, fmt.Errorf("could not get series UIDs from spreadsheet: %w", suidErr)
+			}
+			// No SeriesInstanceUID column — fall through to the standard
+			// path which handles raw spreadsheet rows.
+		}
 	}
 
 	files, _, err := decodeInputFile(ctx, options.Input, client, options, callbacks, s5cmdMap)
@@ -709,6 +636,120 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 		Logger.Warnf("Some downloads failed. Check the logs above for details.")
 	}
 
+	return summary, nil
+}
+
+// runTCIAStreamingDownload runs the worker-pool download pipeline against a
+// channel of FileInfo values produced by streaming metadata fetches. Workers
+// begin downloading as soon as the first batch of metadata arrives.
+func runTCIAStreamingDownload(ctx context.Context, client *http.Client, options *Options, callbacks Callbacks, seriesCount int, fileChan <-chan *FileInfo) (*Summary, error) {
+	if options.Debug {
+		Logger.Warnf("Starting streaming download of ~%d series with %d workers", seriesCount, options.Concurrent)
+	} else {
+		callbacks.emitStderr(fmt.Sprintf("\nDownloading ~%d series with %d workers...\n\n", seriesCount, options.Concurrent))
+	}
+
+	gen3Auth, gaErr := NewGen3AuthManager(client, options.Auth)
+	if gaErr != nil {
+		Logger.Warnf("Failed to initialize Gen3 auth manager: %v", gaErr)
+		gen3Auth = &Gen3AuthManager{}
+	}
+
+	stats := &DownloadStats{Total: int32(seriesCount), StartTime: time.Now()}
+	summary := &Summary{Total: int32(seriesCount)}
+
+	workerCtx := WorkerContext{
+		Context:    ctx,
+		HTTPClient: client,
+		Gen3Auth:   gen3Auth,
+		Options:    options,
+		Stats:      stats,
+		Callbacks:  callbacks,
+		EventGate:  NewSeriesEventGate(options.InterimUpdateInterval),
+		AuthGate:   &AuthGate{},
+	}
+
+	var wg sync.WaitGroup
+	bufSize := seriesCount
+	if bufSize <= 0 {
+		bufSize = 1
+	}
+	inputChan := make(chan *FileInfo, bufSize)
+
+	for i := 0; i < options.Concurrent; i++ {
+		wc := workerCtx
+		wc.WorkerID = i + 1
+		wg.Add(1)
+		go func(wc WorkerContext) {
+			defer wg.Done()
+			wc.processFiles(inputChan)
+		}(wc)
+	}
+
+	seen := make(map[string]struct{})
+	allFiles := make([]*FileInfo, 0, seriesCount)
+	var queued int32
+feedLoop:
+	for {
+		select {
+		case <-ctx.Done():
+			callbacks.emitStderr("\nDownload cancelled by user\n")
+			go func() {
+				for range fileChan {
+				}
+			}()
+			close(inputChan)
+			wg.Wait()
+			stats.Failed += queued - stats.Downloaded - stats.Skipped - stats.Failed
+			summary.Downloaded = stats.Downloaded
+			summary.Skipped = stats.Skipped
+			summary.Failed = stats.Failed
+			summary.Elapsed = time.Since(stats.StartTime)
+			return summary, ctx.Err()
+		case f, ok := <-fileChan:
+			if !ok {
+				break feedLoop
+			}
+			allFiles = append(allFiles, f)
+			if f != nil && f.SeriesInstanceUID != "" {
+				if _, already := seen[f.SeriesInstanceUID]; !already {
+					seen[f.SeriesInstanceUID] = struct{}{}
+					callbacks.emitSeries(newSeriesEvent(f, seriesStatusQueued, "Queued for download", 0))
+				}
+			}
+			queued++
+			inputChan <- f
+		}
+	}
+	close(inputChan)
+	wg.Wait()
+
+	emitManifestMetadata(callbacks, options.Input, allFiles)
+	MergeCompletionStatus(options.Output)
+	callbacks.emitProgress(stats, "Complete", options.Debug)
+	if !options.Debug {
+		callbacks.emitStderr("\n")
+	}
+	summary.Downloaded = stats.Downloaded
+	summary.Synced = stats.Synced
+	summary.Skipped = stats.Skipped
+	summary.Failed = stats.Failed
+	summary.Elapsed = time.Since(stats.StartTime)
+
+	callbacks.emitStdout("\n=== Download Summary ===\n")
+	callbacks.emitStdout(fmt.Sprintf("Total items: %d\n", summary.Total))
+	callbacks.emitStdout(fmt.Sprintf("Downloaded: %d\n", summary.Downloaded))
+	callbacks.emitStdout(fmt.Sprintf("Synced: %d\n", summary.Synced))
+	callbacks.emitStdout(fmt.Sprintf("Skipped: %d\n", summary.Skipped))
+	callbacks.emitStdout(fmt.Sprintf("Failed: %d\n", summary.Failed))
+	callbacks.emitStdout(fmt.Sprintf("Total time: %s\n", summary.Elapsed.Round(time.Second)))
+	if summary.Total > 0 && summary.Elapsed > 0 {
+		rate := float64(summary.Downloaded+summary.Synced+summary.Skipped) / summary.Elapsed.Seconds()
+		callbacks.emitStdout(fmt.Sprintf("Average rate: %.1f items/second\n", rate))
+	}
+	if summary.Failed > 0 {
+		Logger.Warnf("Some downloads failed. Check the logs above for details.")
+	}
 	return summary, nil
 }
 
@@ -1062,8 +1103,10 @@ func decodeInputFile(ctx context.Context, filePath string, client *http.Client, 
 			defer os.Remove(outPath)
 			files, _ := decodeS5cmd(filePath, options.Output, s5cmdMap, callbacks, options)
 			if len(files) == 0 {
+				Logger.Warnf("THIS IS AN NBIA CALL")
 				files = decodeTCIA(ctx, filePath, client, options, callbacks)
 			}
+			Logger.Warnf("Exit")
 
 			emitManifestMetadata(callbacks, filePath, files)
 			return files, 0, nil
