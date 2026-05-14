@@ -6,17 +6,7 @@ import {
   Output,
 } from '@angular/core';
 import { OpenDirectory } from '../../../../wailsjs/go/main/App';
-import { SeriesDownloadSnapshot, SeriesDownloadStatus } from '../../models/download-series.model';
 import { RunState } from '../../models/run-state.model';
-
-const ACTIVE_SERIES_STATUSES = new Set<SeriesDownloadStatus>([
-  'worker-initiated',
-  'pre-check',
-  'metadata',
-  'download-initiated',
-  'downloading',
-  'decompressing',
-]);
 
 @Component({
   selector: 'app-manifest-download-card',
@@ -126,54 +116,32 @@ export class ManifestDownloadCardComponent {
     return `${downloaded} / ${total} downloaded`;
   }
 
-  get currentActiveSeries(): SeriesDownloadSnapshot | null {
-    const series = this.run?.series ?? [];
-    let latest: SeriesDownloadSnapshot | null = null;
-
-    for (const snapshot of series) {
-      if (!ACTIVE_SERIES_STATUSES.has(snapshot.status)) {
-        continue;
-      }
-
-      if (!latest) {
-        latest = snapshot;
-        continue;
-      }
-
-      const snapshotTime = snapshot.lastUpdatedAt ? Date.parse(snapshot.lastUpdatedAt) : 0;
-      const latestTime = latest.lastUpdatedAt ? Date.parse(latest.lastUpdatedAt) : 0;
-      if (snapshotTime >= latestTime) {
-        latest = snapshot;
-      }
-    }
-
-    return latest;
-  }
-
   get transferStatusText(): string {
-    const active = this.currentActiveSeries;
-    if (!active) {
+    if (this.isPaused || this.isTerminal) {
+      return '';
+    }
+    if ((this.run?.overview?.active ?? 0) <= 0) {
       return '';
     }
 
-    const title = active.seriesDescription?.trim() || active.seriesUID || 'Series';
-
-    switch (active.status) {
-      case 'worker-initiated':
-        return `Worker Initiated: ${title}`;
-      case 'pre-check':
-        return `Running Pre-checks: ${title}`;
-      case 'metadata':
-        return `Fetching Metadata: ${title}`;
-      case 'download-initiated':
-        return `Download Initiated: ${title}`;
-      case 'downloading':
-        return `Downloading: ${title}`;
-      case 'decompressing':
-        return `Decompressing: ${title}`;
-      default:
-        return '';
+    const bps = this.run?.bytesPerSecond;
+    if (typeof bps !== 'number' || !isFinite(bps) || bps <= 0) {
+      return 'Download Speed: measuring…';
     }
+
+    return `Download Speed: ${this.formatBytesPerSecond(bps)}`;
+  }
+
+  private formatBytesPerSecond(bytesPerSecond: number): string {
+    const units = ['B/s', 'KB/s', 'MB/s', 'GB/s', 'TB/s'];
+    let value = bytesPerSecond;
+    let unitIndex = 0;
+    while (value >= 1024 && unitIndex < units.length - 1) {
+      value /= 1024;
+      unitIndex++;
+    }
+    const decimals = value >= 100 || unitIndex === 0 ? 0 : value >= 10 ? 1 : 2;
+    return `${value.toFixed(decimals)} ${units[unitIndex]}`;
   }
 
   get hasFailedSeries(): boolean {

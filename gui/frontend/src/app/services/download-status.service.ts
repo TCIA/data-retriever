@@ -447,7 +447,7 @@ export class DownloadStatusService implements OnDestroy {
           const instantaneousRate = deltaBytes / deltaSeconds;
           run.bytesPerSecond =
             typeof run.bytesPerSecond === 'number'
-              ? run.bytesPerSecond * 0.65 + instantaneousRate * 0.35
+              ? run.bytesPerSecond * 0.88 + instantaneousRate * 0.12
               : instantaneousRate;
           run.lastByteSampleValue = bytesDownloaded;
           run.lastByteSampleAt = now;
@@ -455,7 +455,7 @@ export class DownloadStatusService implements OnDestroy {
           run.bytesPerSecond = undefined;
           run.lastByteSampleValue = bytesDownloaded;
           run.lastByteSampleAt = now;
-        } else if (deltaSeconds >= 1.5) {
+        } else if (deltaSeconds >= 4) {
           run.bytesPerSecond = 0;
           run.lastByteSampleValue = bytesDownloaded;
           run.lastByteSampleAt = now;

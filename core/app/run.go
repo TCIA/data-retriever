@@ -458,51 +458,67 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 
 	ext := strings.ToLower(filepath.Ext(options.Input))
 
-	// For .tcia manifests backed by TCIA (not IDC/s5cmd), stream metadata in
-	// batches so download workers can start on the first batch while remaining
-	// batches are still in-flight.
-	//
-	// IDC .tcia files embed an s5cmd manifest, so decodeS5cmd succeeds; those
-	// fall through to the standard path below.
+	// For .tcia manifests, run a single pass that classifies each line: IDC
+	// s5cmd lines and bare UIDs resolvable via the parquet index produce
+	// pre-built FileInfos; bare UIDs not in the parquet are routed through the
+	// TCIA streaming/batch path. When both paths produce work, queue the
+	// s5cmd jobs first and stream the TCIA batches behind them so workers can
+	// start immediately on the s5cmd side while TCIA metadata is fetched.
 	if ext == ".tcia" {
-		s5Files, _ := decodeS5cmd(options.Input, options.Output, s5cmdMap, callbacks, options)
-		if len(s5Files) == 0 {
+		s5Files, _, tciaUIDs := decodeS5cmd(options.Input, options.Output, s5cmdMap, callbacks, options)
+		if len(s5Files) == 0 && len(tciaUIDs) == 0 {
+			// Nothing parsed as either IDC or bare-UID — try the lenient
+			// TCIA reader (handles edge-case manifests decodeS5cmd skipped).
 			seriesCount, fileChan, serr := decodeTCIAStreaming(ctx, options.Input, client, options, callbacks)
 			if serr != nil {
 				return nil, fmt.Errorf("failed to decode tcia file: %w", serr)
 			}
 			return runTCIAStreamingDownload(ctx, client, options, callbacks, seriesCount, fileChan)
 		}
-		// IDC .tcia — fall through to the standard path; decodeInputFile will
-		// re-run decodeS5cmd against the already-built in-memory map.
+		if len(tciaUIDs) > 0 {
+			// Partial pre-check: TCIA-side sizes aren't known until metadata
+			// streams in, so this only catches shortfalls already evident
+			// from the s5cmd portion.
+			if spaceErr := checkDiskSpace(options.Output, s5Files); spaceErr != nil {
+				return nil, spaceErr
+			}
+			seriesCount, fileChan := streamFilesFromSeriesIDs(ctx, s5Files, tciaUIDs, client, options, callbacks)
+			return runTCIAStreamingDownload(ctx, client, options, callbacks, seriesCount, fileChan)
+		}
+		// Pure IDC .tcia — fall through to the standard path; decodeInputFile
+		// will re-run decodeS5cmd against the already-built in-memory map.
 	}
 
-	// Spreadsheets with a SeriesInstanceUID column that are not IDC s5cmd
-	// manifests are treated like a TCIA manifest. Stream metadata in batches
-	// of tciaBatchSize so workers can start as the first batch arrives,
-	// matching the .tcia streaming behavior.
+	// Spreadsheets with a SeriesInstanceUID column: classify each UID against
+	// the parquet index. IDC-known UIDs become s5cmd jobs; the rest stream
+	// through the TCIA path. When both paths produce work, queue s5cmd jobs
+	// first so workers can start while TCIA metadata is still being fetched.
 	if ext == ".csv" || ext == ".tsv" || ext == ".xlsx" {
-		s5Files, _ := decodeS5cmd(options.Input, options.Output, s5cmdMap, callbacks, options)
-		if len(s5Files) == 0 {
-			seriesUIDs, suidErr := getSeriesInstanceUIDsFromSpreadsheet(options.Input)
-			if suidErr == nil {
-				metaDir := filepath.Join(options.Output, "metadata")
-				if mkErr := os.MkdirAll(metaDir, 0755); mkErr != nil {
-					return nil, fmt.Errorf("failed to create metadata directory: %w", mkErr)
-				}
-				destPath := filepath.Join(metaDir, filepath.Base(options.Input))
-				if copyErr := copyFile(options.Input, destPath); copyErr != nil {
-					Logger.Warnf("Failed to copy spreadsheet to metadata folder: %v", copyErr)
-				}
-
-				seriesCount, fileChan := streamFilesFromSeriesIDs(ctx, seriesUIDs, client, options, callbacks)
-				return runTCIAStreamingDownload(ctx, client, options, callbacks, seriesCount, fileChan)
-			} else if suidErr != ErrSeriesInstanceUIDColumnNotFound {
-				return nil, fmt.Errorf("could not get series UIDs from spreadsheet: %w", suidErr)
+		s5Files, _, tciaUIDs, splitErr := decodeSpreadsheetSplit(options.Input, options.Output, s5cmdMap, callbacks, options)
+		if splitErr == nil {
+			metaDir := filepath.Join(options.Output, "metadata")
+			if mkErr := os.MkdirAll(metaDir, 0755); mkErr != nil {
+				return nil, fmt.Errorf("failed to create metadata directory: %w", mkErr)
 			}
-			// No SeriesInstanceUID column — fall through to the standard
-			// path which handles raw spreadsheet rows.
+			destPath := filepath.Join(metaDir, filepath.Base(options.Input))
+			if copyErr := copyFile(options.Input, destPath); copyErr != nil {
+				Logger.Warnf("Failed to copy spreadsheet to metadata folder: %v", copyErr)
+			}
+
+			// Partial pre-check: TCIA-side sizes aren't known until metadata
+			// streams in, so this only catches shortfalls already evident
+			// from the s5cmd portion (sizes from the parquet index).
+			if spaceErr := checkDiskSpace(options.Output, s5Files); spaceErr != nil {
+				return nil, spaceErr
+			}
+
+			seriesCount, fileChan := streamFilesFromSeriesIDs(ctx, s5Files, tciaUIDs, client, options, callbacks)
+			return runTCIAStreamingDownload(ctx, client, options, callbacks, seriesCount, fileChan)
+		} else if splitErr != ErrSeriesInstanceUIDColumnNotFound {
+			return nil, fmt.Errorf("could not get series UIDs from spreadsheet: %w", splitErr)
 		}
+		// No SeriesInstanceUID column — fall through to the standard path
+		// which handles raw spreadsheet rows (drs_uri, imageUrl, etc.).
 	}
 
 	files, _, err := decodeInputFile(ctx, options.Input, client, options, callbacks, s5cmdMap)
@@ -1081,38 +1097,28 @@ func decodeInputFile(ctx context.Context, filePath string, client *http.Client, 
 	ext := strings.ToLower(filepath.Ext(filePath))
 	switch ext {
 	case ".tcia":
-		files, _ := decodeS5cmd(filePath, options.Output, s5cmdMap, callbacks, options)
-		if len(files) == 0 {
-			files = decodeTCIA(ctx, filePath, client, options, callbacks)
+		s5Files, _, tciaUIDs := decodeS5cmd(filePath, options.Output, s5cmdMap, callbacks, options)
+		if len(s5Files) == 0 && len(tciaUIDs) == 0 {
+			files := decodeTCIA(ctx, filePath, client, options, callbacks)
+			emitManifestMetadata(callbacks, filePath, files)
+			return files, 0, nil
 		}
+		files := combineWithTCIABatch(ctx, s5Files, tciaUIDs, client, options, callbacks)
 		emitManifestMetadata(callbacks, filePath, files)
 		return files, 0, nil
 	case ".s5cmd":
-		files, newJobs := decodeS5cmd(filePath, options.Output, s5cmdMap, callbacks, options)
+		s5Files, newJobs, tciaUIDs := decodeS5cmd(filePath, options.Output, s5cmdMap, callbacks, options)
+		files := combineWithTCIABatch(ctx, s5Files, tciaUIDs, client, options, callbacks)
 		emitManifestMetadata(callbacks, filePath, files)
 		return files, newJobs, nil
 	case ".csv", ".tsv", ".xlsx":
-		// Try to decode as a SeriesInstanceUID spreadsheet first
-		seriesUIDs, err := getSeriesInstanceUIDsFromSpreadsheet(filePath)
-		if err == nil {
-			// Success, handle like a TCIA manifest
-			outPath, err := saveSeriesUIDsToFile(filePath, seriesUIDs)
-			if err != nil {
-				return nil, 0, err
-			}
-			defer os.Remove(outPath)
-			files, _ := decodeS5cmd(filePath, options.Output, s5cmdMap, callbacks, options)
-			if len(files) == 0 {
-				Logger.Warnf("THIS IS AN NBIA CALL")
-				files = decodeTCIA(ctx, filePath, client, options, callbacks)
-			}
-			Logger.Warnf("Exit")
-
+		s5Files, _, tciaUIDs, splitErr := decodeSpreadsheetSplit(filePath, options.Output, s5cmdMap, callbacks, options)
+		if splitErr == nil {
+			files := combineWithTCIABatch(ctx, s5Files, tciaUIDs, client, options, callbacks)
 			emitManifestMetadata(callbacks, filePath, files)
 			return files, 0, nil
-		} else if err != ErrSeriesInstanceUIDColumnNotFound {
-			// A real error occurred
-			return nil, 0, fmt.Errorf("could not get series UIDs from spreadsheet: %w", err)
+		} else if splitErr != ErrSeriesInstanceUIDColumnNotFound {
+			return nil, 0, fmt.Errorf("could not get series UIDs from spreadsheet: %w", splitErr)
 		}
 
 		// Fallback to regular spreadsheet handling
@@ -1125,6 +1131,28 @@ func decodeInputFile(ctx context.Context, filePath string, client *http.Client, 
 	default:
 		return nil, 0, fmt.Errorf("unsupported input file format: %s", ext)
 	}
+}
+
+// combineWithTCIABatch fetches TCIA metadata for tciaUIDs (if any), appends
+// the resulting FileInfos to s5Files, and writes the combined metadata.csv +
+// completion status. Used by decodeInputFile for non-streaming hybrid runs.
+func combineWithTCIABatch(ctx context.Context, s5Files []*FileInfo, tciaUIDs []string, client *http.Client, options *Options, callbacks Callbacks) []*FileInfo {
+	files := s5Files
+	if len(tciaUIDs) > 0 {
+		callbacks.emitStdout(fmt.Sprintf("Fetching TCIA metadata for %d series\n", len(tciaUIDs)))
+		tciaFiles := fetchTCIABatch(ctx, tciaUIDs, client)
+		files = append(files, tciaFiles...)
+	}
+	if len(tciaUIDs) > 0 || len(files) > 0 {
+		csvPath := filepath.Join(options.Output, "metadata", "metadata.csv")
+		if err := WriteAllMetadataToCSV(files, csvPath); err != nil {
+			Logger.Errorf("Failed to save combined CSV: %v", err)
+		} else {
+			callbacks.emitStdout(fmt.Sprintf("Saved metadata for %d files to %s\n", len(files), csvPath))
+		}
+		InitCompletionStatus(options.Output, files)
+	}
+	return files
 }
 
 func isAuthError(err error) bool {

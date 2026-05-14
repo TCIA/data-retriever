@@ -357,113 +357,84 @@ func loadS5cmdSeriesMapFromCSVs(outputDir string) (map[string]string, error) {
 	return seriesMap, nil
 }
 
-func decodeS5cmd(filePath string, outputDir string, processedSeries map[string]string, callbacks Callbacks, options *Options) ([]*FileInfo, int) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		logger.Fatalf("could not open s5cmd manifest: %v", err)
-	}
-	defer file.Close()
-
-
-
-
+// loadParquetMetadata loads both parquet indexes (with embedded fallback) and
+// returns the URI→metadata map plus a SeriesInstanceUID→s3 URI lookup.
+func loadParquetMetadata(options *Options) (map[string]*SeriesMetadata, map[string]string) {
 	seriesMeta := make(map[string]*SeriesMetadata)
 	nbiaLookup := make(map[string]string)
-	
-	logger.Warnf("PARQUET: ")
-	logger.Warnf(options.IDCParquetPath)
 
-	loadSeriesMetadataFromParquet(
+	if err := loadSeriesMetadataFromParquet(
 		options.IDCParquetPath, "parquet/idc_index.parquet",
 		seriesMeta, nbiaLookup,
-	)
-
-	loadSeriesMetadataFromParquet(
+	); err != nil {
+		logger.Warnf("Failed to load idc parquet metadata: %v", err)
+	}
+	if err := loadSeriesMetadataFromParquet(
 		options.PriorParquetPath, "parquet/prior_versions_index.parquet",
 		seriesMeta, nbiaLookup,
-	)
+	); err != nil {
+		logger.Warnf("Failed to load prior_versions parquet metadata: %v", err)
+	}
+	return seriesMeta, nbiaLookup
+}
 
-	//loadSeriesMetadataFromParquet("parquet/idc_index.parquet", seriesMeta, nbiaLookup)
-	//loadSeriesMetadataFromParquet("parquet/prior_versions_index.parquet", seriesMeta, nbiaLookup)
-
-
-	if err != nil {
-		logger.Fatalf("Failed to load parquet metadata: %v", err)
+// buildS5cmdFileInfo constructs a FileInfo for a single IDC s3 URI using the
+// parquet-derived metadata map. Returns (fi, isNewJob, found). When found is
+// false the URI was not in the parquet and the caller should route the source
+// (e.g. a SeriesInstanceUID) through the TCIA fallback instead.
+func buildS5cmdFileInfo(originalURI string, seriesMeta map[string]*SeriesMetadata, outputDir string, processedSeries map[string]string, options *Options) (*FileInfo, bool, bool) {
+	meta, ok := seriesMeta[originalURI]
+	if !ok {
+		return nil, false, false
 	}
 
-	var jobsToProcess []*FileInfo
-	var newJobs int
-	var numDotRe = regexp.MustCompile(`^[0-9][0-9.]*$`)
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.Fields(line)
-		var originalURI string
-		if len(parts) >= 2 && parts[0] == "cp" {
-			originalURI = parts[1]
-		} else if len(parts) == 1 && strings.HasPrefix(parts[0], "s3://") {
-		originalURI = parts[0]
-	} else if len(parts) == 1 && numDotRe.MatchString(parts[0]) {
-		originalURI = nbiaLookup[parts[0]]
-	} else {
-		continue // Skip comments and invalid lines
-	}
-
-	fi := &FileInfo{}
-	if seriesUID, ok := processedSeries[originalURI]; ok {
-		// This is a sync job for an existing series
+	var fi *FileInfo
+	isNewJob := false
+	if seriesUID, exists := processedSeries[originalURI]; exists {
 		logger.Warnf("Queueing sync job for existing series: %s", originalURI)
 		fi = &FileInfo{
-			DownloadURL:      originalURI,
-			SeriesInstanceUID:        seriesUID, // We already know the final UID
-			OriginalS5cmdURI: originalURI,
-			IsSyncJob:        true,
+			DownloadURL:       originalURI,
+			SeriesInstanceUID: seriesUID,
+			OriginalS5cmdURI:  originalURI,
+			IsSyncJob:         true,
 		}
 	} else {
-		// This is a new copy job
-		newJobs++
+		isNewJob = true
 		logger.Infof("Queueing new copy job for series: %s", originalURI)
-
 		fi = &FileInfo{
-			DownloadURL:      originalURI,
-			SeriesInstanceUID:        originalURI, // Temporary ID for progress
-			OriginalS5cmdURI: originalURI,
-			IsSyncJob:        false,
+			DownloadURL:       originalURI,
+			SeriesInstanceUID: originalURI,
+			OriginalS5cmdURI:  originalURI,
+			IsSyncJob:         false,
 		}
 	}
 
-	//  Attach Parquet metadata if available
-	if meta, ok := seriesMeta[originalURI]; ok {
-	    fi.SeriesInstanceUID   = meta.SeriesInstanceUID
-	    fi.FileSize            = strconv.FormatInt(int64(meta.series_size_MB*1000*1000), 10)
-	    fi.PatientID           = meta.PatientID
-	    fi.PatientAge          = meta.PatientAge
-	    fi.PatientSex          = meta.PatientSex
-	    fi.StudyInstanceUID    = meta.StudyInstanceUID
-	    fi.Collection          = meta.collection_id
-	    fi.StudyDate           = meta.StudyDate
-	    fi.StudyDesc           = meta.StudyDescription
-	    fi.BodyPartExamined    = meta.BodyPartExamined
-	    fi.Modality            = meta.Modality
-	    fi.SOPClassUID         = meta.SOPClassUID
-	    fi.SOPClassName        = meta.sop_class_name
-	    fi.TransferSyntaxUID   = meta.TransferSyntaxUID
-	    fi.TransferSyntaxName  = meta.transfer_syntax_name
-	    fi.Manufacturer        = meta.Manufacturer
-	    fi.ManufacturerModelName = meta.ManufacturerModelName
-	    fi.SeriesDate          = meta.SeriesDate
-	    fi.SeriesNumber        = meta.SeriesNumber
-	    fi.SeriesDescription   = meta.SeriesDescription
-	    fi.InstanceCount       = meta.instanceCount
-	    fi.LicenseShortName    = meta.license_short_name
-	    fi.AWSBucket           = meta.aws_bucket
-	    fi.CRDCSeriesUUID      = meta.crdc_series_uuid
-	    fi.SourceDOI           = meta.source_DOI
-	    fi.AnalysisResultID    = meta.analysis_result_id
-	} else {
-		logger.Warnf("No parquet metadata found for series %s", originalURI)
-		continue;
-	}
+	fi.SeriesInstanceUID = meta.SeriesInstanceUID
+	fi.FileSize = strconv.FormatInt(int64(meta.series_size_MB*1000*1000), 10)
+	fi.PatientID = meta.PatientID
+	fi.PatientAge = meta.PatientAge
+	fi.PatientSex = meta.PatientSex
+	fi.StudyInstanceUID = meta.StudyInstanceUID
+	fi.Collection = meta.collection_id
+	fi.StudyDate = meta.StudyDate
+	fi.StudyDesc = meta.StudyDescription
+	fi.BodyPartExamined = meta.BodyPartExamined
+	fi.Modality = meta.Modality
+	fi.SOPClassUID = meta.SOPClassUID
+	fi.SOPClassName = meta.sop_class_name
+	fi.TransferSyntaxUID = meta.TransferSyntaxUID
+	fi.TransferSyntaxName = meta.transfer_syntax_name
+	fi.Manufacturer = meta.Manufacturer
+	fi.ManufacturerModelName = meta.ManufacturerModelName
+	fi.SeriesDate = meta.SeriesDate
+	fi.SeriesNumber = meta.SeriesNumber
+	fi.SeriesDescription = meta.SeriesDescription
+	fi.InstanceCount = meta.instanceCount
+	fi.LicenseShortName = meta.license_short_name
+	fi.AWSBucket = meta.aws_bucket
+	fi.CRDCSeriesUUID = meta.crdc_series_uuid
+	fi.SourceDOI = meta.source_DOI
+	fi.AnalysisResultID = meta.analysis_result_id
 
 	var finalDirPath string
 	if options.DirectoryMode == "descriptive" {
@@ -486,28 +457,132 @@ func decodeS5cmd(filePath string, outputDir string, processedSeries map[string]s
 
 	if err := os.MkdirAll(finalDirPath, 0755); err != nil {
 		logger.Warnf("Could not create temp directory for %s: %v", originalURI, err)
-		continue
+		return nil, false, false
+	}
+	fi.S5cmdManifestPath = finalDirPath
+
+	return fi, isNewJob, true
+}
+
+// decodeS5cmd parses an s5cmd or .tcia manifest. Bare SeriesInstanceUID lines
+// that don't resolve via the parquet index are returned as tciaFallbackUIDs so
+// the caller can route them through the TCIA streaming/batch path. When the
+// fallback list is empty the function writes metadata.csv and initializes
+// completion status itself, preserving prior behavior for pure IDC inputs;
+// when there are fallback UIDs the caller is responsible for writing combined
+// metadata after the TCIA side completes.
+func decodeS5cmd(filePath string, outputDir string, processedSeries map[string]string, callbacks Callbacks, options *Options) ([]*FileInfo, int, []string) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		logger.Fatalf("could not open s5cmd manifest: %v", err)
+	}
+	defer file.Close()
+
+	seriesMeta, nbiaLookup := loadParquetMetadata(options)
+
+	var jobsToProcess []*FileInfo
+	var tciaFallbackUIDs []string
+	var newJobs int
+	var numDotRe = regexp.MustCompile(`^[0-9][0-9.]*$`)
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		parts := strings.Fields(line)
+		var originalURI string
+		var sourceUID string
+		if len(parts) >= 2 && parts[0] == "cp" {
+			originalURI = parts[1]
+		} else if len(parts) == 1 && strings.HasPrefix(parts[0], "s3://") {
+			originalURI = parts[0]
+		} else if len(parts) == 1 && numDotRe.MatchString(parts[0]) {
+			sourceUID = parts[0]
+			originalURI = nbiaLookup[sourceUID]
+			if originalURI == "" {
+				tciaFallbackUIDs = append(tciaFallbackUIDs, sourceUID)
+				continue
+			}
+		} else {
+			continue
+		}
+
+		fi, isNew, found := buildS5cmdFileInfo(originalURI, seriesMeta, outputDir, processedSeries, options)
+		if !found {
+			if sourceUID != "" {
+				tciaFallbackUIDs = append(tciaFallbackUIDs, sourceUID)
+			} else {
+				logger.Warnf("No parquet metadata found for series %s", originalURI)
+			}
+			continue
+		}
+		if isNew {
+			newJobs++
+		}
+		jobsToProcess = append(jobsToProcess, fi)
 	}
 
-	fi.S5cmdManifestPath = finalDirPath
-	jobsToProcess = append(jobsToProcess, fi)
+	if err := scanner.Err(); err != nil {
+		logger.Fatalf("error reading s5cmd manifest: %v", err)
+	}
 
+	if len(tciaFallbackUIDs) == 0 {
+		csvPath := filepath.Join(outputDir, "metadata", "metadata.csv")
+		if err := WriteAllMetadataToCSV(jobsToProcess, csvPath); err != nil {
+			logger.Errorf("Failed to save combined CSV: %v", err)
+		} else {
+			callbacks.emitStdout(fmt.Sprintf("Saved metadata for %d files to %s\n", len(jobsToProcess), csvPath))
+		}
+		InitCompletionStatus(outputDir, jobsToProcess)
+	}
+
+	logger.Infof("Found %d s5cmd jobs to process (%d new, %d existing); %d UIDs deferred to TCIA",
+		len(jobsToProcess), newJobs, len(jobsToProcess)-newJobs, len(tciaFallbackUIDs))
+	return jobsToProcess, newJobs, tciaFallbackUIDs
 }
 
-if err := scanner.Err(); err != nil {
-	logger.Fatalf("error reading s5cmd manifest: %v", err)
-}
+// decodeSpreadsheetSplit reads SeriesInstanceUIDs from a CSV/TSV/XLSX file and
+// partitions them: UIDs present in the parquet index become s5cmd FileInfos;
+// the rest are returned for the caller to feed through the TCIA path. Never
+// writes metadata.csv itself — the caller is expected to combine s5cmd and
+// TCIA results and write once.
+func decodeSpreadsheetSplit(filePath string, outputDir string, processedSeries map[string]string, callbacks Callbacks, options *Options) ([]*FileInfo, int, []string, error) {
+	seriesUIDs, err := getSeriesInstanceUIDsFromSpreadsheet(filePath)
+	if err != nil {
+		return nil, 0, nil, err
+	}
 
+	seriesMeta, nbiaLookup := loadParquetMetadata(options)
 
-// Save all to a single CSV file
-csvPath := filepath.Join(outputDir, "metadata", "metadata.csv")
-if err := WriteAllMetadataToCSV(jobsToProcess, csvPath); err != nil {
-	logger.Errorf("Failed to save combined CSV: %v", err)
-} else {
-	callbacks.emitStdout(fmt.Sprintf("Saved metadata for %d files to %s\n", len(jobsToProcess), csvPath))
-}
-InitCompletionStatus(outputDir, jobsToProcess)
+	var jobsToProcess []*FileInfo
+	var tciaFallbackUIDs []string
+	var newJobs int
+	seen := make(map[string]struct{})
+	for _, uid := range seriesUIDs {
+		uid = strings.TrimSpace(uid)
+		if uid == "" {
+			continue
+		}
+		if _, dup := seen[uid]; dup {
+			continue
+		}
+		seen[uid] = struct{}{}
 
-logger.Infof("Found %d s5cmd jobs to process (%d new, %d existing)", len(jobsToProcess), newJobs, len(jobsToProcess)-newJobs)
-return jobsToProcess, newJobs
+		originalURI := nbiaLookup[uid]
+		if originalURI == "" {
+			tciaFallbackUIDs = append(tciaFallbackUIDs, uid)
+			continue
+		}
+		fi, isNew, found := buildS5cmdFileInfo(originalURI, seriesMeta, outputDir, processedSeries, options)
+		if !found {
+			tciaFallbackUIDs = append(tciaFallbackUIDs, uid)
+			continue
+		}
+		if isNew {
+			newJobs++
+		}
+		jobsToProcess = append(jobsToProcess, fi)
+	}
+
+	logger.Infof("Spreadsheet split: %d s5cmd jobs (%d new), %d UIDs deferred to TCIA",
+		len(jobsToProcess), newJobs, len(tciaFallbackUIDs))
+	return jobsToProcess, newJobs, tciaFallbackUIDs, nil
 }

@@ -496,35 +496,44 @@ func decodeTCIAStreaming(ctx context.Context, path string, httpClient *http.Clie
 		return 0, nil, fmt.Errorf("error reading tcia file: %w", err)
 	}
 
-	total, out := streamFilesFromSeriesIDs(ctx, seriesIDs, httpClient, options, callbacks)
+	total, out := streamFilesFromSeriesIDs(ctx, nil, seriesIDs, httpClient, options, callbacks)
 	return total, out, nil
 }
 
 // streamFilesFromSeriesIDs fetches FileInfo metadata for the provided series
 // IDs in concurrent batches of tciaBatchSize and emits each FileInfo on the
-// returned channel as soon as its batch completes. After all batches finish,
-// metadata.csv is written and completion status is initialized, then the
-// channel is closed.
-func streamFilesFromSeriesIDs(ctx context.Context, seriesIDs []string, httpClient *http.Client, options *Options, callbacks Callbacks) (int, <-chan *FileInfo) {
+// returned channel as soon as its batch completes. Any prefixFiles are emitted
+// first (used for hybrid IDC-s5cmd + TCIA runs so already-built s5cmd jobs
+// queue ahead of streaming TCIA metadata). After all batches finish,
+// metadata.csv is written with the combined set and completion status is
+// initialized, then the channel is closed.
+func streamFilesFromSeriesIDs(ctx context.Context, prefixFiles []*FileInfo, seriesIDs []string, httpClient *http.Client, options *Options, callbacks Callbacks) (int, <-chan *FileInfo) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 
-	total := len(seriesIDs)
-	callbacks.emitStdout(fmt.Sprintf("Found %d series to fetch metadata for\n", total))
+	tciaTotal := len(seriesIDs)
+	total := len(prefixFiles) + tciaTotal
+	if tciaTotal > 0 {
+		callbacks.emitStdout(fmt.Sprintf("Found %d series to fetch metadata for\n", tciaTotal))
+	}
 
-	out := make(chan *FileInfo, tciaBatchSize)
+	bufSize := total
+	if bufSize < tciaBatchSize {
+		bufSize = tciaBatchSize
+	}
+	out := make(chan *FileInfo, bufSize)
 
 	if total == 0 {
 		close(out)
 		return 0, out
 	}
 
-	batches := make([][]string, 0, (total+tciaBatchSize-1)/tciaBatchSize)
-	for i := 0; i < total; i += tciaBatchSize {
+	batches := make([][]string, 0, (tciaTotal+tciaBatchSize-1)/tciaBatchSize)
+	for i := 0; i < tciaTotal; i += tciaBatchSize {
 		end := i + tciaBatchSize
-		if end > total {
-			end = total
+		if end > tciaTotal {
+			end = tciaTotal
 		}
 		batches = append(batches, seriesIDs[i:end])
 	}
@@ -532,10 +541,19 @@ func streamFilesFromSeriesIDs(ctx context.Context, seriesIDs []string, httpClien
 	go func() {
 		defer close(out)
 
+		allFiles := make([]*FileInfo, 0, total)
+		for _, f := range prefixFiles {
+			select {
+			case <-ctx.Done():
+				return
+			case out <- f:
+			}
+			allFiles = append(allFiles, f)
+		}
+
 		sem := make(chan struct{}, tciaConcurrentBatches)
 		var wg sync.WaitGroup
 		var mu sync.Mutex
-		allFiles := make([]*FileInfo, 0, total)
 
 		for batchIdx, batch := range batches {
 			select {
