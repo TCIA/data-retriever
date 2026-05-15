@@ -205,6 +205,7 @@ export class DownloadStatusService implements OnDestroy {
           const { run, message } = this.resolveRunAndMessage(payload, 'error');
           if (!run) return;
           run.status = 'error';
+          run.completedAt = new Date().toISOString();
           if (message) {
             run.errorMessage = message;
             this.appendLog(run, `ERROR: ${message}`);
@@ -290,6 +291,7 @@ export class DownloadStatusService implements OnDestroy {
     const run = this.runsMap.get(runId);
     if (!run) return;
     run.status = 'error';
+    run.completedAt = new Date().toISOString();
     this.appendLog(run, `ERROR: ${err}`);
     this.publishRun(run);
   }

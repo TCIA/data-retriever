@@ -1,8 +1,11 @@
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   EventEmitter,
   Input,
+  OnDestroy,
+  OnInit,
   Output,
 } from '@angular/core';
 import { OpenDirectory } from '../../../../wailsjs/go/main/App';
@@ -14,8 +17,25 @@ import { RunState } from '../../models/run-state.model';
   styleUrls: ['./manifest-download-card.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ManifestDownloadCardComponent {
+export class ManifestDownloadCardComponent implements OnInit, OnDestroy {
   @Input() run!: RunState;
+
+  private elapsedTickId?: ReturnType<typeof setInterval>;
+
+  constructor(private readonly cdr: ChangeDetectorRef) {}
+
+  ngOnInit(): void {
+    // 1Hz tick so the elapsed-time indicator advances between progress events
+    // (and during quiet periods like TCIA metadata fetches).
+    this.elapsedTickId = setInterval(() => this.cdr.markForCheck(), 1000);
+  }
+
+  ngOnDestroy(): void {
+    if (this.elapsedTickId !== undefined) {
+      clearInterval(this.elapsedTickId);
+      this.elapsedTickId = undefined;
+    }
+  }
 
   @Output() pauseToggled = new EventEmitter<void>();
   @Output() cancelRequested = new EventEmitter<void>();
@@ -133,8 +153,12 @@ export class ManifestDownloadCardComponent {
   }
 
   private formatBytesPerSecond(bytesPerSecond: number): string {
-    const units = ['B/s', 'KB/s', 'MB/s', 'GB/s', 'TB/s'];
-    let value = bytesPerSecond;
+    return `${this.formatBytes(bytesPerSecond)}/s`;
+  }
+
+  private formatBytes(bytes: number): string {
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    let value = bytes;
     let unitIndex = 0;
     while (value >= 1024 && unitIndex < units.length - 1) {
       value /= 1024;
@@ -142,6 +166,37 @@ export class ManifestDownloadCardComponent {
     }
     const decimals = value >= 100 || unitIndex === 0 ? 0 : value >= 10 ? 1 : 2;
     return `${value.toFixed(decimals)} ${units[unitIndex]}`;
+  }
+
+  get totalDownloadedText(): string {
+    if (!this.isTerminal) return '';
+    const bytes = this.run?.bytesDownloaded;
+    if (typeof bytes !== 'number' || !isFinite(bytes) || bytes <= 0) return '';
+    return `Total downloaded: ${this.formatBytes(bytes)}`;
+  }
+
+  get elapsedText(): string {
+    const startISO = this.run?.startedAt;
+    if (!startISO) return '';
+    const start = Date.parse(startISO);
+    if (isNaN(start)) return '';
+
+    const completedISO = this.run?.completedAt;
+    const completed = completedISO ? Date.parse(completedISO) : NaN;
+    const endMs = !isNaN(completed) ? completed : Date.now();
+    if (endMs < start) return '';
+
+    const elapsedSec = Math.floor((endMs - start) / 1000);
+    const label = !isNaN(completed) || this.isTerminal ? 'Total time' : 'Elapsed';
+    return `${label}: ${this.formatDuration(elapsedSec)}`;
+  }
+
+  private formatDuration(totalSec: number): string {
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
   }
 
   get hasFailedSeries(): boolean {
