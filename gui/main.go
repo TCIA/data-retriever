@@ -15,7 +15,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/GrigoryEvko/NBIA_data_retriever_CLI/core/app"
+	"TCIA_Data_Retriever/core/app"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/logger"
 	"github.com/wailsapp/wails/v2/pkg/options"

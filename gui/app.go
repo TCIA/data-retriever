@@ -17,7 +17,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrigoryEvko/NBIA_data_retriever_CLI/core/app"
+	"TCIA_Data_Retriever/core/app"
 	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 

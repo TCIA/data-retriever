@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/GrigoryEvko/NBIA_data_retriever_CLI/core/app"
+	"TCIA_Data_Retriever/core/app"
 )
 
 var (

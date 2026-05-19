@@ -5,7 +5,7 @@ go 1.24.0
 toolchain go1.24.4
 
 require (
-	github.com/GrigoryEvko/NBIA_data_retriever_CLI v0.0.0
+	TCIA_Data_Retriever v0.0.0
 	github.com/wailsapp/wails/v2 v2.10.2
 )
 
@@ -93,4 +93,4 @@ require (
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )
 
-replace github.com/GrigoryEvko/NBIA_data_retriever_CLI => ../
+replace TCIA_Data_Retriever => ../

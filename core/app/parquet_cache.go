@@ -57,7 +57,6 @@ func parquetCacheDir() (string, error) {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return "", fmt.Errorf("could not create parquet cache dir: %w", err)
 	}
-	log.Printf("[parquet] WARN: ===== PARQUET CACHE DIR IS: %s =====", dir)
 	return dir, nil
 }
 

@@ -995,6 +995,7 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 
 	updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
 	wc.emitSeriesEvent(fileInfo, seriesStatusSucceeded, fmt.Sprintf("Download completed: %s", displayName), 100)
+	postSeriesCompletionLog(fileInfo)
 }
 
 func (wc *WorkerContext) handleMetadataOnly(fileInfo *FileInfo, isSpreadsheetInput bool) {

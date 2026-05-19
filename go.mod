@@ -1,4 +1,4 @@
-module github.com/GrigoryEvko/NBIA_data_retriever_CLI
+module TCIA_Data_Retriever
 
 go 1.24.0
 
