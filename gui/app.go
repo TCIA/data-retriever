@@ -35,6 +35,11 @@ func (a *App) CheckForUpdate() (UpdateInfo, error) {
 	if version == "" || version == "dev" {
 		return UpdateInfo{}, nil
 	}
+	// Store builds (Mac App Store, Microsoft Store) update through their
+	// respective storefronts, so skip the GitHub release check entirely.
+	if distChannel != "" && distChannel != "github" {
+		return UpdateInfo{}, nil
+	}
 
 	const apiURL = "https://api.github.com/repos/TCIA/data-retriever/releases/latest"
 	client := &http.Client{Timeout: 10 * time.Second}

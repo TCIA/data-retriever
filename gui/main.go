@@ -27,10 +27,11 @@ import (
 var assets embed.FS
 
 var (
-	buildStamp string
-	gitHash    string
-	goVersion  string
-	version    string
+	buildStamp  string
+	gitHash     string
+	goVersion   string
+	version     string
+	distChannel string // set via -ldflags "-X main.distChannel=appstore|msstore"; empty == GitHub build
 )
 
 func main() {
