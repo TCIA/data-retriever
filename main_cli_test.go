@@ -30,7 +30,11 @@ func TestMainCLIHelperProcess(t *testing.T) {
 
 func runCLIHelper(t *testing.T, args ...string) (string, error) {
 	t.Helper()
-	commandArgs := append([]string{"-test.run=TestMainCLIHelperProcess", "--"}, args...)
+	// The merged binary defaults to GUI mode; inject --cli so main() runs runCLI().
+	// --accept-data-policy bypasses the interactive prompt that would otherwise
+	// block tests like --version on stdin.
+	cliArgs := append([]string{"--cli", "--accept-data-policy"}, args...)
+	commandArgs := append([]string{"-test.run=TestMainCLIHelperProcess", "--"}, cliArgs...)
 	cmd := exec.Command(os.Args[0], commandArgs...)
 	cmd.Env = append(os.Environ(), "GO_WANT_HELPER_PROCESS=1")
 	output, err := cmd.CombinedOutput()
