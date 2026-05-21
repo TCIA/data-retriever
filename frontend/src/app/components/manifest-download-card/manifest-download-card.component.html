@@ -57,13 +57,34 @@
         <div class="header-actions">
           <button
             *ngIf="canOpenOutputDirectory"
-            class="open-folder-btn"
+            class="action-btn open-folder-btn"
             type="button"
             (click)="openOutputDirectory($event)"
             title="Open output folder"
             aria-label="Open output folder"
           >
-            Open Folder
+            <span class="material-symbols-outlined">folder_open</span>
+          </button>
+          <!-- Expand / collapse -->
+          <button
+            class="action-btn collapse-btn"
+            (click)="toggleOutput()"
+            [class.is-pressed]="showOutput"
+            [title]="showOutput ? 'Hide console output' : 'Show console output'"
+            [attr.aria-label]="showOutput ? 'Hide console output' : 'Show console output'"
+            [attr.aria-pressed]="showOutput"
+            type="button"
+          >
+            <span class="material-symbols-outlined">terminal_2</span>
+          </button>
+          <button
+            class="action-btn download-card-close"
+            title="Dismiss"
+            aria-label="Remove"
+            type="button"
+            (click)="onCancel($event); onRemove($event)"
+          >
+            <span class="material-icons-outlined">close</span>
           </button>
           <button
             *ngIf="isTerminal && hasFailedSeries"
@@ -74,24 +95,6 @@
             aria-label="Retry failed downloads"
           >
             Retry Failed
-          </button>
-          <button 
-                  class="download-card-close"
-                  title="Dismiss"
-                  (click)="onCancel($event); onRemove($event)">
-            <span class="material-icons-outlined">close</span>
-          </button>
-          <!-- Expand / collapse -->
-          <button
-            class="collapse-btn"
-            (click)="toggleOutput()"
-            [class.is-pressed]="showOutput"
-            [title]="showOutput ? 'Hide console output' : 'Show console output'"
-            [attr.aria-label]="showOutput ? 'Hide console output' : 'Show console output'"
-            [attr.aria-pressed]="showOutput"
-            type="button"
-          >
-            <span class="material-symbols-outlined">terminal_2</span>
           </button>
         </div>
       </div>

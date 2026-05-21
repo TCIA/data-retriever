@@ -68,3 +68,5 @@ Thumbs.db
 *.tar.gz
 *.zip
 checksums.txt
+go.mod
+go.mod

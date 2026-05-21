@@ -40,6 +40,12 @@
   gap: 12px;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .title-section {
   display: flex;
   flex-direction: column;
@@ -91,24 +97,30 @@
   margin-top: 2px;
 }
 
-.open-folder-btn {
-  margin-top: 8px;
-  align-self: flex-start;
+.action-btn {
+  width: 32px;
+  height: 32px;
   border: 1px solid #d0d0d0;
-  border-radius: 6px;
+  border-radius: 50%;
   background: transparent;
-  color: var(--text-primary, #333);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1;
-  padding: 7px 10px;
+  color: #666;
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
 }
 
-.open-folder-btn:hover {
+.action-btn:hover {
   background: rgba(0, 0, 0, 0.04);
   border-color: #bcbcbc;
+  color: #333;
+}
+
+.action-btn .material-icons-outlined,
+.action-btn .material-symbols-outlined {
+  font-size: 20px;
 }
 
 .retry-btn {
@@ -140,31 +152,6 @@
     background: rgba(239, 154, 154, 0.12);
     border-color: #e57373;
     color: #e57373;
-  }
-}
-
-.collapse-btn {
-  width: 32px;
-  height: 32px;
-  border: none;
-  border-radius: 50%;
-  background: transparent;
-  color: #666;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-  
-  &:hover {
-    background: rgba(0, 0, 0, 0.05);
-    color: #333;
-  }
-  
-  .material-icons-outlined,
-  .material-symbols-outlined {
-    font-size: 20px;
   }
 }
 
@@ -385,14 +372,15 @@
   color: #999;
 }
 
-:host-context(.dark-mode) .open-folder-btn {
+:host-context(.dark-mode) .action-btn {
   border-color: #555;
   color: #e0e0e0;
 }
 
-:host-context(.dark-mode) .open-folder-btn:hover {
+:host-context(.dark-mode) .action-btn:hover {
   background: rgba(255, 255, 255, 0.08);
   border-color: #6a6a6a;
+  color: #f0f0f0;
 }
 
 :host-context(.dark-mode) .stat-value {
