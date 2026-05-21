@@ -240,12 +240,12 @@
              *ngIf="runs.length > 0"
              [title]="globalOverview.completed + ' completed, ' + globalOverview.failed + ' failed, ' + globalOverview.skipped + ' skipped, ' + globalOverview.cancelled + ' cancelled, ' + globalOverview.queued + ' queued, ' + globalOverview.active + ' in progress'"
              [attr.aria-label]="globalOverview.completed + ' completed, ' + globalOverview.failed + ' failed, ' + globalOverview.skipped + ' skipped, ' + globalOverview.cancelled + ' cancelled, ' + globalOverview.queued + ' queued, ' + globalOverview.active + ' in progress'">
-          <span>{{ globalOverview.completed }} completed</span>
-          <span>{{ globalOverview.failed }} failed</span>
-          <span>{{ globalOverview.skipped }} skipped</span>
-          <span>{{ globalOverview.cancelled }} cancelled</span>
-          <span>{{ globalOverview.queued }} queued</span>
-          <span>{{ globalOverview.active }} in progress</span>
+          <span class="downloads-meta-pill"><strong>{{ globalOverview.completed }}</strong><span>Completed</span></span>
+          <span class="downloads-meta-pill"><strong>{{ globalOverview.failed }}</strong><span>Failed</span></span>
+          <span class="downloads-meta-pill"><strong>{{ globalOverview.skipped }}</strong><span>Skipped</span></span>
+          <span class="downloads-meta-pill"><strong>{{ globalOverview.cancelled }}</strong><span>Cancelled</span></span>
+          <span class="downloads-meta-pill"><strong>{{ globalOverview.queued }}</strong><span>Queued</span></span>
+          <span class="downloads-meta-pill"><strong>{{ globalOverview.active }}</strong><span>In-Progress</span></span>
         </div>
       </div>
 

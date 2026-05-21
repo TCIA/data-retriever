@@ -333,21 +333,39 @@
 }
 
 .downloads-meta {
-  display: block;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   font-size: 12px;
   color: #666;
   margin-top: 6px;
   line-height: 1.4;
 }
 
-.downloads-meta span + span::before {
-  content: "•";
-  margin: 0 6px;
-  color: inherit;
+.downloads-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #eef1f4;
+  color: #4a4a4a;
+  white-space: nowrap;
+}
+
+.downloads-meta-pill strong {
+  font-weight: 700;
+  color: #222;
+}
+
+.app-container.dark-mode .downloads-meta-pill {
+  background: #3a3a3a;
+  color: #cfcfcf;
+}
+
+.app-container.dark-mode .downloads-meta-pill strong {
+  color: #f1f1f1;
 }
 
 .downloads-content {

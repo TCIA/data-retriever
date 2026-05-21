@@ -5,10 +5,11 @@
     <div class="progress-shell">
       <div
         class="ring"
+        [class.is-error]="run.status === 'error'"
         [style.--size]="'96px'"
         [style.--thickness]="'8px'"
         [style.--value]="isCompleted ? 100 : displayProgressValue"
-        [style.--accent]="isCompleted ? 'var(--ring-complete)' : (isPaused ? 'var(--ring-paused)' : '#2196f3')"
+        [style.--accent]="isCompleted ? 'var(--ring-complete)' : (run.status === 'error' ? 'var(--ring-error)' : (isPaused ? 'var(--ring-paused)' : '#2196f3'))"
         [style.--track]="'var(--ring-track)'"
         [style.--bg]="'var(--card-bg)'"
         aria-live="polite"
@@ -38,9 +39,10 @@
         <div class="title-section">
           <div class="card-title" [title]="title">{{ title }}</div>
           <div class="card-status"
-               [class.downloading]="statusLabel === 'Downloading'"
-               [class.paused]="isPaused"
-               [class.error]="run.status === 'error'">
+            [class.downloading]="statusLabel === 'Downloading'"
+            [class.paused]="isPaused"
+            [class.completed]="statusLabel === 'Completed'"
+            [class.error]="run.status === 'error'">
             {{ statusLabel }}
           </div>
           <div class="card-error-message" *ngIf="run.status === 'error' && run.errorMessage">
