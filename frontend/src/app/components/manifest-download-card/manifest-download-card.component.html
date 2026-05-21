@@ -3,36 +3,32 @@
   <div class="card-main">
     <!-- Left: Progress Circle -->
     <div class="progress-shell">
-      <ng-container *ngIf="isCompleted; else activeProgress">
-        <div class="complete-indicator" role="img" aria-label="Completed">
-          <span class="material-icons-outlined">check_circle</span>
-        </div>
-      </ng-container>
-      <ng-template #activeProgress>
-        <div
-          class="ring"
-          [style.--size]="'96px'"
-          [style.--thickness]="'8px'"
-          [style.--value]="displayProgressValue"
-          [style.--accent]="isPaused ? 'var(--ring-paused)' : '#2196f3'"
-          [style.--track]="'var(--ring-track)'"
-          [style.--bg]="'var(--card-bg)'"
-          aria-live="polite"
-          role="img"
+      <div
+        class="ring"
+        [style.--size]="'96px'"
+        [style.--thickness]="'8px'"
+        [style.--value]="isCompleted ? 100 : displayProgressValue"
+        [style.--accent]="isCompleted ? 'var(--ring-complete)' : (isPaused ? 'var(--ring-paused)' : '#2196f3')"
+        [style.--track]="'var(--ring-track)'"
+        [style.--bg]="'var(--card-bg)'"
+        aria-live="polite"
+        role="img"
+      >
+        <!-- Play/pause button overlay inside ring -->
+        <button
+          class="play-pause-btn"
+          [class.is-complete]="isCompleted"
+          (click)="onTogglePause($event)"
+          [disabled]="isCompleted"
+          [title]="isCompleted ? 'Download complete' : (isPaused ? 'Resume download' : 'Pause download')"
+          [attr.aria-label]="isCompleted ? 'Download complete' : 'Toggle pause'"
         >
-          <!-- Play/pause button overlay inside ring -->
-          <button
-            class="play-pause-btn"
-            (click)="onTogglePause($event)"
-            [title]="isPaused ? 'Resume download' : 'Pause download'"
-            aria-label="Toggle pause"
-          >
-            <span class="material-icons-outlined">{{ isPaused ? 'play_arrow' : 'pause' }}</span>
-          </button>
-          <div class="ring-inner"></div>
-          <div class="ring-label">{{ displayProgressValue }}%</div>
-        </div>
-      </ng-template>
+          <span class="material-symbols-outlined" *ngIf="isCompleted">check</span>
+          <span class="material-icons-outlined" *ngIf="!isCompleted">{{ isPaused ? 'play_arrow' : 'pause' }}</span>
+        </button>
+        <div class="ring-inner"></div>
+        <div class="ring-label">{{ isCompleted ? 100 : displayProgressValue }}%</div>
+      </div>
 
       <div class="completion-fraction">{{ completedSeriesFraction }}</div>
     </div>
