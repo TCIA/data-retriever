@@ -82,8 +82,16 @@
             <span class="material-icons-outlined">close</span>
           </button>
           <!-- Expand / collapse -->
-          <button class="collapse-btn" (click)="toggleOutput()" [title]="showOutput ? 'Collapse' : 'Expand'">
-            <span class="material-icons-outlined">{{ showOutput ? 'expand_less' : 'expand_more' }}</span>
+          <button
+            class="collapse-btn"
+            (click)="toggleOutput()"
+            [class.is-pressed]="showOutput"
+            [title]="showOutput ? 'Hide console output' : 'Show console output'"
+            [attr.aria-label]="showOutput ? 'Hide console output' : 'Show console output'"
+            [attr.aria-pressed]="showOutput"
+            type="button"
+          >
+            <span class="material-symbols-outlined">terminal_2</span>
           </button>
         </div>
       </div>
