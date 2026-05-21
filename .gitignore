@@ -19,8 +19,14 @@ nbia-data-retriever-cli-*
 
 # Build directories
 /dist/
-/build/bin/
+/build/
 /release/
+
+# GUI build and frontend caches
+/gui/build/
+/gui/frontend/dist/
+/gui/frontend/node_modules/
+/gui/frontend/.angular/
 
 # GoReleaser
 dist/
