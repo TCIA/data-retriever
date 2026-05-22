@@ -273,6 +273,20 @@
   to { transform: rotate(360deg); }
 }
 
+.card-output-shell {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-6px);
+  overflow: hidden;
+  transition: max-height 0.25s ease, opacity 0.2s ease, transform 0.25s ease;
+}
+
+.card-output-shell.is-open {
+  max-height: 220px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .card-output {
   border: 1px solid #e6e6e6;
   border-radius: 8px;

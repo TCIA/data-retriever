@@ -135,12 +135,14 @@
   </div>
 
   <!-- Bottom: Collapsible Output -->
-  <div class="card-output" *ngIf="showOutput">
-    <ng-container *ngIf="hasLogs; else emptyState">
-      <div class="log-line" *ngFor="let line of logLines">{{ line }}</div>
-    </ng-container>
-    <ng-template #emptyState>
-      <div class="log-placeholder">Waiting for updates…</div>
-    </ng-template>
+  <div class="card-output-shell" [class.is-open]="showOutput" [attr.aria-hidden]="!showOutput">
+    <div class="card-output">
+      <ng-container *ngIf="hasLogs; else emptyState">
+        <div class="log-line" *ngFor="let line of logLines">{{ line }}</div>
+      </ng-container>
+      <ng-template #emptyState>
+        <div class="log-placeholder">Waiting for updates…</div>
+      </ng-template>
+    </div>
   </div>
 </div>
