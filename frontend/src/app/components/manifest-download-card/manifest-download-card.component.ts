@@ -35,6 +35,10 @@ export class ManifestDownloadCardComponent implements OnInit, OnDestroy {
       clearInterval(this.elapsedTickId);
       this.elapsedTickId = undefined;
     }
+    if (this.copyFeedbackTimer !== undefined) {
+      clearTimeout(this.copyFeedbackTimer);
+      this.copyFeedbackTimer = undefined;
+    }
   }
 
   @Output() pauseToggled = new EventEmitter<void>();
@@ -45,6 +49,9 @@ export class ManifestDownloadCardComponent implements OnInit, OnDestroy {
   @Output() collapseToggled = new EventEmitter<boolean>();
 
   showOutput = false;
+
+  private copyFeedback: 'idle' | 'copied' | 'error' = 'idle';
+  private copyFeedbackTimer?: ReturnType<typeof setTimeout>;
 
   get title(): string {
     const path = this.run?.inputFilePath ?? '';
@@ -203,6 +210,10 @@ export class ManifestDownloadCardComponent implements OnInit, OnDestroy {
     return (this.run?.overview?.failed ?? 0) > 0;
   }
 
+  get showCopyLog(): boolean {
+    return this.isTerminal && (this.hasFailedSeries || this.run?.status === 'error');
+  }
+
   get canOpenOutputDirectory(): boolean {
     const o = this.run?.overview;
     const total = o?.total ?? 0;
@@ -250,6 +261,41 @@ export class ManifestDownloadCardComponent implements OnInit, OnDestroy {
   onRetry(event: MouseEvent): void {
     event.stopPropagation();
     this.retryRequested.emit();
+  }
+
+  get copyLogLabel(): string {
+    switch (this.copyFeedback) {
+      case 'copied': return 'Copied!';
+      case 'error': return 'Copy failed';
+      default: return 'Copy Log';
+    }
+  }
+
+  get copyLogTooltip(): string {
+    return 'Copy log lines to clipboard to share with help staff';
+  }
+
+  onCopyLog(event: MouseEvent): void {
+    event.stopPropagation();
+    const lines = this.run?.logs ?? [];
+    const text = lines.join('\n');
+    const finish = (state: 'copied' | 'error') => {
+      this.copyFeedback = state;
+      if (this.copyFeedbackTimer) clearTimeout(this.copyFeedbackTimer);
+      this.copyFeedbackTimer = setTimeout(() => {
+        this.copyFeedback = 'idle';
+        this.cdr.markForCheck();
+      }, 1500);
+      this.cdr.markForCheck();
+    };
+
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(text)
+        .then(() => finish('copied'))
+        .catch(() => finish('error'));
+    } else {
+      finish('error');
+    }
   }
 
   onToggleCollapse(): void {

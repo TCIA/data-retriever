@@ -162,7 +162,7 @@ func loadSeriesMetadataFromParquet(
 	defer pqReader.Close()
 	for i := 0; i < pqReader.NumRowGroups(); i++ {
 		rg := pqReader.RowGroup(i)
-		logger.Warnf("row group %d: num rows = %d, num columns = %d", i, rg.NumRows(), rg.NumColumns())
+		logger.Debugf("row group %d: num rows = %d, num columns = %d", i, rg.NumRows(), rg.NumColumns())
 	}
 
 	mem := memory.NewGoAllocator()
@@ -187,13 +187,13 @@ func loadSeriesMetadataFromParquet(
 	}
 	defer recReader.Release()
 
-	logger.Warnf("record reader schema: %v", recReader.Schema())
+	logger.Debugf("record reader schema: %v", recReader.Schema())
 	schema := recReader.Schema()
 	for _, f := range schema.Fields() {
-		logger.Warnf("Column: %s, Type: %v", f.Name, f.Type)
+		logger.Debugf("Column: %s, Type: %v", f.Name, f.Type)
 	}
 
-	logger.Warnf("parquet row groups: %d", pqReader.NumRowGroups())
+	logger.Debugf("parquet row groups: %d", pqReader.NumRowGroups())
 	for recReader.Next() {
 		rec := recReader.Record()
 		schema := rec.Schema()
@@ -391,7 +391,7 @@ func buildS5cmdFileInfo(originalURI string, seriesMeta map[string]*SeriesMetadat
 	var fi *FileInfo
 	isNewJob := false
 	if seriesUID, exists := processedSeries[originalURI]; exists {
-		logger.Warnf("Queueing sync job for existing series: %s", originalURI)
+		logger.Infof("Queueing sync job for existing series: %s", originalURI)
 		fi = &FileInfo{
 			DownloadURL:       originalURI,
 			SeriesInstanceUID: seriesUID,

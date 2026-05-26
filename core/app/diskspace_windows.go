@@ -48,7 +48,7 @@ func checkDiskSpace(outputDir string, files []*FileInfo) error {
 
 	requiredMB := uint64(totalBytes) / (1024 * 1024)
 	availableMB := available / (1024 * 1024)
-	Logger.Warnf("Disk space check: manifest requires ~%d MB, %d MB available in %s", requiredMB, availableMB, outputDir)
+	Logger.Infof("Disk space check: manifest requires ~%d MB, %d MB available in %s", requiredMB, availableMB, outputDir)
 
 	if uint64(totalBytes) > available {
 		return fmt.Errorf("insufficient disk space: manifest requires ~%d MB but only %d MB available in %s", requiredMB, availableMB, outputDir)

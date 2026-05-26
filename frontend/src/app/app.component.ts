@@ -54,6 +54,7 @@ export class AppComponent implements OnInit, OnDestroy {
   simultaneousDownloads = 8;
   skipExisting = true;
   downloadInParallel = true;
+  verbose = false;
 
   // ── Version / update ─────────────────────────────────────────────────────
   appVersion = '';
@@ -311,6 +312,7 @@ export class AppComponent implements OnInit, OnDestroy {
       downloadInParallel: this.downloadInParallel,
       authFilePath: this.authFilePath,
       directoryMode: this.directoryMode,
+      verbose: this.verbose,
     };
     this.downloadStatus.beginRun(runId, this.inputFilePath, this.outputDirPath, runOptions);
     this.closeManifestModal();
@@ -324,6 +326,7 @@ export class AppComponent implements OnInit, OnDestroy {
       '--processes', String(this.simultaneousDownloads),
     ];
     if (this.skipExisting) parts.push('--skip-existing');
+    if (this.verbose) parts.push('--verbose');
     this.downloadStatus.appendManifestLog(runId, 'Running: ' + parts.join(' '));
     this.downloadStatus.appendManifestLog(runId, 'Started');
 
@@ -337,6 +340,7 @@ export class AppComponent implements OnInit, OnDestroy {
       this.downloadInParallel,
       this.authFilePath,
       this.directoryMode,
+      this.verbose,
       Number(runId),
     ).catch(err => {
       this.ngZone.run(() => {
@@ -407,6 +411,7 @@ export class AppComponent implements OnInit, OnDestroy {
       opts.downloadInParallel,
       opts.authFilePath,
       opts.directoryMode,
+      opts.verbose,
       Number(newRunId),
     ).catch(err => {
       this.ngZone.run(() => {

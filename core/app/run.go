@@ -432,9 +432,9 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 		options.InterimUpdateInterval = DefaultInterimUpdateInterval
 	}
 
-	if Logger == nil {
-		setLogger(options.Debug, "")
-	}
+	// Always (re)initialise the logger so per-run verbose/debug flags and an
+	// optional GUI LogSink take effect even after earlier runs configured it.
+	setLogger(options.Debug, options.Verbose, "", options.LogSink)
 
 	if ctx == nil {
 		ctx = context.Background()
@@ -565,9 +565,8 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 		}
 	}
 
-	if options.Debug {
-		Logger.Warnf("Starting download of %d %s with %d workers", len(files), itemType, options.Concurrent)
-	} else {
+	Logger.Infof("Starting download of %d %s with %d workers", len(files), itemType, options.Concurrent)
+	if !options.Debug && !options.Verbose {
 		callbacks.emitStderr(fmt.Sprintf("\nDownloading %d %s with %d workers...\n\n", len(files), itemType, options.Concurrent))
 	}
 
@@ -659,9 +658,8 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 // channel of FileInfo values produced by streaming metadata fetches. Workers
 // begin downloading as soon as the first batch of metadata arrives.
 func runTCIAStreamingDownload(ctx context.Context, client *http.Client, options *Options, callbacks Callbacks, seriesCount int, fileChan <-chan *FileInfo) (*Summary, error) {
-	if options.Debug {
-		Logger.Warnf("Starting streaming download of ~%d series with %d workers", seriesCount, options.Concurrent)
-	} else {
+	Logger.Infof("Starting streaming download of ~%d series with %d workers", seriesCount, options.Concurrent)
+	if !options.Debug && !options.Verbose {
 		callbacks.emitStderr(fmt.Sprintf("\nDownloading ~%d series with %d workers...\n\n", seriesCount, options.Concurrent))
 	}
 
@@ -845,7 +843,7 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 			return
 		}
 	} else {
-		Logger.Warnf("this is a sync job")
+		Logger.Debugf("this is a sync job")
 	}
 
 	if wc.Context.Err() != nil {
@@ -931,7 +929,7 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 
 	if err != nil && isAuthError(err) && wc.Options.AuthGate != nil {
 		// Distinguish format failure (already caught in Run) vs server rejection
-		Logger.Warnf("DEBUG auth check: err=%v, Auth=%q, isAuthErr=%v", err, wc.Options.Auth, isAuthError(err))
+		Logger.Debugf("auth check: err=%v, Auth=%q, isAuthErr=%v", err, wc.Options.Auth, isAuthError(err))
 
 		if wc.Options.Auth != "" {
 			if _, fmtErr := NewGen3AuthManager(wc.HTTPClient, wc.Options.Auth); fmtErr != nil {

@@ -786,7 +786,7 @@ func (info *FileInfo) NeedsDownload(output string, force bool, noDecompress bool
 
 		// Check total size of extracted files
 		if (info.FileSize != "" && info.FileSize != "0" ) {
-			Logger.Warnf("file size: %s", info.FileSize)
+			Logger.Debugf("file size: %s", info.FileSize)
 			expectedSize, err := strconv.ParseInt(info.FileSize, 10, 64)
 			if err == nil {
 				actualSize, err := getDirectorySize(targetPath)
@@ -795,7 +795,7 @@ func (info *FileInfo) NeedsDownload(output string, force bool, noDecompress bool
 					return true
 				}
 				if float64(actualSize) < (float64(expectedSize) * .9) {
-					logger.Warnf("Directory %s size mismatch: expected %d, got %d", targetPath, expectedSize, actualSize)
+					logger.Infof("Directory %s size mismatch: expected %d, got %d", targetPath, expectedSize, actualSize)
 					return true
 				} else {
 					return false
@@ -1574,10 +1574,10 @@ func getGen3DownloadURL(client *http.Client, commonsURL, objectID string, gen3Au
 	}
 
 	// Log the request for debugging
-	logger.Warnf("Gen3 API Request URL: %s", req.URL.String())
+	logger.Debugf("Gen3 API Request URL: %s", req.URL.String())
 	for name, headers := range req.Header {
 		for _, h := range headers {
-			logger.Warnf("Gen3 API Request Header: %s: %s", name, h)
+			logger.Debugf("Gen3 API Request Header: %s: %s", name, h)
 		}
 	}
 

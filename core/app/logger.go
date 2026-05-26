@@ -1,11 +1,13 @@
 package app
 
 import (
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
+	"io"
 	"os"
 	"path/filepath"
 	"time"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 var (
@@ -38,29 +40,42 @@ func timeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 }
 
 // setLogger initialises the shared zap logger.
-func setLogger(debug bool, logfile string) {
+// Levels: default = Warn (quiet), verbose = Info, debug = Debug.
+// Extra sinks receive console-encoded log lines at the same level as stdout.
+func setLogger(debug, verbose bool, logfile string, extraSinks ...io.Writer) {
 	encoder := newEncoderConfig()
+	// Extra sinks (e.g. the GUI panel) don't render ANSI color codes well.
+	plainEncoder := encoder
+	plainEncoder.EncodeLevel = zapcore.CapitalLevelEncoder
+
 	level := zap.WarnLevel
-	if debug {
+	switch {
+	case debug:
 		level = zap.DebugLevel
+	case verbose:
+		level = zap.InfoLevel
 	}
 
-	core := zapcore.NewCore(zapcore.NewConsoleEncoder(encoder), zapcore.AddSync(os.Stdout), level)
-	loggerInstance := zap.New(core, zap.AddCaller())
+	cores := []zapcore.Core{
+		zapcore.NewCore(zapcore.NewConsoleEncoder(encoder), zapcore.AddSync(os.Stdout), level),
+	}
+	for _, w := range extraSinks {
+		if w == nil {
+			continue
+		}
+		cores = append(cores, zapcore.NewCore(zapcore.NewConsoleEncoder(plainEncoder), zapcore.AddSync(w), level))
+	}
 	if logfile != "" {
 		_ = os.MkdirAll(filepath.Dir(logfile), os.ModePerm)
 		f, err := os.OpenFile(logfile, os.O_TRUNC|os.O_WRONLY|os.O_CREATE, os.ModePerm)
 		if err != nil {
-			loggerInstance.Sugar().Warnf("failed save log to %s: %v", logfile, err)
+			zap.New(zapcore.NewTee(cores...), zap.AddCaller()).Sugar().Warnf("failed save log to %s: %v", logfile, err)
 		} else {
-			core = zapcore.NewTee(
-				zapcore.NewCore(zapcore.NewJSONEncoder(encoder), zapcore.AddSync(f), zap.DebugLevel),
-				zapcore.NewCore(zapcore.NewConsoleEncoder(encoder), zapcore.AddSync(os.Stdout), level),
-			)
+			cores = append(cores, zapcore.NewCore(zapcore.NewJSONEncoder(encoder), zapcore.AddSync(f), zap.DebugLevel))
 		}
-		loggerInstance = zap.New(core, zap.AddCaller())
 	}
 
+	loggerInstance := zap.New(zapcore.NewTee(cores...), zap.AddCaller())
 	defer func() { _ = loggerInstance.Sync() }()
 	sugar := loggerInstance.Sugar()
 	logger = sugar

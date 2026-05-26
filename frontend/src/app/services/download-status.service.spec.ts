@@ -17,6 +17,7 @@ describe('DownloadStatusService pause/resume races', () => {
     downloadInParallel: true,
     authFilePath: '',
     directoryMode: 'descriptive',
+    verbose: false,
   };
 
   function emit(eventName: string, payload: unknown): void {

@@ -54,7 +54,7 @@ func NewToken(username, passwd, path string, client *http.Client) (*Token, error
 			token.httpClient = client
 			return token, nil
 		} else {
-			logger.Warn("token expired, create new token")
+			logger.Info("token expired, create new token")
 		}
 	}
 

@@ -13,6 +13,7 @@ export interface RunOptions {
   downloadInParallel: boolean;
   authFilePath: string;
   directoryMode: string;
+  verbose: boolean;
 }
 
 export interface RunState {

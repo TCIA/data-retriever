@@ -250,6 +250,7 @@ func (b *App) RunCLIFetch(
 	downloadInParallel bool,
 	authPath string,
 	directoryMode string,
+	verbose bool,
 	runId uint64,
 ) (string, error) {
 
@@ -276,6 +277,7 @@ func (b *App) RunCLIFetch(
 		SkipExist:     skipExisting,
 		AuthPath:      authPath,
 		DirectoryMode: directoryMode,
+		Verbose:       verbose,
 	}
 
 	if b.batches == nil {
@@ -320,6 +322,7 @@ func (b *App) runBatch(batch *DownloadBatch) {
 		Password:              pass,
 		Version:               false,
 		Debug:                 false,
+		Verbose:               batch.Verbose,
 		Help:                  false,
 		MetaUrl:               app.MetaUrl,
 		TokenUrl:              app.TokenUrl,
@@ -348,6 +351,7 @@ func (b *App) runBatch(batch *DownloadBatch) {
 		IDCParquetPath:				 b.parquetPaths.IDCIndex,
 		PriorParquetPath:			 b.parquetPaths.PriorVersions,
 		AuthGate:							 gate,
+		LogSink:               newGuiLogSink(b.ctx, batch.ID),
 	}
 
 	logTimestamp := time.Now().Format("20060102-150405")
@@ -586,6 +590,7 @@ func (b *App) ResumeManifest(manifestPath string) error {
 		true, // downloadInParallel
 		pausedBatch.AuthPath,
 		pausedBatch.DirectoryMode,
+		pausedBatch.Verbose,
 		pausedBatch.ID,
 	)
 	if err != nil {
@@ -594,6 +599,34 @@ func (b *App) ResumeManifest(manifestPath string) error {
 
 	wailsRuntime.EventsEmit(b.ctx, "manifest-resumed", manifestPath)
 	return nil
+}
+
+// guiLogSink forwards zap log lines to the GUI's per-run log panel via a
+// Wails event. Each Write splits the buffer on newlines so the frontend
+// gets one event per log entry. We don't include the runId in the payload
+// because JS Number(runId) truncates the 64-bit value, so the echoed id
+// wouldn't match the runsMap key — the frontend falls back to "most recent
+// run" the same way manifest-series-metadata does.
+type guiLogSink struct {
+	ctx context.Context
+}
+
+func newGuiLogSink(ctx context.Context, batchID uint64) *guiLogSink {
+	_ = batchID
+	return &guiLogSink{ctx: ctx}
+}
+
+func (s *guiLogSink) Write(p []byte) (int, error) {
+	if s == nil || s.ctx == nil {
+		return len(p), nil
+	}
+	for _, line := range strings.Split(strings.TrimRight(string(p), "\n"), "\n") {
+		if line == "" {
+			continue
+		}
+		wailsRuntime.EventsEmit(s.ctx, "manifest-log", line)
+	}
+	return len(p), nil
 }
 
 type DownloadBatch struct {
@@ -610,6 +643,7 @@ type DownloadBatch struct {
 	SkipExist     bool
 	AuthPath      string
 	DirectoryMode string
+	Verbose       bool
 }
 
 func (a *App) FetchFiles() string {

@@ -85,6 +85,7 @@ export class DownloadStatusService implements OnDestroy {
   private unsubscribeResumed?: () => void;
   private unsubscribeCliError?: () => void;
   private unsubscribeCliFinished?: () => void;
+  private unsubscribeManifestLog?: () => void;
 
   constructor(private ngZone: NgZone) {
     if (typeof window === 'undefined') return;
@@ -210,6 +211,27 @@ export class DownloadStatusService implements OnDestroy {
             run.errorMessage = message;
             this.appendLog(run, `ERROR: ${message}`);
           }
+          this.publishRun(run);
+        });
+      }
+    );
+
+    // -----------------------------------------------------------------------
+    // manifest-log  (runId, line)
+    // Forwarded zap log output from the backend; verbose/debug toggles change
+    // which levels reach here.
+    // -----------------------------------------------------------------------
+    this.unsubscribeManifestLog = EventsOn(
+      'manifest-log',
+      (line: string) => {
+        this.ngZone.run(() => {
+          if (!line) return;
+          // No runId in the payload because JS Number(runId) loses precision
+          // above 2^53. Fall back to the most-recent run, matching the way
+          // manifest-series-metadata is routed.
+          const run = this.resolveRun(undefined);
+          if (!run) return;
+          this.appendLog(run, line);
           this.publishRun(run);
         });
       }
@@ -793,6 +815,7 @@ export class DownloadStatusService implements OnDestroy {
       this.unsubscribeResumed,
       this.unsubscribeCliError,
       this.unsubscribeCliFinished,
+      this.unsubscribeManifestLog,
     ];
     for (const fn of unsubs) {
       try { fn?.(); } catch { /* ignore */ }
@@ -800,6 +823,7 @@ export class DownloadStatusService implements OnDestroy {
     const events = [
       'download-series-event', 'manifest-series-metadata',
       'manifest-paused', 'manifest-resumed', 'cli-error', 'cli-finished',
+      'manifest-log',
     ];
     for (const ev of events) {
       try { EventsOff(ev); } catch { /* ignore */ }

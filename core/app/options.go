@@ -11,6 +11,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
+// LogSink is an optional extra destination for formatted log lines (e.g. a
+// GUI log panel). Run will tee the global logger into this writer when set.
+
+
 var (
 	// Default to production NBIA endpoints
 	TokenUrl = "https://services.cancerimagingarchive.net/nbia-api/oauth/token"
@@ -35,6 +39,7 @@ type Options struct {
 	Password              string
 	Version               bool
 	Debug                 bool
+	Verbose               bool
 	Help                  bool
 	MetaUrl               string
 	TokenUrl              string
@@ -61,6 +66,7 @@ type Options struct {
 	AuthGate 							*AuthGate
 	CLI										bool
 	AcceptDataPolicy      bool
+	LogSink               io.Writer
 
 	opt *getoptions.GetOpt
 }
@@ -94,10 +100,11 @@ func ParseOptions(args []string, promptReader io.Reader) (*Options, error) {
 		MetadataWorkers:       20,
 	}
 
-	setLogger(false, "")
+	setLogger(false, false, "")
 
 	opt.opt.BoolVar(&opt.Help, "help", false, opt.opt.Alias("h"), opt.opt.Description("show help information"))
-	opt.opt.BoolVar(&opt.Debug, "debug", false, opt.opt.Description("show more info"))
+	opt.opt.BoolVar(&opt.Debug, "debug", false, opt.opt.Description("enable debug-level logging (developer detail)"))
+	opt.opt.BoolVar(&opt.Verbose, "verbose", false, opt.opt.Alias("V"), opt.opt.Description("enable verbose (info-level) logging"))
 	opt.opt.BoolVar(&opt.SaveLog, "save-log", false, opt.opt.Description("save debug log info to file"))
 	opt.opt.BoolVar(&opt.Version, "version", false, opt.opt.Alias("v"), opt.opt.Description("show version information"))
 	opt.opt.StringVar(&opt.Input, "input", "", opt.opt.Alias("i"), opt.opt.Description("path to input tcia file"))
@@ -140,8 +147,8 @@ func ParseOptions(args []string, promptReader io.Reader) (*Options, error) {
 		Logger.Info("Server-friendly mode: Using extra conservative settings")
 	}
 
-	if opt.Debug || opt.SaveLog {
-		setLogger(opt.Debug, "")
+	if opt.Debug || opt.Verbose || opt.SaveLog {
+		setLogger(opt.Debug, opt.Verbose, "")
 	}
 
 	if opt.opt.Called("help") || len(args) < 1 {

@@ -93,6 +93,16 @@
           >
             Retry Failed
           </button>
+          <button
+            *ngIf="showCopyLog"
+            class="retry-btn"
+            type="button"
+            (click)="onCopyLog($event)"
+            [title]="copyLogTooltip"
+            aria-label="Copy log to clipboard"
+          >
+            {{ copyLogLabel }}
+          </button>
         </div>
       </div>
 

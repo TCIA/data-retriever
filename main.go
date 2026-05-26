@@ -178,7 +178,7 @@ func runCLI() {
 
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
-			appLogger.Warn("Download cancelled by user")
+			appLogger.Info("Download cancelled by user")
 		} else {
 			appLogger.Fatalf("Download failed: %v", err)
 		}
