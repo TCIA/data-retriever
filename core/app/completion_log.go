@@ -27,7 +27,15 @@ type completionLogEvent struct {
 	Modality          string    `json:"modality,omitempty"`
 	SeriesDescription string    `json:"seriesDescription,omitempty"`
 	IsSync            bool      `json:"isSync,omitempty"`
-	CompletedAt       time.Time `json:"completedAt"`
+	// Source is the download mechanism the series resolved to: "IDC" (AWS S3 /
+	// s5cmd), "nbia" (TCIA API), "spreadsheet" (direct URL column), or "drs"
+	// (Gen3 DRS URI). See FileInfo.downloadSource.
+	Source string `json:"source"`
+	// SourceURL is the concrete location the series was fetched from: the s3://
+	// URI (IDC), the direct/DRS URL (spreadsheet/drs), or the TCIA API endpoint
+	// targeted (nbia). See FileInfo.sourceURL.
+	SourceURL   string    `json:"sourceURL,omitempty"`
+	CompletedAt time.Time `json:"completedAt"`
 }
 
 // postSeriesCompletionLog fires a best-effort async POST announcing that one
@@ -54,6 +62,8 @@ func postSeriesCompletionLog(file *FileInfo) {
 		Modality:          file.Modality,
 		SeriesDescription: file.SeriesDescription,
 		IsSync:            file.IsSyncJob,
+		Source:            file.downloadSource(),
+		SourceURL:         file.sourceURL(),
 		CompletedAt:       time.Now().UTC(),
 	}
 

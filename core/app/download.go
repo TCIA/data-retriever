@@ -1152,6 +1152,55 @@ if info.DownloadURL != "" {
 return info.downloadFromTCIA(ctx, output, httpClient, options, onProgress, onDecompress)
 }
 
+// downloadSource classifies where this series is actually fetched from, based on
+// the resolved download mechanism rather than the input file type. The order
+// mirrors the dispatch in doDownload and must stay in sync with it. A spreadsheet
+// or .tcia UID that matched the parquet index resolves to an s5cmd/S3 job and is
+// reported as "IDC"; a UID routed through the TCIA path is reported as "nbia".
+// DRSURI is checked before DownloadURL because a successful Gen3 download
+// overwrites DownloadURL with the resolved https URL (see downloadFromGen3),
+// while DRSURI is left intact. Returns one of: "IDC", "drs", "spreadsheet", "nbia".
+func (info *FileInfo) downloadSource() string {
+	switch {
+	case info.S5cmdManifestPath != "" || info.OriginalS5cmdURI != "" || strings.HasPrefix(info.DownloadURL, "s3://"):
+		return "IDC"
+	case info.DRSURI != "":
+		return "drs"
+	case info.DownloadURL != "":
+		return "spreadsheet"
+	default:
+		return "nbia"
+	}
+}
+
+// sourceURL returns the concrete location this series was fetched from, paired
+// with downloadSource: the s3:// object URI for "IDC", the DRS URI for "drs",
+// the direct download URL for "spreadsheet", and the resolved TCIA API endpoint
+// (with query parameters, matching downloadFromTCIA) for "nbia".
+func (info *FileInfo) sourceURL() string {
+	switch info.downloadSource() {
+	case "IDC":
+		if info.OriginalS5cmdURI != "" {
+			return info.OriginalS5cmdURI
+		}
+		return info.DownloadURL
+	case "drs":
+		return info.DRSURI
+	case "spreadsheet":
+		return info.DownloadURL
+	default: // nbia
+		u, err := makeURL(ImageUrl, map[string]interface{}{
+			"SeriesInstanceUID": info.SeriesInstanceUID,
+			"IncludeMD5":        "Yes",
+			"NewFileNames":      "Yes",
+		})
+		if err != nil {
+			return ImageUrl
+		}
+		return u
+	}
+}
+
 func downloadS3Object(ctx context.Context, client *s3.Client, bucket, key, targetDir string, onProgress ProgressFunc) error {
 	input := &s3.GetObjectInput{
 		Bucket: &bucket,
