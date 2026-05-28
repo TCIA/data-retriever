@@ -294,7 +294,11 @@ export class DownloadStatusService implements OnDestroy {
       status: 'initializing',
       runOptions: options,
     };
+    // Insert the new run at the front so newest manifests appear at the top
+    const existing = Array.from(this.runsMap.entries());
+    this.runsMap.clear();
     this.runsMap.set(runId, run);
+    for (const [k, v] of existing) this.runsMap.set(k, v);
     this.publishRun(run);
     return runId;
   }
@@ -384,9 +388,9 @@ export class DownloadStatusService implements OnDestroy {
       const key = BigInt(runId);
       return this.runsMap.get(key);
     }
-    // Fallback: last run inserted
+    // Fallback: most-recent run (first entry in insertion order)
     const entries = Array.from(this.runsMap.values());
-    return entries[entries.length - 1];
+    return entries[0];
   }
 
   private resolveRunFromPausePayload(
