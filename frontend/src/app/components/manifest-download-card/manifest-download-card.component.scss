@@ -357,16 +357,16 @@
 }
 
 .card-output {
-  border: 1px solid #e6e6e6;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 8px;
-  background: #1a1a1a;
+  background: var(--card-output-bg, #ffffff);
   padding: 12px;
   min-height: 80px;
   max-height: 160px;
   overflow-y: auto;
   font-family: 'Fira Mono', 'Consolas', 'Menlo', monospace;
   font-size: 11px;
-  color: #d0d0d0;
+  color: var(--text-primary, #333);
   line-height: 1.5;
 }
 
@@ -395,6 +395,7 @@
   --ring-complete: #4caf50;
   --ring-error: #e53935;
   --card-bg: #fff;
+  --card-output-bg: #f0f0f0;
 }
 
 /* Play/pause button inside ring - positioned in upper area */
@@ -463,6 +464,7 @@
   --ring-track: #3a3a3a;
   --ring-paused: #6b6b6b;
   --card-bg: #2d2d2d;
+  --card-output-bg: #1a1a1a;
 }
 
 :host-context(.dark-mode) .download-card {
@@ -539,8 +541,9 @@
 }
 
 :host-context(.dark-mode) .card-output {
-  background: #0d0d0d;
-  border-color: #333;
+  background: var(--card-output-bg, #2d2d2d);
+  border-color: #444;
+  color: #e0e0e0;
 }
 
 :host-context(.dark-mode) .card-status.downloading {
