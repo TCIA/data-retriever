@@ -44,6 +44,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .title-section {
@@ -134,6 +135,66 @@
 .action-btn .material-icons-outlined,
 .action-btn .material-symbols-outlined {
   font-size: 20px;
+}
+
+.copy-log-control {
+  position: relative;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  overflow: visible;
+}
+
+.copy-log-btn {
+  border-color: #e53935;
+  color: #e53935;
+}
+
+.copy-log-btn.is-copied {
+  background: rgba(229, 57, 53, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(229, 57, 53, 0.15);
+}
+
+.copy-log-btn.is-error {
+  animation: copy-log-error-flash 0.35s ease;
+}
+
+.copy-log-btn:hover {
+  background: rgba(229, 57, 53, 0.08);
+  border-color: #c62828;
+  color: #c62828;
+}
+
+.copy-log-feedback {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fff;
+  color: #000;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: none;
+  border: 1px solid #000;
+}
+
+.copy-log-feedback.is-error {
+  color: #000;
+}
+
+@keyframes copy-log-error-flash {
+  0% { transform: translateY(0); }
+  35% { transform: translateY(-1px); }
+  100% { transform: translateY(0); }
 }
 
 .retry-btn {
@@ -429,6 +490,27 @@
   background: rgba(255, 255, 255, 0.08);
   border-color: #6a6a6a;
   color: #f0f0f0;
+}
+
+:host-context(.dark-mode) .copy-log-btn {
+  border-color: #ef9a9a;
+  color: #ef9a9a;
+}
+
+:host-context(.dark-mode) .copy-log-btn:hover {
+  background: rgba(239, 154, 154, 0.12);
+  border-color: #e57373;
+  color: #f5b5b5;
+}
+
+:host-context(.dark-mode) .copy-log-feedback {
+  background: #fff;
+  color: #000;
+  border-color: #000;
+}
+
+:host-context(.dark-mode) .copy-log-feedback.is-error {
+  color: #000;
 }
 
 :host-context(.dark-mode) .stat-value {

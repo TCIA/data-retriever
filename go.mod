@@ -16,7 +16,6 @@ require (
 	github.com/tealeg/xlsx v1.0.5
 	github.com/wailsapp/wails/v2 v2.10.2
 	go.uber.org/zap v1.27.0
-	golang.org/x/net v0.49.0
 )
 
 require (
@@ -77,6 +76,7 @@ require (
 	golang.org/x/crypto v0.47.0 // indirect
 	golang.org/x/exp v0.0.0-20240525044651-4c93da0ed11d // indirect
 	golang.org/x/mod v0.31.0 // indirect
+	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/telemetry v0.0.0-20251203150158-8fff8a5912fc // indirect

@@ -271,8 +271,24 @@ export class ManifestDownloadCardComponent implements OnInit, OnDestroy {
     }
   }
 
-  get copyLogTooltip(): string {
-    return 'Copy log lines to clipboard to share with help staff';
+  get copyFeedbackState(): 'idle' | 'copied' | 'error' {
+    return this.copyFeedback;
+  }
+
+  get copyLogFeedbackText(): string {
+    switch (this.copyFeedback) {
+      case 'copied': return 'Copied!';
+      case 'error': return 'Copy failed';
+      default: return '';
+    }
+  }
+
+  get copyLogButtonTitle(): string {
+    switch (this.copyFeedback) {
+      case 'copied': return 'Copied to clipboard';
+      case 'error': return 'Copy failed';
+      default: return 'Copy error message to share with support';
+    }
   }
 
   onCopyLog(event: MouseEvent): void {
