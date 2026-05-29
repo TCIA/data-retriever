@@ -145,11 +145,12 @@
         </div>
       </div>
 
-      <div class="transfer-status" *ngIf="showTransferSpinner || transferStatusText || elapsedText || totalDownloadedText">
+      <div class="transfer-status" *ngIf="showTransferSpinner || transferStatusText || elapsedText || totalDownloadedText || averageSpeedText">
         <span class="spinner" *ngIf="showTransferSpinner" aria-hidden="true"></span>
         <span class="transfer-detail" *ngIf="elapsedText" [title]="elapsedText">{{ elapsedText }}</span>
         <span class="transfer-detail" *ngIf="transferStatusText" [title]="transferStatusText">{{ transferStatusText }}</span>
         <span class="transfer-detail" *ngIf="totalDownloadedText" [title]="totalDownloadedText">{{ totalDownloadedText }}</span>
+        <span class="transfer-detail" *ngIf="averageSpeedText" [title]="averageSpeedText">{{ averageSpeedText }}</span>
       </div>
 
     </div>

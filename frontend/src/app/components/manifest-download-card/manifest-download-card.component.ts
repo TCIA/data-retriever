@@ -182,20 +182,47 @@ export class ManifestDownloadCardComponent implements OnInit, OnDestroy {
     return `Total downloaded: ${this.formatBytes(bytes)}`;
   }
 
-  get elapsedText(): string {
+  /**
+   * Whole seconds from run start to completion (or to now while still running).
+   * Returns null when start/end timestamps are missing or inconsistent.
+   */
+  private elapsedSeconds(): number | null {
     const startISO = this.run?.startedAt;
-    if (!startISO) return '';
+    if (!startISO) return null;
     const start = Date.parse(startISO);
-    if (isNaN(start)) return '';
+    if (isNaN(start)) return null;
 
     const completedISO = this.run?.completedAt;
     const completed = completedISO ? Date.parse(completedISO) : NaN;
     const endMs = !isNaN(completed) ? completed : Date.now();
-    if (endMs < start) return '';
+    if (endMs < start) return null;
 
-    const elapsedSec = Math.floor((endMs - start) / 1000);
-    const label = !isNaN(completed) || this.isTerminal ? 'Total time' : 'Elapsed';
+    return Math.floor((endMs - start) / 1000);
+  }
+
+  get elapsedText(): string {
+    const elapsedSec = this.elapsedSeconds();
+    if (elapsedSec === null) return '';
+
+    const completedISO = this.run?.completedAt;
+    const hasCompleted = !!completedISO && !isNaN(Date.parse(completedISO));
+    const label = hasCompleted || this.isTerminal ? 'Total time' : 'Elapsed';
     return `${label}: ${this.formatDuration(elapsedSec)}`;
+  }
+
+  /**
+   * Average throughput over the whole run: total bytes downloaded divided by
+   * total elapsed time. Shown only once the run is terminal.
+   */
+  get averageSpeedText(): string {
+    if (!this.isTerminal) return '';
+    const bytes = this.run?.bytesDownloaded;
+    if (typeof bytes !== 'number' || !isFinite(bytes) || bytes <= 0) return '';
+
+    const elapsedSec = this.elapsedSeconds();
+    if (elapsedSec === null || elapsedSec <= 0) return '';
+
+    return `Average speed: ${this.formatBytesPerSecond(bytes / elapsedSec)}`;
   }
 
   private formatDuration(totalSec: number): string {

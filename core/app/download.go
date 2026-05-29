@@ -1312,6 +1312,14 @@ func (info *FileInfo) downloadFromS3(
 		numWorkers := 32
 		wg.Add(numWorkers)
 
+		// Accumulate bytes across every transferred object so the series reports
+		// the full transferred total, not just the last file. The counter and the
+		// onProgress emit are held under the same lock so reported bytes increase
+		// monotonically and the final emit carries the grand total despite the
+		// concurrent workers below.
+		var downloadedBytes int64
+		var progressMu sync.Mutex
+
 		for i := 0; i < numWorkers; i++ {
 			go func() {
 				defer wg.Done()
@@ -1372,7 +1380,10 @@ func (info *FileInfo) downloadFromS3(
 					}
 
 					if onProgress != nil {
-						onProgress(100.0, numBytes, numBytes)
+						progressMu.Lock()
+						downloadedBytes += numBytes
+						onProgress(100.0, downloadedBytes, downloadedBytes)
+						progressMu.Unlock()
 					}
 				}
 			}()
