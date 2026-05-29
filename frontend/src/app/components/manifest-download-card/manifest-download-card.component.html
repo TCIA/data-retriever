@@ -52,6 +52,27 @@
         </div>
 
         <div class="header-actions">
+          <div *ngIf="showCopyLog" class="copy-log-control">
+            <button
+              class="action-btn copy-log-btn"
+              type="button"
+              (click)="onCopyLog($event)"
+              [class.is-copied]="copyFeedbackState === 'copied'"
+              [class.is-error]="copyFeedbackState === 'error'"
+              [title]="copyLogButtonTitle"
+              [attr.aria-label]="copyLogButtonTitle"
+            >
+              <span class="material-symbols-outlined">content_copy</span>
+            </button>
+            <span
+              *ngIf="copyLogFeedbackText"
+              class="copy-log-feedback"
+              [class.is-error]="copyFeedbackState === 'error'"
+              aria-live="polite"
+            >
+              {{ copyLogFeedbackText }}
+            </span>
+          </div>
           <button
             *ngIf="canOpenOutputDirectory"
             class="action-btn open-folder-btn"
@@ -92,16 +113,6 @@
             aria-label="Retry failed downloads"
           >
             Retry Failed
-          </button>
-          <button
-            *ngIf="showCopyLog"
-            class="retry-btn"
-            type="button"
-            (click)="onCopyLog($event)"
-            [title]="copyLogTooltip"
-            aria-label="Copy log to clipboard"
-          >
-            {{ copyLogLabel }}
           </button>
         </div>
       </div>

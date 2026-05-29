@@ -1,7 +1,12 @@
+import { ChangeDetectorRef } from '@angular/core';
 import { ManifestDownloadCardComponent } from './manifest-download-card.component';
 import { RunState } from '../../models/run-state.model';
 
 describe('ManifestDownloadCardComponent', () => {
+  function createComponent(): ManifestDownloadCardComponent {
+    return new ManifestDownloadCardComponent({ markForCheck: () => undefined } as ChangeDetectorRef);
+  }
+
   function createRunState(overrides?: Partial<RunState>): RunState {
     const base: RunState = {
       runId: 1n,
@@ -52,14 +57,14 @@ describe('ManifestDownloadCardComponent', () => {
   }
 
   it('shows Open Folder when all series are completed', () => {
-    const component = new ManifestDownloadCardComponent();
+    const component = createComponent();
     component.run = createRunState();
 
     expect(component.canOpenOutputDirectory).toBeTrue();
   });
 
   it('shows Open Folder when all series are skipped', () => {
-    const component = new ManifestDownloadCardComponent();
+    const component = createComponent();
     component.run = createRunState({
       overview: {
         total: 3,
@@ -77,7 +82,7 @@ describe('ManifestDownloadCardComponent', () => {
   });
 
   it('shows Open Folder when completed + skipped equals total', () => {
-    const component = new ManifestDownloadCardComponent();
+    const component = createComponent();
     component.run = createRunState({
       overview: {
         total: 4,
@@ -95,7 +100,7 @@ describe('ManifestDownloadCardComponent', () => {
   });
 
   it('hides Open Folder when any series failed', () => {
-    const component = new ManifestDownloadCardComponent();
+    const component = createComponent();
     component.run = createRunState({
       overview: {
         total: 2,
@@ -113,7 +118,7 @@ describe('ManifestDownloadCardComponent', () => {
   });
 
   it('hides Open Folder when any series were cancelled', () => {
-    const component = new ManifestDownloadCardComponent();
+    const component = createComponent();
     component.run = createRunState({
       overview: {
         total: 2,
@@ -131,14 +136,14 @@ describe('ManifestDownloadCardComponent', () => {
   });
 
   it('hides Open Folder when output path is empty', () => {
-    const component = new ManifestDownloadCardComponent();
+    const component = createComponent();
     component.run = createRunState({ outputDirPath: '' });
 
     expect(component.canOpenOutputDirectory).toBeFalse();
   });
 
   it('shows downloaded fraction as completed plus skipped over total', () => {
-    const component = new ManifestDownloadCardComponent();
+    const component = createComponent();
     component.run = createRunState({
       overview: {
         total: 5,
@@ -156,7 +161,7 @@ describe('ManifestDownloadCardComponent', () => {
   });
 
   it('shows Paused label when run is paused even if status is done', () => {
-    const component = new ManifestDownloadCardComponent();
+    const component = createComponent();
     component.run = createRunState({
       status: 'done',
       isPaused: true,
@@ -166,7 +171,7 @@ describe('ManifestDownloadCardComponent', () => {
   });
 
   it('keeps Error label precedence over paused state', () => {
-    const component = new ManifestDownloadCardComponent();
+    const component = createComponent();
     component.run = createRunState({
       status: 'error',
       isPaused: true,
@@ -176,7 +181,7 @@ describe('ManifestDownloadCardComponent', () => {
   });
 
   it('does not show completion marker while paused', () => {
-    const component = new ManifestDownloadCardComponent();
+    const component = createComponent();
     component.run = createRunState({
       status: 'done',
       isPaused: true,
@@ -196,7 +201,7 @@ describe('ManifestDownloadCardComponent', () => {
   });
 
   it('does not show completion marker when status is done but active series remain', () => {
-    const component = new ManifestDownloadCardComponent();
+    const component = createComponent();
     component.run = createRunState({
       status: 'done',
       isPaused: false,
@@ -216,7 +221,7 @@ describe('ManifestDownloadCardComponent', () => {
   });
 
   it('shows Downloading label when active series remain even if status is done', () => {
-    const component = new ManifestDownloadCardComponent();
+    const component = createComponent();
     component.run = createRunState({
       status: 'done',
       isPaused: false,
@@ -233,5 +238,15 @@ describe('ManifestDownloadCardComponent', () => {
     });
 
     expect(component.statusLabel).toBe('Downloading');
+  });
+
+  it('shows copy feedback text after a successful copy state', () => {
+    const component = createComponent();
+
+    expect(component.copyLogButtonTitle).toBe('Copy error message to share with support');
+
+    (component as any).copyFeedback = 'copied';
+
+    expect(component.copyLogButtonTitle).toBe('Copied to clipboard');
   });
 });
