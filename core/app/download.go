@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/csv"
+	"encoding/xml"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -111,6 +112,14 @@ type MetadataStats struct {
 	LastUpdate    time.Time
 	CurrentSeries string
 	mu            sync.Mutex
+}
+
+type tciaCollectionManifest struct {
+	Downloads tciaCollectionDownloads `xml:"Downloads"`
+}
+
+type tciaCollectionDownloads struct {
+	URLs []string `xml:"URL"`
 }
 
 // updateMetadataProgress updates and displays metadata fetching progress
@@ -462,23 +471,92 @@ func parseMetadataCSV(content []byte) []*FileInfo {
 	return files
 }
 
-// readTCIASeriesIDs parses a .tcia file and returns the series ID lines.
-func readTCIASeriesIDs(path string) ([]string, error) {
-	f, err := os.Open(path)
+func parseLegacyTCIASeriesIDs(r io.Reader) ([]string, error) {
+	var ids []string
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.Contains(line, "=") || strings.HasPrefix(line, "#") {
+			continue
+		}
+		ids = append(ids, line)
+	}
+	return ids, scanner.Err()
+}
+
+func looksLikeTCIAXML(content []byte) bool {
+	trimmed := bytes.TrimSpace(content)
+	return bytes.HasPrefix(trimmed, []byte("<?xml")) || bytes.HasPrefix(trimmed, []byte("<TCIACollection"))
+}
+
+func readTCIAXMLSeriesIDs(content []byte, httpClient *http.Client) ([]string, error) {
+	var manifest tciaCollectionManifest
+	if err := xml.Unmarshal(content, &manifest); err != nil {
+		return nil, fmt.Errorf("invalid XML .tcia manifest: %w", err)
+	}
+
+	urls := make([]string, 0, len(manifest.Downloads.URLs))
+	for _, rawURL := range manifest.Downloads.URLs {
+		manifestURL := strings.TrimSpace(rawURL)
+		if manifestURL == "" {
+			continue
+		}
+		urls = append(urls, manifestURL)
+	}
+
+	if len(urls) == 0 {
+		return nil, fmt.Errorf("xml .tcia manifest does not contain any download URL")
+	}
+
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+
+	combined := make([]string, 0)
+	for _, manifestURL := range urls {
+		req, err := http.NewRequest("GET", manifestURL, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request for XML manifest URL %q: %w", manifestURL, err)
+		}
+
+		resp, err := doRequest(httpClient, req)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch XML manifest URL %q: %w", manifestURL, err)
+		}
+
+		body, readErr := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if readErr != nil {
+			return nil, fmt.Errorf("failed to read XML manifest URL %q: %w", manifestURL, readErr)
+		}
+
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			return nil, fmt.Errorf("XML manifest URL %q returned HTTP %d", manifestURL, resp.StatusCode)
+		}
+
+		ids, err := parseLegacyTCIASeriesIDs(bytes.NewReader(body))
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse nested .tcia content from %q: %w", manifestURL, err)
+		}
+		combined = append(combined, ids...)
+	}
+
+	return combined, nil
+}
+
+// readTCIASeriesIDs parses a .tcia file (legacy text or v2 XML) and returns
+// series IDs suitable for metadata lookups.
+func readTCIASeriesIDs(path string, httpClient *http.Client) ([]string, error) {
+	content, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
 
-	var ids []string
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if !strings.ContainsAny(line, "=") {
-			ids = append(ids, line)
-		}
+	if looksLikeTCIAXML(content) {
+		return readTCIAXMLSeriesIDs(content, httpClient)
 	}
-	return ids, scanner.Err()
+
+	return parseLegacyTCIASeriesIDs(bytes.NewReader(content))
 }
 
 // decodeTCIAStreaming reads the series IDs from a .tcia file and returns the
@@ -491,7 +569,7 @@ func decodeTCIAStreaming(ctx context.Context, path string, httpClient *http.Clie
 		ctx = context.Background()
 	}
 
-	seriesIDs, err := readTCIASeriesIDs(path)
+	seriesIDs, err := readTCIASeriesIDs(path, httpClient)
 	if err != nil {
 		return 0, nil, fmt.Errorf("error reading tcia file: %w", err)
 	}
@@ -605,7 +683,7 @@ func decodeTCIA(ctx context.Context, path string, httpClient *http.Client, optio
 	}
 	logger.Debugf("decoding tcia file: %s", path)
 
-	seriesIDs, err := readTCIASeriesIDs(path)
+	seriesIDs, err := readTCIASeriesIDs(path, httpClient)
 	if err != nil {
 		logger.Errorf("error reading tcia file: %v", err)
 		return nil
