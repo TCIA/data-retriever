@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -62,7 +63,7 @@ func TestReadTCIASeriesIDs_XMLManifestDownloadsLegacyTCIA(t *testing.T) {
 		t.Fatalf("failed to write XML manifest: %v", err)
 	}
 
-	ids, err := readTCIASeriesIDs(manifestPath, ts.Client())
+	ids, err := readTCIASeriesIDs(context.Background(), manifestPath, ts.Client())
 	if err != nil {
 		t.Fatalf("readTCIASeriesIDs returned error: %v", err)
 	}
@@ -88,7 +89,7 @@ func TestReadTCIASeriesIDs_XMLManifestMissingDownloadURL(t *testing.T) {
 		t.Fatalf("failed to write XML manifest: %v", err)
 	}
 
-	_, err := readTCIASeriesIDs(manifestPath, nil)
+	_, err := readTCIASeriesIDs(context.Background(), manifestPath, nil)
 	if err == nil {
 		t.Fatalf("expected error when XML manifest has no download URL")
 	}

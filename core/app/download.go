@@ -489,7 +489,7 @@ func looksLikeTCIAXML(content []byte) bool {
 	return bytes.HasPrefix(trimmed, []byte("<?xml")) || bytes.HasPrefix(trimmed, []byte("<TCIACollection"))
 }
 
-func readTCIAXMLSeriesIDs(content []byte, httpClient *http.Client) ([]string, error) {
+func readTCIAXMLSeriesIDs(ctx context.Context, content []byte, httpClient *http.Client) ([]string, error) {
 	var manifest tciaCollectionManifest
 	if err := xml.Unmarshal(content, &manifest); err != nil {
 		return nil, fmt.Errorf("invalid XML .tcia manifest: %w", err)
@@ -514,7 +514,7 @@ func readTCIAXMLSeriesIDs(content []byte, httpClient *http.Client) ([]string, er
 
 	combined := make([]string, 0)
 	for _, manifestURL := range urls {
-		req, err := http.NewRequest("GET", manifestURL, nil)
+		req, err := http.NewRequestWithContext(ctx, "GET", manifestURL, nil)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create request for XML manifest URL %q: %w", manifestURL, err)
 		}
@@ -546,14 +546,18 @@ func readTCIAXMLSeriesIDs(content []byte, httpClient *http.Client) ([]string, er
 
 // readTCIASeriesIDs parses a .tcia file (legacy text or v2 XML) and returns
 // series IDs suitable for metadata lookups.
-func readTCIASeriesIDs(path string, httpClient *http.Client) ([]string, error) {
+func readTCIASeriesIDs(ctx context.Context, path string, httpClient *http.Client) ([]string, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
 	if looksLikeTCIAXML(content) {
-		return readTCIAXMLSeriesIDs(content, httpClient)
+		return readTCIAXMLSeriesIDs(ctx, content, httpClient)
 	}
 
 	return parseLegacyTCIASeriesIDs(bytes.NewReader(content))
@@ -569,7 +573,7 @@ func decodeTCIAStreaming(ctx context.Context, path string, httpClient *http.Clie
 		ctx = context.Background()
 	}
 
-	seriesIDs, err := readTCIASeriesIDs(path, httpClient)
+	seriesIDs, err := readTCIASeriesIDs(ctx, path, httpClient)
 	if err != nil {
 		return 0, nil, fmt.Errorf("error reading tcia file: %w", err)
 	}
@@ -683,7 +687,7 @@ func decodeTCIA(ctx context.Context, path string, httpClient *http.Client, optio
 	}
 	logger.Debugf("decoding tcia file: %s", path)
 
-	seriesIDs, err := readTCIASeriesIDs(path, httpClient)
+	seriesIDs, err := readTCIASeriesIDs(ctx, path, httpClient)
 	if err != nil {
 		logger.Errorf("error reading tcia file: %v", err)
 		return nil
