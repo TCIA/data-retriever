@@ -34,6 +34,13 @@ const (
 
 	tciaBatchSize         = 50 // series IDs per metadata request
 	tciaConcurrentBatches = 3  // max concurrent metadata requests
+
+	// tciaManifestFetchTimeout bounds the fetch of a URL referenced by an XML
+	// .tcia manifest when no caller-supplied client (with its own timeout) is used.
+	tciaManifestFetchTimeout = 5 * time.Minute
+	// tciaManifestMaxBytes caps the body read from a manifest URL. A .tcia
+	// manifest is a plain-text list of series UIDs, so this is generously large.
+	tciaManifestMaxBytes = 64 << 20 // 64 MiB
 )
 
 // ProgressFunc is a callback for reporting download progress.
@@ -485,7 +492,9 @@ func parseLegacyTCIASeriesIDs(r io.Reader) ([]string, error) {
 }
 
 func looksLikeTCIAXML(content []byte) bool {
-	trimmed := bytes.TrimSpace(content)
+	// Strip a leading UTF-8 BOM (common in Windows-exported manifests) before
+	// trimming whitespace, since TrimSpace does not treat the BOM as space.
+	trimmed := bytes.TrimSpace(bytes.TrimPrefix(content, []byte("\xef\xbb\xbf")))
 	return bytes.HasPrefix(trimmed, []byte("<?xml")) || bytes.HasPrefix(trimmed, []byte("<TCIACollection"))
 }
 
@@ -509,7 +518,7 @@ func readTCIAXMLSeriesIDs(ctx context.Context, content []byte, httpClient *http.
 	}
 
 	if httpClient == nil {
-		httpClient = http.DefaultClient
+		httpClient = &http.Client{Timeout: tciaManifestFetchTimeout}
 	}
 
 	combined := make([]string, 0)
@@ -524,7 +533,9 @@ func readTCIAXMLSeriesIDs(ctx context.Context, content []byte, httpClient *http.
 			return nil, fmt.Errorf("failed to fetch XML manifest URL %q: %w", manifestURL, err)
 		}
 
-		body, readErr := io.ReadAll(resp.Body)
+		// Read at most tciaManifestMaxBytes+1 so an oversized body can be
+		// detected (the extra byte distinguishes "exactly at limit" from "over").
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, tciaManifestMaxBytes+1))
 		resp.Body.Close()
 		if readErr != nil {
 			return nil, fmt.Errorf("failed to read XML manifest URL %q: %w", manifestURL, readErr)
@@ -534,11 +545,19 @@ func readTCIAXMLSeriesIDs(ctx context.Context, content []byte, httpClient *http.
 			return nil, fmt.Errorf("XML manifest URL %q returned HTTP %d", manifestURL, resp.StatusCode)
 		}
 
+		if int64(len(body)) > tciaManifestMaxBytes {
+			return nil, fmt.Errorf("XML manifest URL %q body exceeds %d bytes", manifestURL, int64(tciaManifestMaxBytes))
+		}
+
 		ids, err := parseLegacyTCIASeriesIDs(bytes.NewReader(body))
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse nested .tcia content from %q: %w", manifestURL, err)
 		}
 		combined = append(combined, ids...)
+	}
+
+	if len(combined) == 0 {
+		return nil, fmt.Errorf("xml .tcia manifest resolved to 0 series IDs")
 	}
 
 	return combined, nil
