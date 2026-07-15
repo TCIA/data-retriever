@@ -9,6 +9,7 @@ import (
 	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -46,7 +47,7 @@ type progressReader struct {
 	read         int64
 	onProgress   ProgressFunc
 	lastReported float64
-	lastBytes     int64
+	lastBytes    int64
 	lastTime     time.Time
 }
 
@@ -113,6 +114,14 @@ type MetadataStats struct {
 	mu            sync.Mutex
 }
 
+type tciaCollectionManifest struct {
+	Downloads tciaCollectionDownloads `xml:"Downloads"`
+}
+
+type tciaCollectionDownloads struct {
+	URLs []string `xml:"URL"`
+}
+
 // updateMetadataProgress updates and displays metadata fetching progress
 func (m *MetadataStats) updateProgress(action string, seriesID string) {
 	m.mu.Lock()
@@ -163,9 +172,9 @@ func (m *MetadataStats) updateProgress(action string, seriesID string) {
 
 		// Clear line and print progress - identical format to download progress
 		fmt.Fprintf(os.Stderr, "\r\033[K[%d/%d] %.1f%% | Fetched: %d | Cached: %d | Failed: %d%s | Current: %s",
-		completed, m.Total, percentage,
-		m.Fetched, m.Cached, m.Failed,
-		eta, displayID)
+			completed, m.Total, percentage,
+			m.Fetched, m.Cached, m.Failed,
+			eta, displayID)
 
 		if completed == m.Total {
 			fmt.Fprintf(os.Stderr, "\n")
@@ -174,7 +183,7 @@ func (m *MetadataStats) updateProgress(action string, seriesID string) {
 }
 
 var (
-	dirMutex sync.Mutex
+	dirMutex  sync.Mutex
 	metaMutex sync.Mutex
 	statusMu  sync.Mutex
 )
@@ -299,7 +308,6 @@ func FetchMetadataForSeriesUIDs(ctx context.Context, seriesIDs []string, httpCli
 
 				// Set headers
 				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
 
 				// Set timeout for metadata request
 				reqCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
@@ -462,23 +470,92 @@ func parseMetadataCSV(content []byte) []*FileInfo {
 	return files
 }
 
-// readTCIASeriesIDs parses a .tcia file and returns the series ID lines.
-func readTCIASeriesIDs(path string) ([]string, error) {
-	f, err := os.Open(path)
+func parseLegacyTCIASeriesIDs(r io.Reader) ([]string, error) {
+	var ids []string
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.Contains(line, "=") || strings.HasPrefix(line, "#") {
+			continue
+		}
+		ids = append(ids, line)
+	}
+	return ids, scanner.Err()
+}
+
+func looksLikeTCIAXML(content []byte) bool {
+	trimmed := bytes.TrimSpace(content)
+	return bytes.HasPrefix(trimmed, []byte("<?xml")) || bytes.HasPrefix(trimmed, []byte("<TCIACollection"))
+}
+
+func readTCIAXMLSeriesIDs(content []byte, httpClient *http.Client) ([]string, error) {
+	var manifest tciaCollectionManifest
+	if err := xml.Unmarshal(content, &manifest); err != nil {
+		return nil, fmt.Errorf("invalid XML .tcia manifest: %w", err)
+	}
+
+	urls := make([]string, 0, len(manifest.Downloads.URLs))
+	for _, rawURL := range manifest.Downloads.URLs {
+		manifestURL := strings.TrimSpace(rawURL)
+		if manifestURL == "" {
+			continue
+		}
+		urls = append(urls, manifestURL)
+	}
+
+	if len(urls) == 0 {
+		return nil, fmt.Errorf("xml .tcia manifest does not contain any download URL")
+	}
+
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+
+	combined := make([]string, 0)
+	for _, manifestURL := range urls {
+		req, err := http.NewRequest("GET", manifestURL, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request for XML manifest URL %q: %w", manifestURL, err)
+		}
+
+		resp, err := doRequest(httpClient, req)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch XML manifest URL %q: %w", manifestURL, err)
+		}
+
+		body, readErr := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if readErr != nil {
+			return nil, fmt.Errorf("failed to read XML manifest URL %q: %w", manifestURL, readErr)
+		}
+
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			return nil, fmt.Errorf("XML manifest URL %q returned HTTP %d", manifestURL, resp.StatusCode)
+		}
+
+		ids, err := parseLegacyTCIASeriesIDs(bytes.NewReader(body))
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse nested .tcia content from %q: %w", manifestURL, err)
+		}
+		combined = append(combined, ids...)
+	}
+
+	return combined, nil
+}
+
+// readTCIASeriesIDs parses a .tcia file (legacy text or v2 XML) and returns
+// series IDs suitable for metadata lookups.
+func readTCIASeriesIDs(path string, httpClient *http.Client) ([]string, error) {
+	content, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
 
-	var ids []string
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if !strings.ContainsAny(line, "=") {
-			ids = append(ids, line)
-		}
+	if looksLikeTCIAXML(content) {
+		return readTCIAXMLSeriesIDs(content, httpClient)
 	}
-	return ids, scanner.Err()
+
+	return parseLegacyTCIASeriesIDs(bytes.NewReader(content))
 }
 
 // decodeTCIAStreaming reads the series IDs from a .tcia file and returns the
@@ -491,7 +568,7 @@ func decodeTCIAStreaming(ctx context.Context, path string, httpClient *http.Clie
 		ctx = context.Background()
 	}
 
-	seriesIDs, err := readTCIASeriesIDs(path)
+	seriesIDs, err := readTCIASeriesIDs(path, httpClient)
 	if err != nil {
 		return 0, nil, fmt.Errorf("error reading tcia file: %w", err)
 	}
@@ -605,7 +682,7 @@ func decodeTCIA(ctx context.Context, path string, httpClient *http.Client, optio
 	}
 	logger.Debugf("decoding tcia file: %s", path)
 
-	seriesIDs, err := readTCIASeriesIDs(path)
+	seriesIDs, err := readTCIASeriesIDs(path, httpClient)
 	if err != nil {
 		logger.Errorf("error reading tcia file: %v", err)
 		return nil
@@ -670,23 +747,22 @@ type FileInfo struct {
 	DateReleased                        string `csv:"DateReleased"`
 	ThirdPartyAnalysis                  string `csv:"ThirdPartyAnalysis"`
 	Authorized                          string `csv:"Authorized"`
-	AnalysisResultID     string `csv:"analysis_result_id" json:"analysis_result_id,omitempty"`
-	SOPClassUID          string `csv:"SOPClassUID" json:"SOPClassUID,omitempty"`
-	SOPClassName         string `csv:"sop_class_name" json:"sop_class_name,omitempty"`
-	TransferSyntaxUID    string `csv:"TransferSyntaxUID" json:"TransferSyntaxUID,omitempty"`
-	TransferSyntaxName   string `csv:"transfer_syntax_name" json:"transfer_syntax_name,omitempty"`
-	InstanceCount        int64  `csv:"instanceCount" json:"instanceCount,omitempty"`
-	LicenseShortName     string `csv:"license_short_name" json:"license_short_name,omitempty"`
-	AWSBucket            string `csv:"aws_bucket" json:"aws_bucket,omitempty"`
-	CRDCSeriesUUID       string `csv:"crdc_series_uuid" json:"crdc_series_uuid,omitempty"`
-	SourceDOI            string `csv:"source_DOI" json:"source_DOI,omitempty"`
+	AnalysisResultID                    string `csv:"analysis_result_id" json:"analysis_result_id,omitempty"`
+	SOPClassUID                         string `csv:"SOPClassUID" json:"SOPClassUID,omitempty"`
+	SOPClassName                        string `csv:"sop_class_name" json:"sop_class_name,omitempty"`
+	TransferSyntaxUID                   string `csv:"TransferSyntaxUID" json:"TransferSyntaxUID,omitempty"`
+	TransferSyntaxName                  string `csv:"transfer_syntax_name" json:"transfer_syntax_name,omitempty"`
+	InstanceCount                       int64  `csv:"instanceCount" json:"instanceCount,omitempty"`
+	LicenseShortName                    string `csv:"license_short_name" json:"license_short_name,omitempty"`
+	AWSBucket                           string `csv:"aws_bucket" json:"aws_bucket,omitempty"`
+	CRDCSeriesUUID                      string `csv:"crdc_series_uuid" json:"crdc_series_uuid,omitempty"`
+	SourceDOI                           string `csv:"source_DOI" json:"source_DOI,omitempty"`
 	DownloadURL                         string
 	DRSURI                              string `json:"drs_uri,omitempty"`
 	S5cmdManifestPath                   string `json:"s5cmd_manifest_path,omitempty"`
 	FileName                            string `json:"file_name,omitempty"`
 	OriginalS5cmdURI                    string `json:"original_s5cmd_uri,omitempty"`
 	IsSyncJob                           bool   `json:"is_sync_job,omitempty"`
-
 }
 
 // GetOutput construct the output directory (thread-safe)
@@ -706,12 +782,11 @@ func (info *FileInfo) getOutput(output string, options *Options) string {
 		}
 
 		outputDir = filepath.Join(output, info.Collection, info.PatientID,
-    	joinParts(info.StudyDate, cleanStudyDesc[:min(54, len(cleanStudyDesc))], studyUID),
-    	joinParts(info.SeriesNumber, cleanSeriesDesc[:min(54, len(cleanSeriesDesc))], seriesUID))
+			joinParts(info.StudyDate, cleanStudyDesc[:min(54, len(cleanStudyDesc))], studyUID),
+			joinParts(info.SeriesNumber, cleanSeriesDesc[:min(54, len(cleanSeriesDesc))], seriesUID))
 	} else {
 		outputDir = filepath.Join(output, info.Collection, info.PatientID, info.StudyInstanceUID, info.SeriesInstanceUID)
 	}
-
 
 	// Check if directory exists without lock first
 	if _, err := os.Stat(outputDir); !os.IsNotExist(err) {
@@ -732,7 +807,6 @@ func (info *FileInfo) getOutput(output string, options *Options) string {
 func (info *FileInfo) MetaFile(output string) string {
 	return getMetadataCachePath(output, info.SeriesInstanceUID)
 }
-
 
 func (info *FileInfo) DcimFiles(output string, options *Options) string {
 	return info.getOutput(output, options)
@@ -785,7 +859,7 @@ func (info *FileInfo) NeedsDownload(output string, force bool, noDecompress bool
 		}
 
 		// Check total size of extracted files
-		if (info.FileSize != "" && info.FileSize != "0" ) {
+		if info.FileSize != "" && info.FileSize != "0" {
 			Logger.Debugf("file size: %s", info.FileSize)
 			expectedSize, err := strconv.ParseInt(info.FileSize, 10, 64)
 			if err == nil {
@@ -802,7 +876,7 @@ func (info *FileInfo) NeedsDownload(output string, force bool, noDecompress bool
 				}
 			}
 
-		} else if (info.FileName != "") {
+		} else if info.FileName != "" {
 			filePath := filepath.Join(targetPath, info.FileName)
 			if _, err := os.Stat(filePath); err == nil {
 				logger.Debugf("File %s exists, skipping download", filePath)
@@ -1080,13 +1154,13 @@ func (info *FileInfo) DownloadWithRetry(ctx context.Context, output string, http
 		}
 
 		if ctx.Err() != nil {
-	    AppendCompletionStatus(output, info.SeriesInstanceUID, ctx.Err(), false)
+			AppendCompletionStatus(output, info.SeriesInstanceUID, ctx.Err(), false)
 			return ctx.Err()
 		}
 
 		err := info.doDownload(ctx, output, httpClient, options, onProgress, onDecompress, gen3Auth)
 		if err == nil {
-	    AppendCompletionStatus(output, info.SeriesInstanceUID, nil, false)
+			AppendCompletionStatus(output, info.SeriesInstanceUID, nil, false)
 			return nil
 		}
 
@@ -1096,7 +1170,7 @@ func (info *FileInfo) DownloadWithRetry(ctx context.Context, output string, http
 		// Check if error is retryable
 		if !isRetryableError(err) {
 			logger.Errorf("Non-retryable error for %s: %v", info.SeriesInstanceUID, err)
-	    AppendCompletionStatus(output, info.SeriesInstanceUID, err, false)
+			AppendCompletionStatus(output, info.SeriesInstanceUID, err, false)
 			return err
 		}
 	}
@@ -1117,17 +1191,17 @@ func isRetryableError(err error) bool {
 	}
 
 	return strings.Contains(errStr, "timeout") ||
-	strings.Contains(errStr, "connection refused") ||
-	strings.Contains(errStr, "connection reset") ||
-	strings.Contains(errStr, "EOF") ||
-	strings.Contains(errStr, "incomplete download") || // Truncated downloads
-	strings.Contains(errStr, "closed") || // Connection closed
-	strings.Contains(errStr, "broken pipe") || // Broken connection
-	strings.Contains(errStr, "429") || // Rate limiting
-	strings.Contains(errStr, "500") || // Server error
-	strings.Contains(errStr, "502") || // Bad gateway
-	strings.Contains(errStr, "503") || // Service unavailable
-	strings.Contains(errStr, "504") // Gateway timeout
+		strings.Contains(errStr, "connection refused") ||
+		strings.Contains(errStr, "connection reset") ||
+		strings.Contains(errStr, "EOF") ||
+		strings.Contains(errStr, "incomplete download") || // Truncated downloads
+		strings.Contains(errStr, "closed") || // Connection closed
+		strings.Contains(errStr, "broken pipe") || // Broken connection
+		strings.Contains(errStr, "429") || // Rate limiting
+		strings.Contains(errStr, "500") || // Server error
+		strings.Contains(errStr, "502") || // Bad gateway
+		strings.Contains(errStr, "503") || // Service unavailable
+		strings.Contains(errStr, "504") // Gateway timeout
 }
 
 // doDownload is a dispatcher for different download types
@@ -1137,68 +1211,19 @@ func (info *FileInfo) doDownload(ctx context.Context, output string, httpClient 
 		return info.downloadFromS3(ctx, info.S5cmdManifestPath, options, onProgress)
 	}
 	if strings.HasPrefix(info.DownloadURL, "s3://") {
-	// This handles other potential S3 downloads that are not from a manifest
-	return info.downloadFromS3(ctx, output, options, onProgress)
-}
-if info.DRSURI != "" {
-	return info.downloadFromGen3(ctx, output, httpClient, gen3Auth, options, onProgress)
-}
-if ctx == nil {
-	ctx = context.Background()
-}
-if info.DownloadURL != "" {
-	return info.downloadDirect(ctx, output, httpClient, options, onProgress, gen3Auth)
-}
-return info.downloadFromTCIA(ctx, output, httpClient, options, onProgress, onDecompress)
-}
-
-// downloadSource classifies where this series is actually fetched from, based on
-// the resolved download mechanism rather than the input file type. The order
-// mirrors the dispatch in doDownload and must stay in sync with it. A spreadsheet
-// or .tcia UID that matched the parquet index resolves to an s5cmd/S3 job and is
-// reported as "IDC"; a UID routed through the TCIA path is reported as "nbia".
-// DRSURI is checked before DownloadURL because a successful Gen3 download
-// overwrites DownloadURL with the resolved https URL (see downloadFromGen3),
-// while DRSURI is left intact. Returns one of: "IDC", "drs", "spreadsheet", "nbia".
-func (info *FileInfo) downloadSource() string {
-	switch {
-	case info.S5cmdManifestPath != "" || info.OriginalS5cmdURI != "" || strings.HasPrefix(info.DownloadURL, "s3://"):
-		return "IDC"
-	case info.DRSURI != "":
-		return "drs"
-	case info.DownloadURL != "":
-		return "spreadsheet"
-	default:
-		return "nbia"
+		// This handles other potential S3 downloads that are not from a manifest
+		return info.downloadFromS3(ctx, output, options, onProgress)
 	}
-}
-
-// sourceURL returns the concrete location this series was fetched from, paired
-// with downloadSource: the s3:// object URI for "IDC", the DRS URI for "drs",
-// the direct download URL for "spreadsheet", and the resolved TCIA API endpoint
-// (with query parameters, matching downloadFromTCIA) for "nbia".
-func (info *FileInfo) sourceURL() string {
-	switch info.downloadSource() {
-	case "IDC":
-		if info.OriginalS5cmdURI != "" {
-			return info.OriginalS5cmdURI
-		}
-		return info.DownloadURL
-	case "drs":
-		return info.DRSURI
-	case "spreadsheet":
-		return info.DownloadURL
-	default: // nbia
-		u, err := makeURL(ImageUrl, map[string]interface{}{
-			"SeriesInstanceUID": info.SeriesInstanceUID,
-			"IncludeMD5":        "Yes",
-			"NewFileNames":      "Yes",
-		})
-		if err != nil {
-			return ImageUrl
-		}
-		return u
+	if info.DRSURI != "" {
+		return info.downloadFromGen3(ctx, output, httpClient, gen3Auth, options, onProgress)
 	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if info.DownloadURL != "" {
+		return info.downloadDirect(ctx, output, httpClient, options, onProgress, gen3Auth)
+	}
+	return info.downloadFromTCIA(ctx, output, httpClient, options, onProgress, onDecompress)
 }
 
 func downloadS3Object(ctx context.Context, client *s3.Client, bucket, key, targetDir string, onProgress ProgressFunc) error {
@@ -1295,7 +1320,7 @@ func (info *FileInfo) downloadFromS3(
 				}
 				size := int64(0)
 				if obj.Size != nil {
-				    size = *obj.Size
+					size = *obj.Size
 				}
 				objects = append(objects, s3Object{key: *obj.Key, size: size})
 			}
@@ -1311,14 +1336,6 @@ func (info *FileInfo) downloadFromS3(
 		var wg sync.WaitGroup
 		numWorkers := 32
 		wg.Add(numWorkers)
-
-		// Accumulate bytes across every transferred object so the series reports
-		// the full transferred total, not just the last file. The counter and the
-		// onProgress emit are held under the same lock so reported bytes increase
-		// monotonically and the final emit carries the grand total despite the
-		// concurrent workers below.
-		var downloadedBytes int64
-		var progressMu sync.Mutex
 
 		for i := 0; i < numWorkers; i++ {
 			go func() {
@@ -1380,10 +1397,7 @@ func (info *FileInfo) downloadFromS3(
 					}
 
 					if onProgress != nil {
-						progressMu.Lock()
-						downloadedBytes += numBytes
-						onProgress(100.0, downloadedBytes, downloadedBytes)
-						progressMu.Unlock()
+						onProgress(100.0, numBytes, numBytes)
 					}
 				}
 			}()
@@ -1456,27 +1470,27 @@ func awsConfig() (aws.Config, error) {
 
 func parseS3URL(s string) (bucket string, key string, isWildcard bool, err error) {
 	if !strings.HasPrefix(s, "s3://") {
-	return "", "", false, fmt.Errorf("invalid S3 URL: %s", s)
-}
+		return "", "", false, fmt.Errorf("invalid S3 URL: %s", s)
+	}
 
-trimmed := strings.TrimPrefix(s, "s3://")
-parts := strings.SplitN(trimmed, "/", 2)
+	trimmed := strings.TrimPrefix(s, "s3://")
+	parts := strings.SplitN(trimmed, "/", 2)
 
-bucket = parts[0]
-if bucket == "" {
-	return "", "", false, fmt.Errorf("invalid S3 URL: %s", s)
-}
+	bucket = parts[0]
+	if bucket == "" {
+		return "", "", false, fmt.Errorf("invalid S3 URL: %s", s)
+	}
 
-if len(parts) == 2 {
-	key = parts[1]
-}
+	if len(parts) == 2 {
+		key = parts[1]
+	}
 
-if strings.HasSuffix(key, "/*") {
-	isWildcard = true
-	key = strings.TrimSuffix(key, "/*")
-}
+	if strings.HasSuffix(key, "/*") {
+		isWildcard = true
+		key = strings.TrimSuffix(key, "/*")
+	}
 
-return bucket, key, isWildcard, nil
+	return bucket, key, isWildcard, nil
 }
 
 // downloadFromGen3 downloads a file from a Gen3 server
@@ -1750,7 +1764,7 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 	logger.Debugf("getting image file to %s", output)
 
 	url_, err := makeURL(ImageUrl, map[string]interface{}{"SeriesInstanceUID": info.SeriesInstanceUID,
-	"IncludeMD5": "Yes", "NewFileNames": "Yes"})
+		"IncludeMD5": "Yes", "NewFileNames": "Yes"})
 	if err != nil {
 		return fmt.Errorf("failed to make URL: %v", err)
 	}
@@ -1789,7 +1803,6 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 		return fmt.Errorf("failed to create request: %v", err)
 	}
 
-
 	// Set timeout based on file size (if known)
 	var timeout time.Duration
 	if info.FileSize != "" {
@@ -1817,7 +1830,7 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 
 	// Log response headers for debugging
 	logger.Debugf("Response headers for %s: Status=%s, Content-Length=%d, Transfer-Encoding=%s",
-	info.SeriesInstanceUID, resp.Status, resp.ContentLength, resp.Header.Get("Transfer-Encoding"))
+		info.SeriesInstanceUID, resp.Status, resp.ContentLength, resp.Header.Get("Transfer-Encoding"))
 
 	// Check HTTP status
 	if resp.StatusCode != http.StatusOK {
@@ -1890,7 +1903,7 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 		expectedSize, _ := strconv.ParseInt(info.FileSize, 10, 64)
 		compressionRatio := float64(written) / float64(expectedSize) * 100
 		logger.Debugf("Downloaded %s: %d bytes (%.1f%% of uncompressed size %d)",
-		info.SeriesInstanceUID, written, compressionRatio, expectedSize)
+			info.SeriesInstanceUID, written, compressionRatio, expectedSize)
 	}
 
 	// Close ZIP file before extraction
@@ -2030,11 +2043,11 @@ func SeriesUpToDate(seriesDir string) bool {
 }
 
 func joinParts(parts ...string) string {
-    var nonEmpty []string
-    for _, p := range parts {
-        if p != "" {
-            nonEmpty = append(nonEmpty, p)
-        }
-    }
-    return strings.Join(nonEmpty, "-")
+	var nonEmpty []string
+	for _, p := range parts {
+		if p != "" {
+			nonEmpty = append(nonEmpty, p)
+		}
+	}
+	return strings.Join(nonEmpty, "-")
 }

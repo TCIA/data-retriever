@@ -79,25 +79,25 @@ func (a *App) CheckForUpdate() (UpdateInfo, error) {
 }
 
 func (b *App) GetPendingFileOpen() string {
-    path := b.pendingFileOpen
-    b.pendingFileOpen = ""
-    return path
+	path := b.pendingFileOpen
+	b.pendingFileOpen = ""
+	return path
 }
 
 func (b *App) HandleFileOpen(filePath string) {
-    // The app may not be fully started yet when this fires on cold launch,
-    // so guard against a nil context.
+	// The app may not be fully started yet when this fires on cold launch,
+	// so guard against a nil context.
 
-    if b.ctx == nil {
-				b.pendingFileOpen = filePath
-        return
-    }
-    go func() {
-        select {
-        case <-b.frontendReady:
-            wailsRuntime.EventsEmit(b.ctx, "file-opened", filePath)
-				}
-    }()
+	if b.ctx == nil {
+		b.pendingFileOpen = filePath
+		return
+	}
+	go func() {
+		select {
+		case <-b.frontendReady:
+			wailsRuntime.EventsEmit(b.ctx, "file-opened", filePath)
+		}
+	}()
 
 }
 
@@ -207,7 +207,7 @@ func (b *App) OpenAuthFileDialog() (string, error) {
 // OpenInputFileDialog opens a system file dialog and returns the selected file path
 func (b *App) OpenInputFileDialog() (string, error) {
 	result, err := wailsRuntime.OpenFileDialog(b.ctx, wailsRuntime.OpenDialogOptions{
-		Title: "Select TCIA Manifest File",
+		Title: "Select Manifest File (.tcia/.s5cmd/.csv/.tsv/.xlsx/.json/.jsonld)",
 	})
 	if err != nil {
 		return "", err
@@ -307,10 +307,9 @@ func (b *App) runBatch(batch *DownloadBatch) {
 	}
 	pass := os.Getenv("NBIA_PASS")
 
-  gate := &app.AuthGate{}
-  b.authGates.Store(uint64(batch.ID), gate)
-  defer b.authGates.Delete(uint64(batch.ID))
-
+	gate := &app.AuthGate{}
+	b.authGates.Store(uint64(batch.ID), gate)
+	defer b.authGates.Delete(uint64(batch.ID))
 
 	options := &app.Options{
 		Input:                 batch.Manifest,
@@ -342,16 +341,16 @@ func (b *App) runBatch(batch *DownloadBatch) {
 		RefreshMetadata:       false,
 		MetadataWorkers:       20,
 		Auth: func() string {
-				if batch.AuthPath != "" {
-					return batch.AuthPath
-				}
-				return app.LoadSavedAuthFilePath()
-			}(),
-		DirectoryMode:         batch.DirectoryMode,
-		IDCParquetPath:				 b.parquetPaths.IDCIndex,
-		PriorParquetPath:			 b.parquetPaths.PriorVersions,
-		AuthGate:							 gate,
-		LogSink:               newGuiLogSink(b.ctx, batch.ID),
+			if batch.AuthPath != "" {
+				return batch.AuthPath
+			}
+			return app.LoadSavedAuthFilePath()
+		}(),
+		DirectoryMode:    batch.DirectoryMode,
+		IDCParquetPath:   b.parquetPaths.IDCIndex,
+		PriorParquetPath: b.parquetPaths.PriorVersions,
+		AuthGate:         gate,
+		LogSink:          newGuiLogSink(b.ctx, batch.ID),
 	}
 
 	logTimestamp := time.Now().Format("20060102-150405")
@@ -368,8 +367,6 @@ func (b *App) runBatch(batch *DownloadBatch) {
 			eventLog.Close()
 		}
 	}()
-
-
 
 	manifestReceived := false
 	callbacks := app.Callbacks{
@@ -396,11 +393,11 @@ func (b *App) runBatch(batch *DownloadBatch) {
 			}
 			wailsRuntime.EventsEmit(b.ctx, "manifest-series-metadata", p)
 		},
-	  EmitEvent: func(name string, data ...interface{}) {
-			 // Prepend runId so the frontend knows which run needs auth
-       args := append([]interface{}{fmt.Sprintf("%d", uint64(batch.ID))}, data...)
-       wailsRuntime.EventsEmit(b.ctx, name, args...)
-    },
+		EmitEvent: func(name string, data ...interface{}) {
+			// Prepend runId so the frontend knows which run needs auth
+			args := append([]interface{}{fmt.Sprintf("%d", uint64(batch.ID))}, data...)
+			wailsRuntime.EventsEmit(b.ctx, name, args...)
+		},
 	}
 
 	// Run the CLI download (blocking inside goroutine)
@@ -439,33 +436,31 @@ func (b *App) runBatch(batch *DownloadBatch) {
 }
 
 func (a *App) ResolveAuth(runIdStr string, authFilePath string) error {
-    runId, err := strconv.ParseUint(runIdStr, 10, 64)
-    if err != nil {
-        return fmt.Errorf("invalid runId: %w", err)
-    }
-    if authFilePath != "" {
-        if saveErr := app.SaveAuthFile(authFilePath); saveErr != nil {
-            fmt.Fprintf(os.Stderr, "failed to save auth file: %v\n", saveErr)
-        }
-    }
-    if v, ok := a.authGates.Load(runId); ok {
-        v.(*app.AuthGate).Resolve(authFilePath)
-    }
-    return nil
+	runId, err := strconv.ParseUint(runIdStr, 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid runId: %w", err)
+	}
+	if authFilePath != "" {
+		if saveErr := app.SaveAuthFile(authFilePath); saveErr != nil {
+			fmt.Fprintf(os.Stderr, "failed to save auth file: %v\n", saveErr)
+		}
+	}
+	if v, ok := a.authGates.Load(runId); ok {
+		v.(*app.AuthGate).Resolve(authFilePath)
+	}
+	return nil
 }
 
 func (a *App) CancelAuth(runIdStr string) error {
-    runId, err := strconv.ParseUint(runIdStr, 10, 64)
-    if err != nil {
-        return fmt.Errorf("invalid runId: %w", err)
-    }
-    if v, ok := a.authGates.Load(runId); ok {
-        v.(*app.AuthGate).Resolve("")
-    }
-    return nil
+	runId, err := strconv.ParseUint(runIdStr, 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid runId: %w", err)
+	}
+	if v, ok := a.authGates.Load(runId); ok {
+		v.(*app.AuthGate).Resolve("")
+	}
+	return nil
 }
-
-
 
 func (b *App) CancelDownload() {
 	b.mu.Lock()
@@ -516,19 +511,19 @@ func (b *App) OpenDirectory(path string) error {
 }
 
 func (a *App) IsMac() bool {
-    return stdRuntime.GOOS == "darwin"
+	return stdRuntime.GOOS == "darwin"
 }
 
 type App struct {
-	ctx           context.Context
-	mu            sync.Mutex
-	runID         uint64
-	batches       map[uint64]*DownloadBatch
-	pausedBatches map[string]*DownloadBatch // keyed by manifest path for resume
-	parquetPaths	app.ParquetPaths
+	ctx             context.Context
+	mu              sync.Mutex
+	runID           uint64
+	batches         map[uint64]*DownloadBatch
+	pausedBatches   map[string]*DownloadBatch // keyed by manifest path for resume
+	parquetPaths    app.ParquetPaths
 	pendingFileOpen string
-	frontendReady	chan struct{}
-	authGates sync.Map
+	frontendReady   chan struct{}
+	authGates       sync.Map
 }
 
 func NewApp() *App {
@@ -540,14 +535,13 @@ func NewApp() *App {
 }
 
 func (b *App) FrontendReady() {
-    select {
-    case <-b.frontendReady:
-        // already closed, no-op
-    default:
-        close(b.frontendReady)
-    }
+	select {
+	case <-b.frontendReady:
+		// already closed, no-op
+	default:
+		close(b.frontendReady)
+	}
 }
-
 
 // PauseManifest pauses a download by canceling its context and storing the batch for resume
 func (b *App) PauseManifest(manifestPath string) error {
@@ -630,7 +624,7 @@ func (s *guiLogSink) Write(p []byte) (int, error) {
 }
 
 type DownloadBatch struct {
-	ID     uint64 
+	ID     uint64
 	Ctx    context.Context
 	Cancel context.CancelFunc
 

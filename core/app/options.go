@@ -14,7 +14,6 @@ import (
 // LogSink is an optional extra destination for formatted log lines (e.g. a
 // GUI log panel). Run will tee the global logger into this writer when set.
 
-
 var (
 	// Default to production NBIA endpoints
 	TokenUrl = "https://services.cancerimagingarchive.net/nbia-api/oauth/token"
@@ -61,10 +60,10 @@ type Options struct {
 	MetadataWorkers       int
 	Auth                  string
 	DirectoryMode         string
-	IDCParquetPath				string
-	PriorParquetPath			string
-	AuthGate 							*AuthGate
-	CLI										bool
+	IDCParquetPath        string
+	PriorParquetPath      string
+	AuthGate              *AuthGate
+	CLI                   bool
 	AcceptDataPolicy      bool
 	LogSink               io.Writer
 
@@ -107,7 +106,7 @@ func ParseOptions(args []string, promptReader io.Reader) (*Options, error) {
 	opt.opt.BoolVar(&opt.Verbose, "verbose", false, opt.opt.Alias("V"), opt.opt.Description("enable verbose (info-level) logging"))
 	opt.opt.BoolVar(&opt.SaveLog, "save-log", false, opt.opt.Description("save debug log info to file"))
 	opt.opt.BoolVar(&opt.Version, "version", false, opt.opt.Alias("v"), opt.opt.Description("show version information"))
-	opt.opt.StringVar(&opt.Input, "input", "", opt.opt.Alias("i"), opt.opt.Description("path to input tcia file"))
+	opt.opt.StringVar(&opt.Input, "input", "", opt.opt.Alias("i"), opt.opt.Description("path to input manifest file (.tcia, .s5cmd, .csv/.tsv/.xlsx, .json/.jsonld Croissant)"))
 	opt.opt.StringVar(&opt.Output, "output", "./", opt.opt.Alias("o"), opt.opt.Description("Output directory for downloaded files"))
 	opt.opt.StringVar(&opt.Proxy, "proxy", "", opt.opt.Alias("x"), opt.opt.Description("the proxy to use [http, socks5://user:passwd@host:port]"))
 	opt.opt.IntVar(&opt.Concurrent, "processes", 2, opt.opt.Alias("p"), opt.opt.Description("start how many download at same time"))

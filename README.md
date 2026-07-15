@@ -23,7 +23,7 @@ Please note that this is a beta release version.  Full feature implementation is
 
 ## Overview
 
-TCIA Data Retriever is a desktop application for downloading datasets from the [Cancer Imaging Archive (TCIA)](https://www.cancerimagingarchive.net/). It accepts TCIA manifest files (`.tcia`), s5cmd manifests (`.s5cmd`), and spreadsheets (`.csv`, `.tsv`, `.xlsx`) and downloads the associated data with parallel workers, retry logic, and real-time progress tracking.
+TCIA Data Retriever is a desktop application for downloading datasets from the [Cancer Imaging Archive (TCIA)](https://www.cancerimagingarchive.net/). It accepts TCIA manifest files (`.tcia`), s5cmd manifests (`.s5cmd`), spreadsheets (`.csv`, `.tsv`, `.xlsx`), and Croissant manifests (`.json`, `.jsonld`) and downloads the associated data with parallel workers, retry logic, and real-time progress tracking.
 
 ---
 
@@ -31,7 +31,7 @@ TCIA Data Retriever is a desktop application for downloading datasets from the [
 
 - **Desktop GUI** built with [Wails](https://wails.io/) (Go backend + Angular frontend) — native look on Windows, macOS, and Linux
 - **Dual-mode** — launch with `--cli` to use the same binary as a command-line tool
-- **Multiple manifest formats** — `.tcia`, `.s5cmd`, `.csv`, `.tsv`, `.xlsx`
+- **Multiple manifest formats** — `.tcia`, `.s5cmd`, `.csv`, `.tsv`, `.xlsx`, `.json`, `.jsonld`
 - **Parallel downloads** with configurable worker count and per-host connection limits
 - **Real-time progress** — per-series status (queued → downloading → complete), bytes transferred 
 - **Pause & resume** — pause an in-progress run and resume from where it left off using skip-existing logic, with resumed existing series counted as completed
@@ -96,7 +96,7 @@ See [Building from Source](#building-from-source).
 
 Click the **+** button in the header to open the Manifest & Destination dialog:
 
-- **Manifest file** — path to your `.tcia`, `.s5cmd`, `.csv`, `.tsv`, or `.xlsx` file. You can also user 'Open With' to select the TCIA Data Retriever and open a manifest directly. 
+- **Manifest file** — path to your `.tcia`, `.s5cmd`, `.csv`, `.tsv`, `.xlsx`, `.json`, or `.jsonld` file. You can also use 'Open With' to select the TCIA Data Retriever and open a manifest directly.
 - **Download directory** — where the downloaded files will be saved. The app pre-fills this with your system Downloads folder. Note - Mac version requires the Download Directory to be specified with the Browse Files icon.
 
 Click **Fetch Files** to start. The dialog closes and a new download card appears.
@@ -147,7 +147,7 @@ Launch with `--cli` (or `-cli`) to skip the GUI entirely:
 
 | Option | Short | Default | Description |
 |---|---|---|---|
-| `--input` | `-i` | *required* | Path to manifest file |
+| `--input` | `-i` | *required* | Path to manifest file (`.tcia`, `.s5cmd`, `.csv`, `.tsv`, `.xlsx`, `.json`, `.jsonld`) |
 | `--output` | `-o` | `./` | Output directory |
 | `--processes` | `-p` | `2` | Parallel download workers |
 | `--max-connections` | | `8` | Max connections per host |
@@ -169,6 +169,12 @@ Launch with `--cli` (or `-cli`) to skip the GUI entirely:
 | `--debug` | | off | Verbose debug output |
 | `--version` | `-v` | | Print version info |
 | `--help` | `-h` | | Show help |
+
+### Croissant Input Behavior
+
+- Supported Croissant row roles: `data file`, `manifest`.
+- `manifest` rows marked for **TCIA Data Retriever** are expanded through the linked nested manifest.
+- Unsupported transfer-package rows (for example Aspera handoffs) are skipped with warnings.
 
 ### Examples
 
@@ -253,6 +259,7 @@ wails build -platform darwin/universal
 | MD5 validation failed | Corrupted download | Delete the series folder and re-run |
 | App won't open `.tcia` files | File association not set | Right-click the file → Open With → select the app |
 | `parquet init failed` on startup | First launch, parquet index download failed | Check network; the app still works, IDC downloads may not resolve |
+| Croissant manifest fails to decode | Invalid JSON-LD shape or no actionable rows | Validate JSON syntax and ensure rows include supported `data file` or `manifest` download URLs |
 
 ### Debug Logging (CLI)
 

@@ -116,7 +116,7 @@ func TestParseOptions_Defaults(t *testing.T) {
 	if opt.RetryDelay != 10*time.Second || opt.RequestDelay != 500*time.Millisecond || opt.MetadataWorkers != 20 {
 		t.Fatalf("unexpected duration/worker defaults: %+v", opt)
 	}
-	if opt.Username != "nbia_guest" || opt.DirectoryMode != "" || opt.Auth != "" {
+	if opt.Username != "nbia_guest" || opt.DirectoryMode != "descriptive" || opt.Auth != "" {
 		t.Fatalf("unexpected user/default string values: %+v", opt)
 	}
 	if ImageUrl != "https://services.cancerimagingarchive.net/nbia-api/services/v4/getImage" {

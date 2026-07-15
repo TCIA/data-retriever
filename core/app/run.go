@@ -1093,28 +1093,40 @@ func saveSeriesUIDsToFile(originalPath string, seriesUIDs []string) (string, err
 }
 
 func decodeInputFile(ctx context.Context, filePath string, client *http.Client, options *Options, callbacks Callbacks, s5cmdMap map[string]string) ([]*FileInfo, int, error) {
+	return decodeInputFileInternal(ctx, filePath, client, options, callbacks, s5cmdMap, true)
+}
+
+func decodeInputFileInternal(ctx context.Context, filePath string, client *http.Client, options *Options, callbacks Callbacks, s5cmdMap map[string]string, emitManifest bool) ([]*FileInfo, int, error) {
 	ext := strings.ToLower(filepath.Ext(filePath))
 	switch ext {
 	case ".tcia":
 		s5Files, _, tciaUIDs := decodeS5cmd(filePath, options.Output, s5cmdMap, callbacks, options)
 		if len(s5Files) == 0 && len(tciaUIDs) == 0 {
 			files := decodeTCIA(ctx, filePath, client, options, callbacks)
-			emitManifestMetadata(callbacks, filePath, files)
+			if emitManifest {
+				emitManifestMetadata(callbacks, filePath, files)
+			}
 			return files, 0, nil
 		}
 		files := combineWithTCIABatch(ctx, s5Files, tciaUIDs, client, options, callbacks)
-		emitManifestMetadata(callbacks, filePath, files)
+		if emitManifest {
+			emitManifestMetadata(callbacks, filePath, files)
+		}
 		return files, 0, nil
 	case ".s5cmd":
 		s5Files, newJobs, tciaUIDs := decodeS5cmd(filePath, options.Output, s5cmdMap, callbacks, options)
 		files := combineWithTCIABatch(ctx, s5Files, tciaUIDs, client, options, callbacks)
-		emitManifestMetadata(callbacks, filePath, files)
+		if emitManifest {
+			emitManifestMetadata(callbacks, filePath, files)
+		}
 		return files, newJobs, nil
 	case ".csv", ".tsv", ".xlsx":
 		s5Files, _, tciaUIDs, splitErr := decodeSpreadsheetSplit(filePath, options.Output, s5cmdMap, callbacks, options)
 		if splitErr == nil {
 			files := combineWithTCIABatch(ctx, s5Files, tciaUIDs, client, options, callbacks)
-			emitManifestMetadata(callbacks, filePath, files)
+			if emitManifest {
+				emitManifestMetadata(callbacks, filePath, files)
+			}
 			return files, 0, nil
 		} else if splitErr != ErrSeriesInstanceUIDColumnNotFound {
 			return nil, 0, fmt.Errorf("could not get series UIDs from spreadsheet: %w", splitErr)
@@ -1125,7 +1137,18 @@ func decodeInputFile(ctx context.Context, filePath string, client *http.Client, 
 		if err != nil {
 			return nil, 0, err
 		}
-		emitManifestMetadata(callbacks, filePath, files)
+		if emitManifest {
+			emitManifestMetadata(callbacks, filePath, files)
+		}
+		return files, 0, nil
+	case ".json", ".jsonld":
+		files, err := decodeCroissant(ctx, filePath, client, options, callbacks, s5cmdMap)
+		if err != nil {
+			return nil, 0, err
+		}
+		if emitManifest {
+			emitManifestMetadata(callbacks, filePath, files)
+		}
 		return files, 0, nil
 	default:
 		return nil, 0, fmt.Errorf("unsupported input file format: %s", ext)
