@@ -29,6 +29,12 @@ export interface RunState {
   collapsed: boolean;
   hasAutoExpanded: boolean;
   startedAt: string;
+  /** When the first series actually began transferring, unlike startedAt which
+   *  includes metadata preparation. Used as the average-speed time base. */
+  downloadStartedAt?: string;
+  /** Milliseconds spent paused during the download phase, excluded from the
+   *  average-speed calculation. */
+  downloadPausedMs?: number;
   completedAt?: string;
   bytesDownloaded?: number;
   bytesPerSecond?: number;

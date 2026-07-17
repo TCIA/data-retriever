@@ -186,8 +186,8 @@ export class ManifestDownloadCardComponent implements OnInit, OnDestroy {
    * Whole seconds from run start to completion (or to now while still running).
    * Returns null when start/end timestamps are missing or inconsistent.
    */
-  private elapsedSeconds(): number | null {
-    const startISO = this.run?.startedAt;
+  private elapsedSeconds(startISO?: string): number | null {
+    startISO = startISO ?? this.run?.startedAt;
     if (!startISO) return null;
     const start = Date.parse(startISO);
     if (isNaN(start)) return null;
@@ -211,16 +211,24 @@ export class ManifestDownloadCardComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Average throughput over the whole run: total bytes downloaded divided by
-   * total elapsed time. Shown only once the run is terminal.
+   * Average throughput: total bytes downloaded divided by time spent in the
+   * download phase (from the first series transfer, excluding the initial
+   * metadata preparation and any time spent paused). Shown only once the run
+   * is terminal.
    */
   get averageSpeedText(): string {
     if (!this.isTerminal) return '';
     const bytes = this.run?.bytesDownloaded;
     if (typeof bytes !== 'number' || !isFinite(bytes) || bytes <= 0) return '';
 
-    const elapsedSec = this.elapsedSeconds();
-    if (elapsedSec === null || elapsedSec <= 0) return '';
+    let elapsedSec = this.elapsedSeconds(this.run?.downloadStartedAt);
+    if (elapsedSec === null) return '';
+
+    const pausedMs = this.run?.downloadPausedMs;
+    if (typeof pausedMs === 'number' && isFinite(pausedMs) && pausedMs > 0) {
+      elapsedSec -= Math.floor(pausedMs / 1000);
+    }
+    if (elapsedSec <= 0) return '';
 
     return `Average speed: ${this.formatBytesPerSecond(bytes / elapsedSec)}`;
   }

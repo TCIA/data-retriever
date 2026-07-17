@@ -10,6 +10,9 @@ import {
 } from '../models/download-series.model';
 import { RunState, RunOptions } from '../models/run-state.model';
 
+/** Minimum wall-clock window over which a download-speed sample is taken. */
+const RATE_SAMPLE_WINDOW_SECONDS = 1;
+
 const TERMINAL_STATUSES = new Set<SeriesDownloadSnapshot['status']>([
   'succeeded',
   'failed',
@@ -51,6 +54,13 @@ interface RunInternal {
   collapsed: boolean;
   hasAutoExpanded: boolean;
   startedAt: string;
+  /** When the first series actually began transferring, unlike startedAt which
+   *  includes metadata preparation. Used as the average-speed time base. */
+  downloadStartedAt?: string;
+  /** Total milliseconds spent paused after the download phase began. */
+  pausedMs: number;
+  /** Epoch ms when the current pause began; unset while not paused. */
+  pausedAt?: number;
   completedAt?: string;
   logs: string[];
   status: RunState['status'];
@@ -155,6 +165,9 @@ export class DownloadStatusService implements OnDestroy {
           const run = this.resolveRunFromPausePayload(payload);
           if (!run) return;
           run.isPaused = true;
+          if (run.pausedAt === undefined) {
+            run.pausedAt = Date.now();
+          }
           this.appendLog(run, 'Download paused');
           this.publishRun(run);
         });
@@ -168,6 +181,15 @@ export class DownloadStatusService implements OnDestroy {
           const run = this.resolveRunFromPausePayload(payload);
           if (!run) return;
           run.isPaused = false;
+          if (run.pausedAt !== undefined) {
+            // Only pauses during the download phase count against average
+            // speed; a pause during metadata prep is already excluded by
+            // downloadStartedAt.
+            if (run.downloadStartedAt) {
+              run.pausedMs += Math.max(0, Date.now() - run.pausedAt);
+            }
+            run.pausedAt = undefined;
+          }
 
           // A paused run can still receive a stale done state from
           // pause-driven cancellation completion.
@@ -286,6 +308,7 @@ export class DownloadStatusService implements OnDestroy {
       outputDirPath,
       seriesMap: new Map(),
       manifestInitialBytesTotal: 0,
+      pausedMs: 0,
       isPaused: false,
       collapsed: false,
       hasAutoExpanded: false,
@@ -450,10 +473,13 @@ export class DownloadStatusService implements OnDestroy {
 
     for (const s of series) {
       let sample: number | undefined;
-      if (typeof s.uncompressedBytes === 'number' && s.uncompressedBytes >= 0) {
-        sample = s.uncompressedBytes;
-      } else if (typeof s.bytesDownloaded === 'number' && s.bytesDownloaded >= 0) {
+      // Prefer bytesDownloaded (actual network transfer, compressed) so speed
+      // reflects wire throughput; uncompressedBytes would overstate it by the
+      // archive's compression ratio and spike during local decompression.
+      if (typeof s.bytesDownloaded === 'number' && s.bytesDownloaded >= 0) {
         sample = s.bytesDownloaded;
+      } else if (typeof s.uncompressedBytes === 'number' && s.uncompressedBytes >= 0) {
+        sample = s.uncompressedBytes;
       }
 
       if (typeof sample === 'number') {
@@ -471,12 +497,16 @@ export class DownloadStatusService implements OnDestroy {
         const deltaBytes = bytesDownloaded - previousBytes;
         const deltaSeconds = (now - previousAt) / 1000;
 
-        if (deltaBytes > 0 && deltaSeconds > 0) {
-          const instantaneousRate = deltaBytes / deltaSeconds;
+        // Progress events arrive in bursts, so sampling on every publish
+        // measures event-queue drain rate, not network throughput. Positive
+        // deltas accumulate until a full window has elapsed; only then is a
+        // rate computed over that window.
+        if (deltaBytes > 0 && deltaSeconds >= RATE_SAMPLE_WINDOW_SECONDS) {
+          const windowRate = deltaBytes / deltaSeconds;
           run.bytesPerSecond =
             typeof run.bytesPerSecond === 'number'
-              ? run.bytesPerSecond * 0.88 + instantaneousRate * 0.12
-              : instantaneousRate;
+              ? run.bytesPerSecond * 0.7 + windowRate * 0.3
+              : windowRate;
           run.lastByteSampleValue = bytesDownloaded;
           run.lastByteSampleAt = now;
         } else if ((overview.active <= 0 || run.isPaused || run.status !== 'running') && deltaSeconds >= 0) {
@@ -510,12 +540,29 @@ export class DownloadStatusService implements OnDestroy {
       collapsed: run.collapsed,
       hasAutoExpanded: run.hasAutoExpanded,
       startedAt: run.startedAt,
+      downloadStartedAt: run.downloadStartedAt,
+      downloadPausedMs: this.effectivePausedMs(run),
       completedAt: run.completedAt,
       bytesDownloaded: hasByteSample ? bytesDownloaded : undefined,
       bytesPerSecond: run.bytesPerSecond,
       errorMessage: run.errorMessage,
       runOptions: run.runOptions,
     };
+  }
+
+  /**
+   * Milliseconds spent paused during the download phase, including a pause
+   * still in progress (e.g. a run cancelled while paused, where no resume
+   * event ever closes the span).
+   */
+  private effectivePausedMs(run: RunInternal): number {
+    let pausedMs = run.pausedMs;
+    if (run.pausedAt !== undefined && run.downloadStartedAt) {
+      const completed = run.completedAt ? Date.parse(run.completedAt) : NaN;
+      const end = !isNaN(completed) ? completed : Date.now();
+      pausedMs += Math.max(0, end - run.pausedAt);
+    }
+    return pausedMs;
   }
 
   private buildOverview(run: RunInternal): DownloadOverviewSnapshot {
@@ -557,6 +604,13 @@ export class DownloadStatusService implements OnDestroy {
   private applySeriesEvent(run: RunInternal, payload: SeriesDownloadEventPayload): void {
     if (!payload?.seriesUID) return;
     run.status = 'running';
+
+    if (
+      !run.downloadStartedAt &&
+      (payload.status === 'download-initiated' || payload.status === 'downloading')
+    ) {
+      run.downloadStartedAt = new Date().toISOString();
+    }
 
     const existing = run.seriesMap.get(payload.seriesUID);
     const snapshot: SeriesDownloadSnapshot = existing
