@@ -164,7 +164,7 @@
       <span *ngIf="appVersion" class="app-version">{{ appVersion }}</span>
     </div>
     <div class="header-right">
-      <button class="theme-toggle" (click)="isDarkMode = !isDarkMode" title="Toggle theme">
+      <button class="theme-toggle" (click)="toggleDarkMode()" title="Toggle theme">
         <span class="material-icons-outlined">{{ isDarkMode ? 'light_mode' : 'dark_mode' }}</span>
       </button>
       <button class="advanced-settings-btn" (click)="openAdvancedModal()" title="Advanced Settings">

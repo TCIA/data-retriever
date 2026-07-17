@@ -124,7 +124,7 @@ Click the **⚙** button to open Advanced Settings:
 | Skip Existing | on | Skip series that are already fully downloaded |
 | Download in Parallel | on | Enable multi-worker downloads |
 | CRDC Auth Path | — | JSON credentials file for restricted datasets |
-| Directory Mode | Classic | `classic` or `descriptive` output folder naming |
+| Directory Mode | Descriptive | `classic` or `descriptive` output folder naming |
 
 ### Authentication
 
@@ -155,7 +155,7 @@ Launch with `--cli` (or `-cli`) to skip the GUI entirely:
 | `--skip-existing` | | off | Reuse already-downloaded series and count them as completed (resume-friendly) |
 | `--force` | `-f` | off | Re-download even if files exist |
 | `--auth` | | — | Path to Gen3/CRDC JSON credentials |
-| `--directory-mode` | | — | `classic` or `descriptive` |
+| `--directory-mode` | | `descriptive` | `classic` or `descriptive` |
 | `--meta` | `-m` | off | Fetch metadata only (no images) |
 | `--no-md5` | | off | Disable MD5 validation |
 | `--no-decompress` | | off | Keep downloads as ZIP archives |
@@ -166,6 +166,7 @@ Launch with `--cli` (or `-cli`) to skip the GUI entirely:
 | `--prompt` | `-w` | off | Prompt for password interactively |
 | `--save-log` | | off | Write progress log to file |
 | `--accept-data-policy` | | off | Accept the TCIA data usage policy without interactive prompt |
+| `--verbose` | `-V` | off | Info-level logging |
 | `--debug` | | off | Verbose debug output |
 | `--version` | `-v` | | Print version info |
 | `--help` | `-h` | | Show help |
@@ -231,19 +232,21 @@ cd frontend && npm install && cd ..
 
 ### GUI Binary
 
+Build with `wails build`, passing `--platform` for your target and the version ldflag so `--version` reports correctly:
+
 ```bash
-wails build
+wails build --platform darwin/universal -ldflags "-X main.version=$(git describe --tags --always --dirty)"
 # Output: build/bin/TCIA_Data_Retriever (or .exe / .app)
 ```
 
-### Cross-compilation
+Set `--platform` to the target you want, for example:
 
 ```bash
 # Windows from Linux/macOS
-GOOS=windows GOARCH=amd64 wails build -platform windows/amd64
+wails build --platform windows/amd64 -ldflags "-X main.version=$(git describe --tags --always --dirty)"
 
 # macOS universal binary
-wails build -platform darwin/universal
+wails build --platform darwin/universal -ldflags "-X main.version=$(git describe --tags --always --dirty)"
 ```
 
 

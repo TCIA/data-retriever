@@ -18,7 +18,7 @@ import {
 } from '../../wailsjs/go/main/App';
 import { DownloadStatusService } from './services/download-status.service';
 import { RunState, RunOptions } from './models/run-state.model';
-import { EventsOn, BrowserOpenURL } from '../../wailsjs/runtime/runtime';
+import { EventsOn, BrowserOpenURL, WindowSetBackgroundColour } from '../../wailsjs/runtime/runtime';
 
 @Component({
   selector: 'app-root',
@@ -79,8 +79,10 @@ export class AppComponent implements OnInit, OnDestroy {
     if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) {
       this.isDarkMode = true;
     }
+    this.applyWindowBackground();
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
       this.isDarkMode = e.matches;
+      this.applyWindowBackground();
     });
 
     try {
@@ -200,6 +202,24 @@ export class AppComponent implements OnInit, OnDestroy {
 
   toggleDarkMode() {
     this.isDarkMode = !this.isDarkMode;
+    this.applyWindowBackground();
+  }
+
+  /**
+   * Sync the native window backing colour with the active theme so the strip
+   * under the macOS title bar matches the app instead of showing the default
+   * white bar. Kept in sync with the .header background in app.component.scss.
+   */
+  private applyWindowBackground() {
+    try {
+      if (this.isDarkMode) {
+        WindowSetBackgroundColour(45, 45, 45, 255); // #2d2d2d — dark header
+      } else {
+        WindowSetBackgroundColour(255, 255, 255, 255); // #ffffff — light header
+      }
+    } catch {
+      // Running outside the Wails runtime (e.g. ng serve in a browser).
+    }
   }
 
   openAdvancedModal() {

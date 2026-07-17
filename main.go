@@ -72,7 +72,13 @@ func main() {
 		Frameless:         false,
 		StartHidden:       false,
 		HideWindowOnClose: false,
-		Assets:            assets,
+		// Pin the native window backing colour. Without this, macOS renders the
+		// strip under the title bar using the Wails default (white), which shows
+		// up as a white/translucent bar that varies by machine. The frontend
+		// updates this to match the active light/dark theme on startup and on
+		// every theme toggle via WindowSetBackgroundColour.
+		BackgroundColour: &options.RGBA{R: 26, G: 26, B: 26, A: 1},
+		Assets:           assets,
 		LogLevel:          logger.DEBUG,
 		OnStartup:         app.startup,
 		OnShutdown:        app.shutdown,
