@@ -5,6 +5,9 @@
 Please note that this is a beta release version.  Full feature implementation is not complete.  If you encounter any bugs please create an issue on the project.
 
 [![Go Version](https://img.shields.io/badge/Go-1.24.4-blue.svg)](https://golang.org)
+![Windows downloads](https://img.shields.io/github/downloads/TCIA/data-retriever/TCIA_Data_Retriever_windows_amd64.zip?label=Windows%20downloads&cacheSeconds=21600)
+![Mac downloads](https://img.shields.io/github/downloads/TCIA/data-retriever/TCIA_Data_Retriever_mac.zip?label=Mac%20downloads&cacheSeconds=21600)
+![Linux downloads](https://img.shields.io/github/downloads/TCIA/data-retriever/TCIA_Data_Retriever_linux_x86_64.zip?label=Linux%20downloads&cacheSeconds=21600)
 
 ## Table of Contents
 - [Overview](#overview)
