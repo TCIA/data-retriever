@@ -85,6 +85,8 @@ TCIA Data Retriever is a desktop application for downloading datasets from the [
 # Download the .zip for your platform from the Releases page
 Apple App Store and Microsoft Store versions coming soon.
 
+# Mac users may need to run the following command in the directory where you extracted the zip file:
+xattr -d com.apple.quarantine TCIA_Data_Retriever.app
 ```
 
 ### Option 2: Build from Source
