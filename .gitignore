@@ -19,7 +19,7 @@ nbia-data-retriever-cli-*
 
 # Build directories
 /dist/
-/build/
+/build/bin/
 /release/
 
 # GUI build and frontend caches
