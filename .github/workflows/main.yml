@@ -45,10 +45,53 @@ jobs:
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
       - name: Build
-        run: wails build -platform ${{ matrix.platform }}
+        shell: bash
+        run: |
+          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            # ubuntu-latest (24.04) only ships webkit2gtk-4.1, not 4.0
+            wails build -platform ${{ matrix.platform }} -tags webkit2_41 -clean
+          else
+            wails build -platform ${{ matrix.platform }} -clean
+          fi
+
+      - name: Package AppImage (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+        run: |
+          APP_NAME=$(jq -r .name wails.json)
+          echo "App name: $APP_NAME"
+
+          curl -Lo linuxdeploy https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          curl -Lo linuxdeploy-plugin-appimage https://github.com/linuxdeploy/linuxdeploy-plugin-appimage/releases/download/continuous/linuxdeploy-plugin-appimage-x86_64.AppImage
+          chmod +x linuxdeploy linuxdeploy-plugin-appimage
+          export PATH="$PWD:$PATH"
+
+          # Reuse the project's .desktop file if it has one, otherwise generate a minimal one
+          DESKTOP_FILE="build/linux/${APP_NAME}.desktop"
+          if [ ! -f "$DESKTOP_FILE" ]; then
+            mkdir -p build/linux
+            cat > "$DESKTOP_FILE" <<DESKTOP
+          [Desktop Entry]
+          Name=${APP_NAME}
+          Exec=${APP_NAME}
+          Icon=${APP_NAME}
+          Type=Application
+          Categories=Utility;
+          DESKTOP
+          fi
+
+          mkdir -p AppDir
+          linuxdeploy --appdir AppDir \
+            -e "build/bin/${APP_NAME}" \
+            -d "$DESKTOP_FILE" \
+            -i build/appicon.png \
+            --output appimage
+
+          mv ./*.AppImage "build/bin/${APP_NAME}.AppImage"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-${{ matrix.artifact }}
-          path: build/bin/*
+          path: ${{ matrix.os == 'ubuntu-latest' && 'build/bin/*.AppImage' || 'build/bin/*' }}
