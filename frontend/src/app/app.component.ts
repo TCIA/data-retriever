@@ -3,6 +3,7 @@ import { Subscription } from 'rxjs';
 import {
   CancelDownload,
   CheckForUpdate,
+  EmailCurrentLogFile,
   GetVersion,
   OpenAuthFileDialog,
   OpenInputFileDialog,
@@ -62,6 +63,7 @@ export class AppComponent implements OnInit, OnDestroy {
   updateVersion = '';
   updateUrl = '';
   showUpdateBanner = false;
+  emailLogErrorMessage = '';
 
   // ── Dark mode ─────────────────────────────────────────────────────────────
   isDarkMode = false;
@@ -70,12 +72,22 @@ export class AppComponent implements OnInit, OnDestroy {
   runs: RunState[] = [];
   private runsSubscription?: Subscription;
 
+  private hasWailsRuntime(): boolean {
+    const w = window as unknown as {
+      go?: { main?: { App?: Record<string, unknown> } };
+      runtime?: Record<string, unknown>;
+    };
+    return !!w.go?.main?.App && !!w.runtime;
+  }
+
   constructor(
     private readonly downloadStatus: DownloadStatusService,
     private readonly ngZone: NgZone,
   ) {}
 
   async ngOnInit() {
+    const hasWails = this.hasWailsRuntime();
+
     if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) {
       this.isDarkMode = true;
     }
@@ -86,12 +98,18 @@ export class AppComponent implements OnInit, OnDestroy {
     });
 
     try {
-      this.isMac = await IsMac();
+      if (hasWails) this.isMac = await IsMac();
     } catch (err) {
       console.error('Error detecting macOS:', err);
     }
 
-    this.defaultDownloadDir = await GetDefaultOutputDirectory();
+    try {
+      if (hasWails) {
+        this.defaultDownloadDir = await GetDefaultOutputDirectory();
+      }
+    } catch (err) {
+      console.error('Error getting default output directory:', err);
+    }
     if (this.isMac) this.defaultDownloadDir = '';
     this.outputDirPath = this.defaultDownloadDir;
 
@@ -99,41 +117,11 @@ export class AppComponent implements OnInit, OnDestroy {
       this.runs = runs;
     });
 
-    EventsOn('file-opened', (filePath: string) => {
-      this.ngZone.run(() => {
-        this.inputFilePath = filePath;
-        const baseName = this.baseNameOf(filePath);
-        if (this.outputDirPath) {
-          const parts = this.outputDirPath.split('/');
-          parts[parts.length - 1] = baseName;
-          this.outputDirPath = parts.join('/');
-          this.lastAutoSetOutputPath = this.outputDirPath;
-        }
-        this.openManifestModal();
-      });
-    });
-
-    EventsOn('open:auth-modal', (runId: string) => {
-      this.ngZone.run(() => {
-        this.pendingAuthRunId = runId;
-        this.authRequired = true;
-        this.showAuthModal = true;
-      });
-    });
-
-    EventsOn('auth-error', (runId: string, message: string) => {
-      console.log('auth-error raw:', JSON.stringify(message));
-      this.ngZone.run(() => {
-        this.authErrorMessage = message;
-      });
-    });
-
-    try {
-      const pendingPath = await GetPendingFileOpen();
-      if (pendingPath) {
+    if (hasWails) {
+      EventsOn('file-opened', (filePath: string) => {
         this.ngZone.run(() => {
-          this.inputFilePath = pendingPath;
-          const baseName = this.baseNameOf(pendingPath);
+          this.inputFilePath = filePath;
+          const baseName = this.baseNameOf(filePath);
           if (this.outputDirPath) {
             const parts = this.outputDirPath.split('/');
             parts[parts.length - 1] = baseName;
@@ -142,25 +130,57 @@ export class AppComponent implements OnInit, OnDestroy {
           }
           this.openManifestModal();
         });
-      }
-    } catch (err) {
-      console.error('Error checking pending file open:', err);
-    }
+      });
 
-    FrontendReady();
-
-    GetVersion().then(v => { this.appVersion = v; }).catch(() => {});
-
-    CheckForUpdate().then(info => {
-      if (info?.available) {
+      EventsOn('open:auth-modal', (runId: string) => {
         this.ngZone.run(() => {
-          this.updateAvailable = true;
-          this.updateVersion = info.latestVersion;
-          this.updateUrl = info.url;
-          this.showUpdateBanner = true;
+          this.pendingAuthRunId = runId;
+          this.authRequired = true;
+          this.showAuthModal = true;
         });
+      });
+
+      EventsOn('auth-error', (runId: string, message: string) => {
+        console.log('auth-error raw:', JSON.stringify(message));
+        this.ngZone.run(() => {
+          this.authErrorMessage = message;
+        });
+      });
+
+      try {
+        const pendingPath = await GetPendingFileOpen();
+        if (pendingPath) {
+          this.ngZone.run(() => {
+            this.inputFilePath = pendingPath;
+            const baseName = this.baseNameOf(pendingPath);
+            if (this.outputDirPath) {
+              const parts = this.outputDirPath.split('/');
+              parts[parts.length - 1] = baseName;
+              this.outputDirPath = parts.join('/');
+              this.lastAutoSetOutputPath = this.outputDirPath;
+            }
+            this.openManifestModal();
+          });
+        }
+      } catch (err) {
+        console.error('Error checking pending file open:', err);
       }
-    }).catch(() => {});
+
+      FrontendReady();
+
+      GetVersion().then(v => { this.appVersion = v; }).catch(() => {});
+
+      CheckForUpdate().then(info => {
+        if (info?.available) {
+          this.ngZone.run(() => {
+            this.updateAvailable = true;
+            this.updateVersion = info.latestVersion;
+            this.updateUrl = info.url;
+            this.showUpdateBanner = true;
+          });
+        }
+      }).catch(() => {});
+    }
   }
 
   ngOnDestroy() {
@@ -376,6 +396,25 @@ export class AppComponent implements OnInit, OnDestroy {
     this.showUpdateBanner = false;
   }
 
+  dismissEmailLogError() {
+    this.emailLogErrorMessage = '';
+  }
+
+  onEmailCurrentLogFile() {
+    this.emailLogErrorMessage = '';
+
+    if (!this.hasWailsRuntime()) {
+      this.emailLogErrorMessage = 'Emailing logs is only available in the desktop app build.';
+      return;
+    }
+
+    EmailCurrentLogFile().catch((err: unknown) => {
+      this.ngZone.run(() => {
+        this.emailLogErrorMessage = this.formatEmailLogError(err);
+      });
+    });
+  }
+
   openUpdateUrl() {
     BrowserOpenURL(this.updateUrl);
   }
@@ -445,5 +484,18 @@ export class AppComponent implements OnInit, OnDestroy {
   private baseNameOf(filePath: string): string {
     const fileName = filePath.split(/[\\/]/).pop() ?? '';
     return fileName.replace(/\.[^/.]+$/, '');
+  }
+
+  private formatEmailLogError(err: unknown): string {
+    if (typeof err === 'string' && err.trim() !== '') {
+      return err;
+    }
+    if (err && typeof err === 'object' && 'message' in err) {
+      const message = (err as { message?: unknown }).message;
+      if (typeof message === 'string' && message.trim() !== '') {
+        return message;
+      }
+    }
+    return 'Unable to open your email client with the current log attachment.';
   }
 }

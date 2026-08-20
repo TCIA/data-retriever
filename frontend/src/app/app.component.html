@@ -167,6 +167,9 @@
       <button class="theme-toggle" (click)="toggleDarkMode()" title="Toggle theme">
         <span class="material-icons-outlined">{{ isDarkMode ? 'light_mode' : 'dark_mode' }}</span>
       </button>
+      <button class="advanced-settings-btn email-log-btn" (click)="onEmailCurrentLogFile()" title="Email current log file" aria-label="Email current log file">
+        <span class="material-icons-outlined">mail</span>
+      </button>
       <button class="advanced-settings-btn" (click)="openAdvancedModal()" title="Advanced Settings">
         <span class="material-icons-outlined">settings</span>
       </button>
@@ -174,6 +177,14 @@
         <span class="material-icons">add</span>
       </button>
     </div>
+  </div>
+
+  <div class="email-log-error-banner" *ngIf="emailLogErrorMessage">
+    <span class="material-icons-outlined email-log-error-icon">error</span>
+    <span class="email-log-error-text">{{ emailLogErrorMessage }}</span>
+    <button class="email-log-error-dismiss" (click)="dismissEmailLogError()" title="Dismiss">
+      <span class="material-icons-outlined">close</span>
+    </button>
   </div>
 
   <!-- Manifest & Destination Modal -->

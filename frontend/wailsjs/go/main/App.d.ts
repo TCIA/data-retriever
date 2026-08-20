@@ -12,6 +12,8 @@ export function CheckForUpdate():Promise<main.UpdateInfo>;
 
 export function DeclineLicense():Promise<void>;
 
+export function EmailCurrentLogFile():Promise<void>;
+
 export function FetchFiles():Promise<string>;
 
 export function FrontendReady():Promise<void>;
