@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"time"
 
@@ -66,6 +67,23 @@ type Options struct {
 	CLI                   bool
 	AcceptDataPolicy      bool
 	LogSink               io.Writer
+	// Semaphore, when set, bounds how many files may be actively processed
+	// (pre-check through decompress) at once across ALL Run() calls sharing
+	// it — not just this one. The GUI shares a single instance across
+	// concurrently running manifests so "N simultaneous downloads" is a
+	// process-wide total rather than a per-manifest allowance. The CLI
+	// leaves this nil, in which case Concurrent alone governs parallelism
+	// as before.
+	Semaphore *WorkerSemaphore
+	// SharedHTTPClient, when set, is reused for this Run() call instead of
+	// building a fresh http.Client — mirroring Semaphore, so
+	// MaxConnsPerHost becomes a process-wide per-host connection cap shared
+	// by every manifest using this client rather than one allowance per
+	// manifest. The GUI shares a single instance across concurrently
+	// running manifests, resizing its MaxConnsPerHost the same way it
+	// resizes Semaphore's limit. The CLI leaves this nil and gets its own
+	// client built from Proxy/MaxConnsPerHost as before.
+	SharedHTTPClient *http.Client
 
 	opt *getoptions.GetOpt
 }

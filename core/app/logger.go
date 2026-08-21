@@ -17,6 +17,14 @@ var (
 	logger *zap.SugaredLogger
 )
 
+// init gives logger/Logger a working default so code that logs before
+// setLogger's "real" call (e.g. NewSharedHTTPClient, invoked from the GUI's
+// NewApp() at process startup, well before any Run()/InitOptions() call)
+// doesn't dereference a nil *zap.SugaredLogger.
+func init() {
+	setLogger(false, false, "")
+}
+
 // newEncoderConfig creates EncoderConfig for zap logging.
 func newEncoderConfig() zapcore.EncoderConfig {
 	return zapcore.EncoderConfig{

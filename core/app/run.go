@@ -331,6 +331,10 @@ type WorkerContext struct {
 	EventGate  *SeriesEventGate
 	AuthGate   *AuthGate
 	EmitEvent  func(string, ...interface{}) // wrap runtime.EventsEmit
+	// Semaphore caps how many files are processed at once across every
+	// WorkerContext sharing it (see Options.Semaphore). nil means
+	// unlimited beyond the local worker pool size.
+	Semaphore *WorkerSemaphore
 }
 
 // SeriesEventGate throttles interim per-series events while always allowing
@@ -440,7 +444,10 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 		ctx = context.Background()
 	}
 
-	client := newClient(options.Proxy, options.MaxConnsPerHost)
+	client := options.SharedHTTPClient
+	if client == nil {
+		client = newClient(options.Proxy, options.MaxConnsPerHost)
+	}
 
 	if err := os.MkdirAll(options.Output, os.ModePerm); err != nil {
 		return nil, fmt.Errorf("failed to create output directory: %w", err)
@@ -555,6 +562,7 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 	}
 
 	stats := &DownloadStats{Total: int32(len(files)), StartTime: time.Now()}
+	callbacks.emitEvent("series-total-known", len(files))
 
 	itemType := "items"
 	if len(files) > 0 {
@@ -586,6 +594,7 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 		Callbacks:  callbacks,
 		EventGate:  NewSeriesEventGate(options.InterimUpdateInterval),
 		AuthGate:   &AuthGate{},
+		Semaphore:  options.Semaphore,
 	}
 
 	summary := &Summary{Total: int32(len(files))}
@@ -671,6 +680,12 @@ func runTCIAStreamingDownload(ctx context.Context, client *http.Client, options 
 
 	stats := &DownloadStats{Total: int32(seriesCount), StartTime: time.Now()}
 	summary := &Summary{Total: int32(seriesCount)}
+	// Sent before any per-series events so the UI can pin its progress
+	// denominator to the true total instead of however many series have
+	// streamed in so far — otherwise a batch of instant "already exists"
+	// skips can make progress read 100% while later batches are still
+	// being fetched from TCIA, then drop back down once they arrive.
+	callbacks.emitEvent("series-total-known", seriesCount)
 
 	workerCtx := WorkerContext{
 		Context:    ctx,
@@ -681,6 +696,7 @@ func runTCIAStreamingDownload(ctx context.Context, client *http.Client, options 
 		Callbacks:  callbacks,
 		EventGate:  NewSeriesEventGate(options.InterimUpdateInterval),
 		AuthGate:   &AuthGate{},
+		Semaphore:  options.Semaphore,
 	}
 
 	var wg sync.WaitGroup
@@ -776,7 +792,14 @@ func (wc *WorkerContext) processFiles(input <-chan *FileInfo) {
 			if !ok {
 				return
 			}
+			// Blocks until a global slot is free when Semaphore is shared
+			// across multiple concurrently running manifests; a nil
+			// Semaphore (CLI) makes this a no-op.
+			if err := wc.Semaphore.Acquire(wc.Context); err != nil {
+				return
+			}
 			wc.handleFile(fileInfo)
+			wc.Semaphore.Release()
 		}
 	}
 }

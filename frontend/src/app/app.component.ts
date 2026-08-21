@@ -314,15 +314,28 @@ export class AppComponent implements OnInit, OnDestroy {
 
   // ── Start a new manifest download ─────────────────────────────────────────
 
+  /**
+   * Generates a runId that survives the round trip through RunCLIFetch's
+   * `number` parameter (Go uint64) without precision loss. A full random
+   * 64-bit value almost always exceeds Number.MAX_SAFE_INTEGER, so the
+   * value Go actually receives (and echoes back on every event) silently
+   * diverges from the bigint key the frontend indexes runs by, breaking
+   * event routing and leaving the download card stuck. Limiting to 52 bits
+   * of randomness keeps it an exact JS safe integer.
+   */
+  private generateRunId(): bigint {
+    const buf = new Uint32Array(2);
+    crypto.getRandomValues(buf);
+    return (BigInt(buf[0]) << 20n) | BigInt(buf[1] & 0xfffff);
+  }
+
   onFetchFiles() {
     if (!this.inputFilePath || !this.outputDirPath) {
       console.warn('Please select both an input file and an output directory.');
       return;
     }
 
-    const buf = new Uint32Array(2);
-    crypto.getRandomValues(buf);
-    const runId: bigint = (BigInt(buf[0]) << 32n) | BigInt(buf[1]);
+    const runId: bigint = this.generateRunId();
 
     const runOptions: RunOptions = {
       maxConnections: this.maxConnections,
@@ -409,9 +422,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   onRetryFailed(run: RunState) {
-    const buf = new Uint32Array(2);
-    crypto.getRandomValues(buf);
-    const newRunId: bigint = (BigInt(buf[0]) << 32n) | BigInt(buf[1]);
+    const newRunId: bigint = this.generateRunId();
 
     const opts = run.runOptions;
     const retryOptions: RunOptions = { ...opts, skipExisting: true };

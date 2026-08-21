@@ -101,6 +101,11 @@
     color: var(--ring-complete);
     background: rgba(76, 175, 80, 0.18);
   }
+
+  &.warn {
+    color: var(--ring-warn);
+    background: rgba(249, 168, 37, 0.18);
+  }
 }
 
 .card-error-message {
@@ -394,6 +399,7 @@
   --ring-paused: #9e9e9e;
   --ring-complete: #4caf50;
   --ring-error: #e53935;
+  --ring-warn: #f9a825;
   --card-bg: #fff;
   --card-output-bg: #f0f0f0;
 }
@@ -429,6 +435,10 @@
   font-size: 30px;
   color: var(--ring-complete);
   font-variation-settings: 'wght' 700;
+}
+
+.play-pause-btn .material-symbols-outlined.warn-icon {
+  color: var(--ring-warn);
 }
 
 .play-pause-btn:not(.is-complete):hover {
@@ -552,6 +562,10 @@
 
 :host-context(.dark-mode) .card-status.error {
   color: #ef9a9a;
+}
+
+:host-context(.dark-mode) .card-status.warn {
+  color: #ffd54f;
 }
 
 :host-context(.dark-mode) .card-error-message {

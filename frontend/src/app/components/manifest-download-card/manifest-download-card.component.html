@@ -8,8 +8,8 @@
         [class.is-error]="run.status === 'error'"
         [style.--size]="'96px'"
         [style.--thickness]="'8px'"
-        [style.--value]="isCompleted ? 100 : displayProgressValue"
-        [style.--accent]="isCompleted ? 'var(--ring-complete)' : (run.status === 'error' ? 'var(--ring-error)' : (isPaused ? 'var(--ring-paused)' : '#2196f3'))"
+        [style.--value]="displayProgressValue"
+        [style.--accent]="ringAccent"
         [style.--track]="'var(--ring-track)'"
         [style.--bg]="'var(--card-bg)'"
         aria-live="polite"
@@ -21,14 +21,15 @@
           [class.is-complete]="isCompleted"
           (click)="onTogglePause($event)"
           [disabled]="isCompleted"
-          [title]="isCompleted ? 'Download complete' : (isPaused ? 'Resume download' : 'Pause download')"
-          [attr.aria-label]="isCompleted ? 'Download complete' : 'Toggle pause'"
+          [title]="isCompleted ? (hasFailedSeries ? 'Check error log and/or click to retry' : 'Download complete') : (isPaused ? 'Resume download' : 'Pause download')"
+          [attr.aria-label]="isCompleted ? (hasFailedSeries ? 'Check error log and/or click to retry' : 'Download complete') : 'Toggle pause'"
         >
-          <span class="material-symbols-outlined" *ngIf="isCompleted">check</span>
+          <span class="material-symbols-outlined" *ngIf="isCompleted && !hasFailedSeries">check</span>
+          <span class="material-symbols-outlined warn-icon" *ngIf="isCompleted && hasFailedSeries">priority_high</span>
           <span class="material-icons-outlined" *ngIf="!isCompleted">{{ isPaused ? 'play_arrow' : 'pause' }}</span>
         </button>
         <div class="ring-inner"></div>
-        <div class="ring-label">{{ isCompleted ? 100 : displayProgressValue }}%</div>
+        <div class="ring-label">{{ displayProgressValue }}%</div>
       </div>
 
     </div>
@@ -41,7 +42,8 @@
           <div class="card-status"
             [class.downloading]="statusLabel === 'Downloading'"
             [class.paused]="isPaused"
-            [class.completed]="statusLabel === 'Completed'"
+            [class.completed]="isCompleted && !hasFailedSeries"
+            [class.warn]="isCompleted && hasFailedSeries"
             [class.error]="run.status === 'error'">
             {{ statusLabel }}
           </div>
@@ -96,6 +98,16 @@
             <span class="material-symbols-outlined">terminal_2</span>
           </button>
           <button
+            *ngIf="isTerminal && hasFailedSeries"
+            class="retry-btn"
+            type="button"
+            (click)="onRetry($event)"
+            title="Retry download"
+            aria-label="Retry download"
+          >
+            Retry download
+          </button>
+          <button
             class="action-btn download-card-close"
             title="Dismiss"
             aria-label="Remove"
@@ -103,16 +115,6 @@
             (click)="onCancel($event); onRemove($event)"
           >
             <span class="material-icons-outlined">close</span>
-          </button>
-          <button
-            *ngIf="isTerminal && hasFailedSeries"
-            class="retry-btn"
-            type="button"
-            (click)="onRetry($event)"
-            title="Retry failed downloads"
-            aria-label="Retry failed downloads"
-          >
-            Retry Failed
           </button>
         </div>
       </div>

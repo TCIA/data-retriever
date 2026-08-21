@@ -116,6 +116,18 @@ export class ManifestDownloadCardComponent implements OnInit, OnDestroy {
     return ['done', 'error', 'cancelled'].includes(this.run?.status ?? '');
   }
 
+  /** Ring/icon color for the current state: red on error, grey while paused,
+   *  amber when finished but some series failed (finished ≠ fully complete),
+   *  green on a clean finish, blue while actively downloading. */
+  get ringAccent(): string {
+    if (this.run?.status === 'error') return 'var(--ring-error)';
+    if (this.isPaused) return 'var(--ring-paused)';
+    if (this.isCompleted) {
+      return this.hasFailedSeries ? 'var(--ring-warn)' : 'var(--ring-complete)';
+    }
+    return '#2196f3';
+  }
+
   get hasLogs(): boolean {
     return (this.run?.logs?.length ?? 0) > 0;
   }
@@ -274,7 +286,7 @@ export class ManifestDownloadCardComponent implements OnInit, OnDestroy {
     const active = this.run?.overview?.active ?? 0;
     if (active > 0) return 'Downloading';
 
-    if (this.isCompleted) return 'Completed';
+    if (this.isCompleted) return this.hasFailedSeries ? 'Check error log and/or click to retry' : 'Completed';
     return 'Queued';
   }
 

@@ -311,6 +311,13 @@ func (b *App) runBatch(batch *DownloadBatch) {
 	b.authGates.Store(uint64(batch.ID), gate)
 	defer b.authGates.Delete(uint64(batch.ID))
 
+	// "Simultaneous Downloads" and "Max Connections" are each one shared
+	// setting across the whole app (see downloadSemaphore's and
+	// httpClient's doc comments), so resize them to whatever this launch
+	// requested rather than giving this batch its own pool/client.
+	b.downloadSemaphore.SetLimit(batch.Parallel)
+	app.SetMaxConnsPerHost(b.httpClient, batch.MaxConn)
+
 	options := &app.Options{
 		Input:                 batch.Manifest,
 		Output:                batch.OutputDir,
@@ -351,6 +358,8 @@ func (b *App) runBatch(batch *DownloadBatch) {
 		PriorParquetPath: b.parquetPaths.PriorVersions,
 		AuthGate:         gate,
 		LogSink:          newGuiLogSink(b.ctx, batch.ID),
+		Semaphore:        b.downloadSemaphore,
+		SharedHTTPClient: b.httpClient,
 	}
 
 	logTimestamp := time.Now().Format("20060102-150405")
@@ -368,6 +377,12 @@ func (b *App) runBatch(batch *DownloadBatch) {
 		}
 	}()
 
+	// Stringified so large uint64 values survive the round trip through JS
+	// Number without losing precision (the frontend parses it back via
+	// BigInt()). Every event below must carry this so the frontend can route
+	// it to the right run instead of guessing "most recently started".
+	runIDStr := fmt.Sprintf("%d", batch.ID)
+
 	manifestReceived := false
 	callbacks := app.Callbacks{
 		Stdout: func(line string) {
@@ -384,18 +399,24 @@ func (b *App) runBatch(batch *DownloadBatch) {
 			if eventLog != nil {
 				eventLog.HandleSeries(evt)
 			}
-			wailsRuntime.EventsEmit(b.ctx, "download-series-event", evt)
+			wailsRuntime.EventsEmit(b.ctx, "download-series-event", struct {
+				app.SeriesEvent
+				RunID string `json:"runId"`
+			}{evt, runIDStr})
 		},
 		Manifest: func(p app.ManifestPayload) {
 			manifestReceived = true
 			if eventLog != nil {
 				eventLog.HandleManifest(p)
 			}
-			wailsRuntime.EventsEmit(b.ctx, "manifest-series-metadata", p)
+			wailsRuntime.EventsEmit(b.ctx, "manifest-series-metadata", struct {
+				app.ManifestPayload
+				RunID string `json:"runId"`
+			}{p, runIDStr})
 		},
 		EmitEvent: func(name string, data ...interface{}) {
 			// Prepend runId so the frontend knows which run needs auth
-			args := append([]interface{}{fmt.Sprintf("%d", uint64(batch.ID))}, data...)
+			args := append([]interface{}{runIDStr}, data...)
 			wailsRuntime.EventsEmit(b.ctx, name, args...)
 		},
 	}
@@ -408,15 +429,15 @@ func (b *App) runBatch(batch *DownloadBatch) {
 
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
-			wailsRuntime.EventsEmit(b.ctx, "cli-finished", "")
+			wailsRuntime.EventsEmit(b.ctx, "cli-finished", map[string]interface{}{"runId": runIDStr, "summary": ""})
 			return
 		}
-		wailsRuntime.EventsEmit(b.ctx, "cli-error", fmt.Sprintf("download failed: %v", err))
+		wailsRuntime.EventsEmit(b.ctx, "cli-error", map[string]interface{}{"runId": runIDStr, "error": fmt.Sprintf("download failed: %v", err)})
 		return
 	}
 
 	if !manifestReceived {
-		wailsRuntime.EventsEmit(b.ctx, "cli-error", fmt.Sprintf("no metadata can be found for this manifest: %s", batch.Manifest))
+		wailsRuntime.EventsEmit(b.ctx, "cli-error", map[string]interface{}{"runId": runIDStr, "error": fmt.Sprintf("no metadata can be found for this manifest: %s", batch.Manifest)})
 		return
 	}
 
@@ -432,7 +453,7 @@ func (b *App) runBatch(batch *DownloadBatch) {
 			summary.Elapsed.String(),
 		)
 	}
-	wailsRuntime.EventsEmit(b.ctx, "cli-finished", summaryText)
+	wailsRuntime.EventsEmit(b.ctx, "cli-finished", map[string]interface{}{"runId": runIDStr, "summary": summaryText})
 }
 
 func (a *App) ResolveAuth(runIdStr string, authFilePath string) error {
@@ -524,13 +545,25 @@ type App struct {
 	pendingFileOpen string
 	frontendReady   chan struct{}
 	authGates       sync.Map
+	// downloadSemaphore is shared by every batch so "simultaneous downloads"
+	// is a total across all concurrently running manifests, not an
+	// allowance handed out per manifest. Its limit is resized to match
+	// whatever the UI last requested each time a batch starts.
+	downloadSemaphore *app.WorkerSemaphore
+	// httpClient is shared by every batch so "max connections" is a
+	// process-wide per-host cap across all concurrently running manifests,
+	// not an allowance handed out per manifest. Its limit is resized to
+	// match whatever the UI last requested each time a batch starts.
+	httpClient *http.Client
 }
 
 func NewApp() *App {
 	return &App{
-		batches:       make(map[uint64]*DownloadBatch),
-		pausedBatches: make(map[string]*DownloadBatch),
-		frontendReady: make(chan struct{}),
+		batches:           make(map[uint64]*DownloadBatch),
+		pausedBatches:     make(map[string]*DownloadBatch),
+		frontendReady:     make(chan struct{}),
+		downloadSemaphore: app.NewWorkerSemaphore(8),
+		httpClient:        app.NewSharedHTTPClient(8),
 	}
 }
 
@@ -597,17 +630,16 @@ func (b *App) ResumeManifest(manifestPath string) error {
 
 // guiLogSink forwards zap log lines to the GUI's per-run log panel via a
 // Wails event. Each Write splits the buffer on newlines so the frontend
-// gets one event per log entry. We don't include the runId in the payload
-// because JS Number(runId) truncates the 64-bit value, so the echoed id
-// wouldn't match the runsMap key — the frontend falls back to "most recent
-// run" the same way manifest-series-metadata does.
+// gets one event per log entry. The runId is sent as a string (mirroring
+// EmitEvent) so the frontend can route it with BigInt() without losing
+// precision, letting concurrent runs keep separate log panels.
 type guiLogSink struct {
-	ctx context.Context
+	ctx      context.Context
+	runIDStr string
 }
 
 func newGuiLogSink(ctx context.Context, batchID uint64) *guiLogSink {
-	_ = batchID
-	return &guiLogSink{ctx: ctx}
+	return &guiLogSink{ctx: ctx, runIDStr: fmt.Sprintf("%d", batchID)}
 }
 
 func (s *guiLogSink) Write(p []byte) (int, error) {
@@ -618,7 +650,7 @@ func (s *guiLogSink) Write(p []byte) (int, error) {
 		if line == "" {
 			continue
 		}
-		wailsRuntime.EventsEmit(s.ctx, "manifest-log", line)
+		wailsRuntime.EventsEmit(s.ctx, "manifest-log", map[string]interface{}{"runId": s.runIDStr, "line": line})
 	}
 	return len(p), nil
 }

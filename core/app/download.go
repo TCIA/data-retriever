@@ -34,6 +34,10 @@ const (
 
 	tciaBatchSize         = 50 // series IDs per metadata request
 	tciaConcurrentBatches = 3  // max concurrent metadata requests
+	// tciaBatchTimeout bounds a single metadata batch request so an
+	// unresponsive TCIA API fails that batch instead of blocking the whole
+	// streaming download indefinitely.
+	tciaBatchTimeout = 3 * time.Minute
 )
 
 // ProgressFunc is a callback for reporting download progress.
@@ -243,6 +247,88 @@ func saveMetadataToCache(info *FileInfo, cachePath string) error {
 	return os.Rename(tempFile, cachePath)
 }
 
+// fetchSeriesMetadataWithRetry fetches metadata for a single series, retrying
+// transient failures (timeouts, connection errors, bad responses) with
+// exponential backoff using the same MaxRetries/RetryDelay knobs as file
+// downloads. Authentication failures are not retried since resending the
+// same request won't change the outcome; a cancelled parent context is
+// likewise returned immediately rather than burning through retries.
+func fetchSeriesMetadataWithRetry(ctx context.Context, seriesID string, httpClient *http.Client, options *Options, workerID int) ([]*FileInfo, error) {
+	delay := options.RetryDelay
+
+	var lastErr error
+	for attempt := 0; attempt <= options.MaxRetries; attempt++ {
+		if attempt > 0 {
+			logger.Infof("[Meta Worker %d] Retrying metadata fetch for %s (attempt %d/%d) after %v delay", workerID, seriesID, attempt, options.MaxRetries, delay)
+			time.Sleep(delay)
+			delay *= 2 // Exponential backoff
+		}
+
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+
+		data := url.Values{}
+		data.Set("list", seriesID)
+		data.Set("format", "csv")
+
+		req, err := http.NewRequest("POST", MetaUrl, strings.NewReader(data.Encode()))
+		if err != nil {
+			// Malformed request construction won't fix itself on retry.
+			return nil, fmt.Errorf("failed to create request: %w", err)
+		}
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+		// Set timeout for metadata request
+		reqCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		req = req.WithContext(reqCtx)
+
+		resp, err := doRequest(httpClient, req)
+		cancel()
+		if err != nil {
+			lastErr = err
+			logger.Warnf("[Meta Worker %d] Metadata request failed for %s (attempt %d/%d): %v", workerID, seriesID, attempt+1, options.MaxRetries+1, err)
+			continue
+		}
+
+		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+			status := resp.Status
+			_ = resp.Body.Close()
+			return nil, fmt.Errorf("authentication failed (status: %s); check your credentials and access to this restricted series", status)
+		}
+
+		content, err := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+		if err != nil {
+			lastErr = err
+			logger.Warnf("[Meta Worker %d] Failed to read response for %s (attempt %d/%d): %v", workerID, seriesID, attempt+1, options.MaxRetries+1, err)
+			continue
+		}
+
+		var files []*FileInfo
+		// The API sometimes returns a single object instead of an array for a single series.
+		// We need to handle both cases.
+		if len(content) > 0 && content[0] == '[' {
+			err = json.Unmarshal(content, &files)
+		} else if len(content) > 0 {
+			var file FileInfo
+			err = json.Unmarshal(content, &file)
+			if err == nil {
+				files = []*FileInfo{&file}
+			}
+		}
+		if err != nil {
+			lastErr = err
+			logger.Warnf("[Meta Worker %d] Failed to parse response for %s (attempt %d/%d): %v", workerID, seriesID, attempt+1, options.MaxRetries+1, err)
+			continue
+		}
+
+		return files, nil
+	}
+
+	return nil, fmt.Errorf("failed after %d attempts: %w", options.MaxRetries+1, lastErr)
+}
+
 // FetchMetadataForSeriesUIDs fetches metadata for a list of series UIDs in parallel
 func FetchMetadataForSeriesUIDs(ctx context.Context, seriesIDs []string, httpClient *http.Client, options *Options, callbacks Callbacks) ([]*FileInfo, error) {
 	if ctx == nil {
@@ -294,62 +380,11 @@ func FetchMetadataForSeriesUIDs(ctx context.Context, seriesIDs []string, httpCli
 					logger.Debugf("[Meta Worker %d] Force refresh, fetching metadata for: %s", workerID, seriesID)
 				}
 
-				// Prepare form data for POST
-				data := url.Values{}
-				data.Set("list", seriesID)
-				data.Set("format", "csv")
-
-				req, err := http.NewRequest("POST", MetaUrl, strings.NewReader(data.Encode()))
+				files, err := fetchSeriesMetadataWithRetry(ctx, seriesID, httpClient, options, workerID)
 				if err != nil {
-					logger.Errorf("[Meta Worker %d] Failed to create request: %v", workerID, err)
+					logger.Errorf("[Meta Worker %d] Metadata fetch failed for %s: %v", workerID, seriesID, err)
 					metaStats.updateProgress("failed", seriesID)
 					continue
-				}
-
-				// Set headers
-				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-				// Set timeout for metadata request
-				reqCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-				req = req.WithContext(reqCtx)
-
-				// Send request
-				resp, err := doRequest(httpClient, req)
-				cancel() // Cancel context after request
-
-				if err != nil {
-					logger.Errorf("[Meta Worker %d] Request failed: %v", workerID, err)
-					metaStats.updateProgress("failed", seriesID)
-					continue
-				}
-
-				// Check for authentication errors
-				if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-					logger.Errorf("[Meta Worker %d] Authentication failed for series %s (status: %s). Please check your credentials and ensure you have access to this restricted series.", workerID, seriesID, resp.Status)
-					_ = resp.Body.Close()
-					metaStats.updateProgress("failed", seriesID)
-					continue
-				}
-
-				content, err := io.ReadAll(resp.Body)
-				_ = resp.Body.Close()
-				if err != nil {
-					logger.Errorf("[Meta Worker %d] Failed to read response data: %v", workerID, err)
-					metaStats.updateProgress("failed", seriesID)
-					continue
-				}
-
-				var files []*FileInfo
-				// The API sometimes returns a single object instead of an array for a single series.
-				// We need to handle both cases.
-				if len(content) > 0 && content[0] == '[' {
-					err = json.Unmarshal(content, &files)
-				} else if len(content) > 0 {
-					var file FileInfo
-					err = json.Unmarshal(content, &file)
-					if err == nil {
-						files = []*FileInfo{&file}
-					}
 				}
 
 				// Save to cache
@@ -644,7 +679,18 @@ func streamFilesFromSeriesIDs(ctx context.Context, prefixFiles []*FileInfo, seri
 				defer wg.Done()
 				defer func() { <-sem }()
 
-				batchFiles := fetchTCIABatch(ctx, ids, httpClient)
+				// Without a per-batch deadline, an unresponsive TCIA API
+				// leaves this goroutine blocked in fetchTCIABatch forever —
+				// no error, no timeout, so the run never gets past its
+				// known total and the UI just sits at "Initializing"
+				// indefinitely with no indication anything is wrong.
+				batchCtx, cancel := context.WithTimeout(ctx, tciaBatchTimeout)
+				batchFiles := fetchTCIABatch(batchCtx, ids, httpClient)
+				cancel()
+
+				if batchFiles == nil {
+					logger.Warnf("Metadata batch %d/%d returned no results (TCIA API unresponsive or request failed); %d series in this batch will be missing", idx+1, len(batches), len(ids))
+				}
 
 				mu.Lock()
 				allFiles = append(allFiles, batchFiles...)

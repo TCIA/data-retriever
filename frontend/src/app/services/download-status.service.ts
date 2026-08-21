@@ -50,6 +50,10 @@ interface RunInternal {
   outputDirPath: string;
   seriesMap: Map<string, SeriesDownloadSnapshot>;
   manifestInitialBytesTotal: number;
+  /** True series total reported by the backend before streaming starts. Used
+   *  as a floor on the progress denominator so metadata still in flight (not
+   *  yet reflected in seriesMap) can't make progress read 100% early. */
+  expectedTotal?: number;
   isPaused: boolean;
   collapsed: boolean;
   hasAutoExpanded: boolean;
@@ -96,6 +100,7 @@ export class DownloadStatusService implements OnDestroy {
   private unsubscribeCliError?: () => void;
   private unsubscribeCliFinished?: () => void;
   private unsubscribeManifestLog?: () => void;
+  private unsubscribeSeriesTotalKnown?: () => void;
 
   constructor(private ngZone: NgZone) {
     if (typeof window === 'undefined') return;
@@ -150,6 +155,26 @@ export class DownloadStatusService implements OnDestroy {
             }
           } catch (err) {
             console.error('Failed to process manifest-series-metadata', err);
+          }
+        });
+      }
+    );
+
+    // -----------------------------------------------------------------------
+    // series-total-known  (runId, total)
+    // Emitted once, early, by streaming (.tcia / spreadsheet) runs whose true
+    // series count is known before per-series metadata has finished
+    // fetching. Lets buildOverview avoid reporting 100% off a partial count.
+    // -----------------------------------------------------------------------
+    this.unsubscribeSeriesTotalKnown = EventsOn(
+      'series-total-known',
+      (runId: string, total: number) => {
+        this.ngZone.run(() => {
+          const run = this.resolveRun(runId);
+          if (!run) return;
+          if (typeof total === 'number' && total >= 0) {
+            run.expectedTotal = total;
+            this.publishRun(run);
           }
         });
       }
@@ -239,19 +264,18 @@ export class DownloadStatusService implements OnDestroy {
     );
 
     // -----------------------------------------------------------------------
-    // manifest-log  (runId, line)
+    // manifest-log  { runId, line }
     // Forwarded zap log output from the backend; verbose/debug toggles change
     // which levels reach here.
     // -----------------------------------------------------------------------
     this.unsubscribeManifestLog = EventsOn(
       'manifest-log',
-      (line: string) => {
+      (payload: { runId?: number | string; line?: string } | string) => {
         this.ngZone.run(() => {
+          const runId = typeof payload === 'string' ? undefined : payload?.runId;
+          const line = typeof payload === 'string' ? payload : payload?.line;
           if (!line) return;
-          // No runId in the payload because JS Number(runId) loses precision
-          // above 2^53. Fall back to the most-recent run, matching the way
-          // manifest-series-metadata is routed.
-          const run = this.resolveRun(undefined);
+          const run = this.resolveRun(runId);
           if (!run) return;
           this.appendLog(run, line);
           this.publishRun(run);
@@ -317,11 +341,8 @@ export class DownloadStatusService implements OnDestroy {
       status: 'initializing',
       runOptions: options,
     };
-    // Insert the new run at the front so newest manifests appear at the top
-    const existing = Array.from(this.runsMap.entries());
-    this.runsMap.clear();
+    // Insert the new run at the end so newest manifests appear at the bottom
     this.runsMap.set(runId, run);
-    for (const [k, v] of existing) this.runsMap.set(k, v);
     this.publishRun(run);
     return runId;
   }
@@ -567,7 +588,12 @@ export class DownloadStatusService implements OnDestroy {
 
   private buildOverview(run: RunInternal): DownloadOverviewSnapshot {
     const snapshots = Array.from(run.seriesMap.values());
-    const total = snapshots.length;
+    // Series stream in one at a time while metadata is still being fetched,
+    // so seriesMap.size understates the total until every batch has arrived.
+    // Floor it with the backend-reported expectedTotal (known upfront) so
+    // "done" can't equal "total" — and progress can't read 100% — before
+    // metadata fetching has actually finished.
+    const total = Math.max(snapshots.length, run.expectedTotal ?? 0);
     let queued = 0, active = 0, completed = 0, failed = 0, skipped = 0, cancelled = 0;
     for (const s of snapshots) {
       if (s.status === 'queued') queued++;
@@ -584,7 +610,24 @@ export class DownloadStatusService implements OnDestroy {
       else if (s.status === 'skipped') skipped++;
       else if (s.status === 'cancelled') cancelled++;
     }
-    const done = completed + failed + skipped + cancelled;
+    // Progress reflects successful outcomes only — a failed series never
+    // advances it, so a run that finishes with failures reads e.g. 95%
+    // (95 of 100 succeeded) instead of jumping to 100%.
+    const successCount = completed + skipped;
+    let progressPercent = total > 0 ? Math.round((successCount / total) * 100) : 0;
+    // Math.round can bump a near-total success rate (e.g. 279/280 = 99.64%)
+    // up to a misleading 100%, so only ever show 100 when every series
+    // actually succeeded.
+    if (progressPercent >= 100 && successCount < total) {
+      progressPercent = 99;
+    }
+    // Belt-and-suspenders: never show 100% until the backend has actually
+    // signaled the run finished. Covers any case where a run's true total
+    // isn't known yet (e.g. expectedTotal hasn't arrived), so progress hangs
+    // at 99% instead of flashing to 100% and dropping back down.
+    if (progressPercent >= 100 && run.status !== 'done') {
+      progressPercent = 99;
+    }
     return {
       total,
       queued,
@@ -593,7 +636,7 @@ export class DownloadStatusService implements OnDestroy {
       failed,
       skipped,
       cancelled,
-      progressPercent: total > 0 ? Math.round((done / total) * 100) : 0,
+      progressPercent,
     };
   }
 
@@ -874,6 +917,7 @@ export class DownloadStatusService implements OnDestroy {
       this.unsubscribeCliError,
       this.unsubscribeCliFinished,
       this.unsubscribeManifestLog,
+      this.unsubscribeSeriesTotalKnown,
     ];
     for (const fn of unsubs) {
       try { fn?.(); } catch { /* ignore */ }
@@ -881,7 +925,7 @@ export class DownloadStatusService implements OnDestroy {
     const events = [
       'download-series-event', 'manifest-series-metadata',
       'manifest-paused', 'manifest-resumed', 'cli-error', 'cli-finished',
-      'manifest-log',
+      'manifest-log', 'series-total-known',
     ];
     for (const ev of events) {
       try { EventsOff(ev); } catch { /* ignore */ }

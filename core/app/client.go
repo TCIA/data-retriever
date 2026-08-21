@@ -51,3 +51,33 @@ func newClient(proxy string, maxConnsPerHost int) *http.Client {
 
 	return client
 }
+
+// NewSharedHTTPClient builds a client suitable for reuse across multiple
+// concurrently running manifests (see Options.SharedHTTPClient). It never
+// carries a proxy since callers sharing a single client can't hand it a
+// per-manifest proxy anyway.
+func NewSharedHTTPClient(maxConnsPerHost int) *http.Client {
+	return newClient("", maxConnsPerHost)
+}
+
+// SetMaxConnsPerHost resizes a client's per-host connection cap in place,
+// the same way WorkerSemaphore.SetLimit resizes the download concurrency
+// limit. It takes effect for connections dialed after the call; connections
+// already open or already admitted under the old limit are unaffected. A
+// no-op if client wasn't built by this package (i.e. its Transport isn't an
+// *http.Transport).
+func SetMaxConnsPerHost(client *http.Client, maxConnsPerHost int) {
+	if client == nil {
+		return
+	}
+	if maxConnsPerHost < 1 {
+		maxConnsPerHost = 1
+	}
+	t, ok := client.Transport.(*http.Transport)
+	if !ok {
+		return
+	}
+	t.MaxConnsPerHost = maxConnsPerHost
+	t.MaxIdleConnsPerHost = maxConnsPerHost
+	t.MaxIdleConns = maxConnsPerHost * 2
+}
