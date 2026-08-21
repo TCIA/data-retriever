@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"os/user"
@@ -529,6 +530,175 @@ func (b *App) OpenDirectory(path string) error {
 	}
 
 	return nil
+}
+
+func (b *App) EmailCurrentLogFile() error {
+	const supportRecipient = "help@cancerimagingarchive.net"
+
+	logPath, err := currentLogFilePath()
+	if err != nil {
+		return err
+	}
+
+	subject := fmt.Sprintf("TCIA Data Retriever Log (%s)", time.Now().Format("2006-01-02 15:04:05"))
+	body := strings.Join([]string{
+		"Please find the current TCIA Data Retriever log file attached.",
+		"",
+		fmt.Sprintf("App version: %s", version),
+		fmt.Sprintf("Log path: %s", logPath),
+	}, "\n")
+
+	if err := openEmailClientWithAttachment(supportRecipient, subject, body, logPath); err != nil {
+		return fmt.Errorf("unable to open default email client with the attached log file: %w. You can manually attach this file: %s", err, logPath)
+	}
+
+	return nil
+}
+
+func currentLogFilePath() (string, error) {
+	logDir := filepath.Clean(strings.TrimSpace(app.DefaultLogDir()))
+	if logDir == "" {
+		return "", fmt.Errorf("log directory is empty")
+	}
+
+	info, err := os.Stat(logDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", fmt.Errorf("log directory does not exist: %s", logDir)
+		}
+		return "", fmt.Errorf("failed to access log directory: %w", err)
+	}
+
+	if !info.IsDir() {
+		return "", fmt.Errorf("log path is not a directory: %s", logDir)
+	}
+
+	return newestLogFileInDir(logDir)
+}
+
+func newestLogFileInDir(logDir string) (string, error) {
+	entries, err := os.ReadDir(logDir)
+	if err != nil {
+		return "", fmt.Errorf("failed to read log directory: %w", err)
+	}
+
+	var newestPath string
+	var newestModTime time.Time
+	found := false
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		name := strings.TrimSpace(entry.Name())
+		if name == "" || !strings.EqualFold(filepath.Ext(name), ".log") {
+			continue
+		}
+
+		info, infoErr := entry.Info()
+		if infoErr != nil || !info.Mode().IsRegular() {
+			continue
+		}
+
+		candidatePath := filepath.Join(logDir, name)
+		if !found || info.ModTime().After(newestModTime) {
+			newestPath = candidatePath
+			newestModTime = info.ModTime()
+			found = true
+		}
+	}
+
+	if !found {
+		return "", fmt.Errorf("no log files found in: %s", logDir)
+	}
+
+	return filepath.Clean(newestPath), nil
+}
+
+func openEmailClientWithAttachment(recipient, subject, body, attachmentPath string) error {
+	trimmedRecipient := strings.TrimSpace(recipient)
+	trimmedAttachmentPath := filepath.Clean(strings.TrimSpace(attachmentPath))
+	if trimmedAttachmentPath == "" {
+		return fmt.Errorf("attachment path is empty")
+	}
+
+	info, err := os.Stat(trimmedAttachmentPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("attachment file does not exist: %s", trimmedAttachmentPath)
+		}
+		return fmt.Errorf("failed to access attachment file: %w", err)
+	}
+
+	if !info.Mode().IsRegular() {
+		return fmt.Errorf("attachment path is not a regular file: %s", trimmedAttachmentPath)
+	}
+
+	switch stdRuntime.GOOS {
+	case "linux":
+		if _, err := exec.LookPath("xdg-email"); err != nil {
+			return fmt.Errorf("xdg-email is not available: %w", err)
+		}
+
+		args := []string{"--subject", subject, "--body", body, "--attach", trimmedAttachmentPath}
+		if trimmedRecipient != "" {
+			args = append(args, trimmedRecipient)
+		}
+
+		cmd := exec.Command("xdg-email", args...)
+		if err := cmd.Start(); err != nil {
+			return fmt.Errorf("failed to launch xdg-email: %w", err)
+		}
+		return nil
+	case "darwin":
+		mailtoURL := buildMailtoURL(trimmedRecipient, subject, body, trimmedAttachmentPath)
+		cmd := exec.Command("open", mailtoURL)
+		if err := cmd.Start(); err != nil {
+			return fmt.Errorf("failed to launch default mail client on macOS: %w", err)
+		}
+		return nil
+	case "windows":
+		mailtoURL := buildMailtoURL(trimmedRecipient, subject, body, trimmedAttachmentPath)
+		cmd := exec.Command("rundll32", "url.dll,FileProtocolHandler", mailtoURL)
+		if err := cmd.Start(); err != nil {
+			return fmt.Errorf("failed to launch default mail client on Windows: %w", err)
+		}
+		return nil
+	default:
+		return fmt.Errorf("unsupported operating system: %s", stdRuntime.GOOS)
+	}
+}
+
+func buildMailtoURL(recipient, subject, body, attachmentPath string) string {
+	values := url.Values{}
+	recipientPart := strings.TrimSpace(recipient)
+
+	if strings.TrimSpace(subject) != "" {
+		values.Set("subject", subject)
+	}
+
+	if strings.TrimSpace(body) != "" {
+		values.Set("body", body)
+	}
+
+	if strings.TrimSpace(attachmentPath) != "" {
+		attachmentURL := "file://" + filepath.ToSlash(attachmentPath)
+		values.Set("attach", attachmentURL)
+		values.Set("attachment", attachmentURL)
+	}
+
+	encoded := values.Encode()
+	mailtoPrefix := "mailto:"
+	if recipientPart != "" {
+		mailtoPrefix += recipientPart
+	}
+
+	if encoded == "" {
+		return mailtoPrefix
+	}
+
+	return mailtoPrefix + "?" + encoded
 }
 
 func (a *App) IsMac() bool {

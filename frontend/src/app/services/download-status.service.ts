@@ -102,8 +102,13 @@ export class DownloadStatusService implements OnDestroy {
   private unsubscribeManifestLog?: () => void;
   private unsubscribeSeriesTotalKnown?: () => void;
 
+  private hasWailsRuntime(): boolean {
+    const w = window as unknown as { runtime?: { EventsOnMultiple?: unknown } };
+    return typeof w.runtime?.EventsOnMultiple === 'function';
+  }
+
   constructor(private ngZone: NgZone) {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !this.hasWailsRuntime()) return;
 
     // -----------------------------------------------------------------------
     // download-series-event  { runId, ...SeriesDownloadEventPayload }

@@ -1252,6 +1252,68 @@
   color: #666;
 }
 
+/* Email log error banner */
+.email-log-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: #fdecea;
+  border-bottom: 1px solid #f2b8b5;
+  font-size: 13px;
+  color: #8a1f1f;
+}
+
+.email-log-error-icon {
+  font-size: 18px;
+  color: #b3261e;
+  flex-shrink: 0;
+}
+
+.email-log-error-text {
+  flex: 1;
+  line-height: 1.35;
+}
+
+.email-log-error-dismiss {
+  background: none;
+  border: none;
+  padding: 2px;
+  margin-left: auto;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  color: #8a1f1f;
+  border-radius: 50%;
+  transition: background 0.15s;
+
+  .material-icons-outlined {
+    font-size: 16px;
+  }
+
+  &:hover {
+    background: rgba(138, 31, 31, 0.12);
+  }
+}
+
+.app-container.dark-mode .email-log-error-banner {
+  background: #4d2020;
+  border-bottom-color: #7a3737;
+  color: #ffd7d7;
+}
+
+.app-container.dark-mode .email-log-error-icon {
+  color: #ffb4ab;
+}
+
+.app-container.dark-mode .email-log-error-dismiss {
+  color: #ffd7d7;
+
+  &:hover {
+    background: rgba(255, 183, 183, 0.14);
+  }
+}
+
 /* Update banner */
 .update-banner {
   display: flex;

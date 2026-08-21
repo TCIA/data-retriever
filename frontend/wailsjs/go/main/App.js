@@ -22,6 +22,10 @@ export function DeclineLicense() {
   return window['go']['main']['App']['DeclineLicense']();
 }
 
+export function EmailCurrentLogFile() {
+  return window['go']['main']['App']['EmailCurrentLogFile']();
+}
+
 export function FetchFiles() {
   return window['go']['main']['App']['FetchFiles']();
 }
