@@ -187,7 +187,8 @@
   }
 }
 
-.advanced-settings-btn {
+.advanced-settings-btn,
+.send-logs-btn {
   background: transparent;
   border: none;
   font-size: 20px;
@@ -911,11 +912,13 @@
     color: #e0e0e0;
   }
 
-  .advanced-settings-btn:hover {
+  .advanced-settings-btn:hover,
+  .send-logs-btn:hover {
     background: rgba(255, 255, 255, 0.1);
   }
 
-  .advanced-settings-btn .material-icons-outlined {
+  .advanced-settings-btn .material-icons-outlined,
+  .send-logs-btn .material-icons-outlined {
     color: #e0e0e0;
   }
   
