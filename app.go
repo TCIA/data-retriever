@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"TCIA_Data_Retriever/core/app"
@@ -278,6 +279,11 @@ func (b *App) RunCLIFetch(
 		AuthPath:      authPath,
 		DirectoryMode: directoryMode,
 		Verbose:       verbose,
+		// Assigned once, here, so it reflects when this manifest actually
+		// entered the queue (a fresh Fetch, a Retry, or a Resume all get a
+		// new value at this point) rather than being tied to the random
+		// runId.
+		Priority: atomic.AddInt64(&b.nextBatchPriority, 1),
 	}
 
 	if b.batches == nil {
@@ -295,9 +301,19 @@ func (b *App) RunCLIFetch(
 
 func (b *App) runBatch(batch *DownloadBatch) {
 	defer func() {
-		// Remove batch from map when done
+		// Remove this batch from the map when done — but only if it's
+		// still the one registered under this ID. ResumeManifest reuses
+		// the paused batch's ID for the resumed one; if this (old,
+		// cancelled) goroutine is still winding down in app.Run() when a
+		// resume starts, the new batch gets inserted at the same key
+		// before this cleanup runs. An unconditional delete would then
+		// erase the actively-running resumed batch's map entry, leaving
+		// nothing for PauseManifest to find even though the download is
+		// still going — the pause button would then fail silently forever.
 		b.mu.Lock()
-		delete(b.batches, batch.ID)
+		if b.batches[batch.ID] == batch {
+			delete(b.batches, batch.ID)
+		}
 		b.mu.Unlock()
 	}()
 
@@ -313,11 +329,14 @@ func (b *App) runBatch(batch *DownloadBatch) {
 
 	// "Simultaneous Downloads" and "Max Connections" are each one shared
 	// setting across the whole app (see downloadSemaphore's and
-	// httpClient's doc comments), so resize them to whatever this launch
-	// requested rather than giving this batch its own pool/client.
-	b.downloadSemaphore.SetLimit(batch.Parallel)
-	app.SetMaxConnsPerHost(b.httpClient, batch.MaxConn)
-
+	// httpClient's doc comments). Deliberately NOT resized here: doing so
+	// on every batch start meant starting or retrying any one manifest
+	// silently overwrote the global cap with that manifest's own stored
+	// settings — which could suddenly unblock every other concurrently
+	// running manifest's throttled workers at once, making it look like
+	// retrying one download kicked off unrelated ones. The shared limit is
+	// now only ever changed explicitly via UpdateConcurrencySettings,
+	// which the UI calls when the user actually edits these settings.
 	options := &app.Options{
 		Input:                 batch.Manifest,
 		Output:                batch.OutputDir,
@@ -360,6 +379,7 @@ func (b *App) runBatch(batch *DownloadBatch) {
 		LogSink:          newGuiLogSink(b.ctx, batch.ID),
 		Semaphore:        b.downloadSemaphore,
 		SharedHTTPClient: b.httpClient,
+		Priority:         batch.Priority,
 	}
 
 	logTimestamp := time.Now().Format("20060102-150405")
@@ -493,6 +513,26 @@ func (b *App) CancelDownload() {
 	}
 }
 
+// UpdateConcurrencySettings resizes the shared download semaphore and the
+// shared HTTP client's per-host connection cap in place — the same knobs
+// runBatch sets when a manifest starts (see downloadSemaphore's and
+// httpClient's doc comments) — so a change in the UI takes effect
+// immediately for every manifest currently downloading, not just the next
+// one started.
+//
+// Lowering either value throttles in-flight work right away: workers
+// blocked in WorkerSemaphore.Acquire re-check on every release, and new
+// HTTP connections respect the new per-host cap immediately. Raising
+// simultaneousDownloads, however, can only speed up a manifest as far as
+// the worker-goroutine pool it was started with (options.Concurrent is
+// fixed for the lifetime of that run) — an already-running manifest won't
+// spawn additional workers, so the increase fully benefits only manifests
+// started after the change.
+func (b *App) UpdateConcurrencySettings(simultaneousDownloads int, maxConnections int) {
+	b.downloadSemaphore.SetLimit(simultaneousDownloads)
+	app.SetMaxConnsPerHost(b.httpClient, maxConnections)
+}
+
 func (b *App) OpenDirectory(path string) error {
 	trimmed := strings.TrimSpace(path)
 	if trimmed == "" {
@@ -555,6 +595,12 @@ type App struct {
 	// not an allowance handed out per manifest. Its limit is resized to
 	// match whatever the UI last requested each time a batch starts.
 	httpClient *http.Client
+	// nextBatchPriority hands out a fresh, monotonically increasing
+	// downloadSemaphore priority to each batch as it starts (lower value =
+	// started earlier = favored for available slots). Read with
+	// atomic.AddInt64 so concurrent RunCLIFetch calls each get a distinct
+	// value.
+	nextBatchPriority int64
 }
 
 func NewApp() *App {
@@ -670,6 +716,9 @@ type DownloadBatch struct {
 	AuthPath      string
 	DirectoryMode string
 	Verbose       bool
+	// Priority is this batch's downloadSemaphore priority — see
+	// App.nextBatchPriority and Options.Priority.
+	Priority int64
 }
 
 func (a *App) FetchFiles() string {

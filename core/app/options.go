@@ -84,6 +84,16 @@ type Options struct {
 	// resizes Semaphore's limit. The CLI leaves this nil and gets its own
 	// client built from Proxy/MaxConnsPerHost as before.
 	SharedHTTPClient *http.Client
+	// Priority decides which manifest's pending files win a Semaphore slot
+	// when several concurrently running manifests are all waiting for one:
+	// lower values are favored. The GUI assigns each batch a fresh,
+	// monotonically increasing value when it starts, so an earlier-started
+	// manifest's work is favored over a later one's — the goal being that
+	// the first manifest queued tends to finish before a later one makes
+	// much progress, rather than every running manifest advancing evenly.
+	// Meaningless without a shared Semaphore, so the CLI leaves it at its
+	// zero value.
+	Priority int64
 
 	opt *getoptions.GetOpt
 }

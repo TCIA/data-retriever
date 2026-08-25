@@ -15,6 +15,7 @@ import {
   ResolveAuth,
   CancelAuth,
   DeclineLicense,
+  UpdateConcurrencySettings,
 } from '../../wailsjs/go/main/App';
 import { DownloadStatusService } from './services/download-status.service';
 import { RunState, RunOptions } from './models/run-state.model';
@@ -226,6 +227,20 @@ export class AppComponent implements OnInit, OnDestroy {
     this.showAdvancedModal = true;
   }
 
+  /**
+   * Applies Max Connections / Simultaneous Downloads immediately, including
+   * to manifests already downloading — not just the next one started.
+   * Raising Simultaneous Downloads mid-download only benefits a manifest
+   * that hasn't started yet: an in-progress run's worker count is fixed at
+   * launch, so it can't grow past what it was given. Lowering it, and
+   * either direction for Max Connections, does take effect right away.
+   */
+  onConcurrencySettingsChanged() {
+    if (!Number.isFinite(this.simultaneousDownloads) || !Number.isFinite(this.maxConnections)) return;
+    UpdateConcurrencySettings(this.simultaneousDownloads, this.maxConnections)
+      .catch(err => console.error('UpdateConcurrencySettings error:', err));
+  }
+
   confirmAuth() {
     if (!this.authFilePath || this.pendingAuthRunId === null) return;
     const runId = this.pendingAuthRunId;
@@ -427,10 +442,8 @@ export class AppComponent implements OnInit, OnDestroy {
     const opts = run.runOptions;
     const retryOptions: RunOptions = { ...opts, skipExisting: true };
 
-    this.downloadStatus.beginRun(newRunId, run.inputFilePath, run.outputDirPath, retryOptions);
+    this.downloadStatus.replaceRun(run.runId, newRunId, run.inputFilePath, run.outputDirPath, retryOptions);
     this.downloadStatus.appendManifestLog(newRunId, 'Retrying failed downloads (skip-existing enabled)');
-
-    this.downloadStatus.removeRun(run.runId);
 
     RunCLIFetch(
       run.inputFilePath,

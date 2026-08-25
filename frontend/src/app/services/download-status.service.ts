@@ -347,6 +347,58 @@ export class DownloadStatusService implements OnDestroy {
     return runId;
   }
 
+  /**
+   * Replace one run with a fresh one (e.g. retrying a failed manifest) in
+   * place — the new run takes over the old run's position in the list
+   * instead of jumping to the bottom. A plain removeRun()+beginRun() pair
+   * would delete oldRunId's Map entry and re-insert at the end (Map
+   * iteration follows insertion order), which visibly moved every other
+   * card up a slot and made it look like a different manifest had reset,
+   * even though nothing about it had actually changed.
+   */
+  replaceRun(
+    oldRunId: bigint,
+    newRunId: bigint,
+    inputFilePath: string,
+    outputDirPath: string,
+    options: RunOptions
+  ): bigint {
+    const run: RunInternal = {
+      runId: newRunId,
+      inputFilePath,
+      outputDirPath,
+      seriesMap: new Map(),
+      manifestInitialBytesTotal: 0,
+      pausedMs: 0,
+      isPaused: false,
+      collapsed: false,
+      hasAutoExpanded: false,
+      startedAt: new Date().toISOString(),
+      logs: [],
+      status: 'initializing',
+      runOptions: options,
+    };
+
+    const entries = Array.from(this.runsMap.entries());
+    this.runsMap.clear();
+    let replaced = false;
+    for (const [id, existing] of entries) {
+      if (id === oldRunId) {
+        this.runsMap.set(newRunId, run);
+        replaced = true;
+      } else {
+        this.runsMap.set(id, existing);
+      }
+    }
+    if (!replaced) {
+      // oldRunId was already gone — fall back to appending like beginRun.
+      this.runsMap.set(newRunId, run);
+    }
+
+    this.publishRun(run);
+    return newRunId;
+  }
+
   appendManifestLog(runId: bigint, message: string): void {
     const run = this.runsMap.get(runId);
     if (!run) return;

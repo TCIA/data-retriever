@@ -45,7 +45,7 @@
             <div class="settings-pairs">
               <div class="setting-item">
                 <label class="setting-label" for="max-connections-input">Max Connections</label>
-                <input id="max-connections-input" type="number" [(ngModel)]="maxConnections" min="1" class="setting-input">
+                <input id="max-connections-input" type="number" [(ngModel)]="maxConnections" (ngModelChange)="onConcurrencySettingsChanged()" min="1" class="setting-input">
               </div>
               <div class="setting-item">
                 <label class="setting-label" for="max-retries-input">Max Retries</label>
@@ -53,7 +53,7 @@
               </div>
               <div class="setting-item">
                 <label class="setting-label" for="simultaneous-downloads-input">Simultaneous Downloads</label>
-                <input id="simultaneous-downloads-input" type="number" [(ngModel)]="simultaneousDownloads" min="1" class="setting-input">
+                <input id="simultaneous-downloads-input" type="number" [(ngModel)]="simultaneousDownloads" (ngModelChange)="onConcurrencySettingsChanged()" min="1" class="setting-input">
               </div>
               <div class="setting-item setting-item--checkbox">
                 <label class="checkbox-label" for="download-in-parallel-input">

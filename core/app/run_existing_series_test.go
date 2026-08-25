@@ -8,7 +8,15 @@ import (
 	"time"
 )
 
-func TestApplyExistingSeriesDispositionResumeCountsAsSucceeded(t *testing.T) {
+// Both the --skip-existing/resume check and the plain already-exists check
+// hit applyExistingSeriesDisposition when a series' file is already present
+// and correct — neither actually transfers anything, so both must report
+// "skipped" rather than "downloaded". They used to disagree (resume counted
+// as succeeded/Downloaded), which made a repeat download where every series
+// already existed show as "Downloaded" across the board instead of
+// "Skipped".
+
+func TestApplyExistingSeriesDispositionResumeCountsAsSkipped(t *testing.T) {
 	t.Parallel()
 
 	outputDir := t.TempDir()
@@ -36,24 +44,24 @@ func TestApplyExistingSeriesDispositionResumeCountsAsSucceeded(t *testing.T) {
 		},
 	}
 
-	wc.applyExistingSeriesDisposition(fileInfo, resolveExistingSeriesDisposition(true), "resume")
+	wc.applyExistingSeriesDisposition(fileInfo, resolveExistingSeriesDisposition(), "resume")
 
-	if wc.Stats.Downloaded != 1 {
-		t.Fatalf("Downloaded = %d, want 1", wc.Stats.Downloaded)
+	if wc.Stats.Downloaded != 0 {
+		t.Fatalf("Downloaded = %d, want 0", wc.Stats.Downloaded)
 	}
-	if wc.Stats.Skipped != 0 {
-		t.Fatalf("Skipped = %d, want 0", wc.Stats.Skipped)
+	if wc.Stats.Skipped != 1 {
+		t.Fatalf("Skipped = %d, want 1", wc.Stats.Skipped)
 	}
 	if len(events) != 1 {
 		t.Fatalf("events = %d, want 1", len(events))
 	}
-	if events[0].Status != seriesStatusSucceeded {
-		t.Fatalf("event status = %q, want %q", events[0].Status, seriesStatusSucceeded)
+	if events[0].Status != seriesStatusSkipped {
+		t.Fatalf("event status = %q, want %q", events[0].Status, seriesStatusSkipped)
 	}
 
 	status := readCompletionStatusForSeries(t, outputDir, fileInfo.SeriesInstanceUID)
-	if status != StatusSuccess {
-		t.Fatalf("completion status = %q, want %q", status, StatusSuccess)
+	if status != StatusSkipped {
+		t.Fatalf("completion status = %q, want %q", status, StatusSkipped)
 	}
 }
 
@@ -85,7 +93,7 @@ func TestApplyExistingSeriesDispositionSkipCountsAsSkipped(t *testing.T) {
 		},
 	}
 
-	wc.applyExistingSeriesDisposition(fileInfo, resolveExistingSeriesDisposition(false), "skip")
+	wc.applyExistingSeriesDisposition(fileInfo, resolveExistingSeriesDisposition(), "skip")
 
 	if wc.Stats.Downloaded != 0 {
 		t.Fatalf("Downloaded = %d, want 0", wc.Stats.Downloaded)

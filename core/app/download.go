@@ -689,7 +689,21 @@ func streamFilesFromSeriesIDs(ctx context.Context, prefixFiles []*FileInfo, seri
 				cancel()
 
 				if batchFiles == nil {
-					logger.Warnf("Metadata batch %d/%d returned no results (TCIA API unresponsive or request failed); %d series in this batch will be missing", idx+1, len(batches), len(ids))
+					logger.Warnf("Metadata batch %d/%d returned no results (TCIA API unresponsive or request failed); marking %d series in this batch as failed", idx+1, len(batches), len(ids))
+					// Emitting nothing here would silently drop these UIDs:
+					// the run's reported total (known upfront) would never
+					// match completed+failed+skipped, and there'd be no
+					// record a series was ever supposed to exist. Emit an
+					// explicit failure per UID instead, so the counts stay
+					// consistent and the series shows up as retryable.
+					for _, uid := range ids {
+						callbacks.emitSeries(newSeriesEvent(
+							&FileInfo{SeriesInstanceUID: uid},
+							seriesStatusFailed,
+							"Metadata fetch failed or timed out",
+							100,
+						))
+					}
 				}
 
 				mu.Lock()

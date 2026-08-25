@@ -290,15 +290,15 @@ type existingSeriesDisposition struct {
 	countAsDownloaded bool
 }
 
-func resolveExistingSeriesDisposition(resumeMode bool) existingSeriesDisposition {
-	if resumeMode {
-		return existingSeriesDisposition{
-			status:            seriesStatusSucceeded,
-			completionSkipped: false,
-			countAsDownloaded: true,
-		}
-	}
-
+// resolveExistingSeriesDisposition reports a series that was left alone
+// because it already exists on disk with the expected size — whether that
+// was found via the --skip-existing/resume check (which ignores --force)
+// or the plain already-exists check (which respects --force). Either way,
+// nothing was actually transferred this run, so it's always reported as
+// skipped rather than downloaded: previously the resume path reported
+// "succeeded", which made a repeated download where every series already
+// existed show as "Downloaded" across the board instead of "Skipped".
+func resolveExistingSeriesDisposition() existingSeriesDisposition {
 	return existingSeriesDisposition{
 		status:            seriesStatusSkipped,
 		completionSkipped: true,
@@ -335,6 +335,10 @@ type WorkerContext struct {
 	// WorkerContext sharing it (see Options.Semaphore). nil means
 	// unlimited beyond the local worker pool size.
 	Semaphore *WorkerSemaphore
+	// Priority is this run's Semaphore priority (see Options.Priority),
+	// passed on every Acquire call so an older manifest's pending files
+	// are favored over a newer manifest's when both are waiting.
+	Priority int64
 }
 
 // SeriesEventGate throttles interim per-series events while always allowing
@@ -595,6 +599,7 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 		EventGate:  NewSeriesEventGate(options.InterimUpdateInterval),
 		AuthGate:   &AuthGate{},
 		Semaphore:  options.Semaphore,
+		Priority:   options.Priority,
 	}
 
 	summary := &Summary{Total: int32(len(files))}
@@ -697,6 +702,7 @@ func runTCIAStreamingDownload(ctx context.Context, client *http.Client, options 
 		EventGate:  NewSeriesEventGate(options.InterimUpdateInterval),
 		AuthGate:   &AuthGate{},
 		Semaphore:  options.Semaphore,
+		Priority:   options.Priority,
 	}
 
 	var wg sync.WaitGroup
@@ -784,6 +790,26 @@ feedLoop:
 }
 
 func (wc *WorkerContext) processFiles(input <-chan *FileInfo) {
+	// Holds the Semaphore slot across files instead of releasing and
+	// immediately re-acquiring between each one. Release-then-reacquire
+	// left a window — between this worker giving its slot back and coming
+	// back around the loop to ask for the next one — where a newer,
+	// lower-priority manifest's already-queued waiter could win the grant
+	// first, even though this (older, favored) manifest still had more
+	// work queued up. That let a newer manifest camp on a slot for the
+	// full duration of whatever file it grabbed in that window, which is
+	// exactly the "still allocating some to the second manifest" leak.
+	// Holding the slot for as long as this worker has work closes that
+	// window entirely: a slot only becomes available to another manifest
+	// once every one of this manifest's own workers has genuinely run out
+	// of files.
+	acquired := false
+	defer func() {
+		if acquired {
+			wc.Semaphore.Release()
+		}
+	}()
+
 	for {
 		select {
 		case <-wc.Context.Done():
@@ -792,14 +818,19 @@ func (wc *WorkerContext) processFiles(input <-chan *FileInfo) {
 			if !ok {
 				return
 			}
-			// Blocks until a global slot is free when Semaphore is shared
-			// across multiple concurrently running manifests; a nil
-			// Semaphore (CLI) makes this a no-op.
-			if err := wc.Semaphore.Acquire(wc.Context); err != nil {
-				return
+			if !acquired {
+				// Blocks until a global slot is free when Semaphore is
+				// shared across multiple concurrently running manifests;
+				// a nil Semaphore (CLI) makes this a no-op. Priority
+				// favors an older manifest's files over a newer
+				// manifest's when both are waiting for the same freed
+				// slot.
+				if err := wc.Semaphore.Acquire(wc.Context, wc.Priority); err != nil {
+					return
+				}
+				acquired = true
 			}
 			wc.handleFile(fileInfo)
-			wc.Semaphore.Release()
 		}
 	}
 }
@@ -850,7 +881,7 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 			Logger.Debugf("[Worker %d] Resume hit existing %s", wc.WorkerID, fileInfo.SeriesInstanceUID)
 			wc.applyExistingSeriesDisposition(
 				fileInfo,
-				resolveExistingSeriesDisposition(true),
+				resolveExistingSeriesDisposition(),
 				fmt.Sprintf("Series already present (resume complete): %s", displayName),
 			)
 			return
@@ -860,7 +891,7 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 			Logger.Debugf("[Worker %d] Skip %s (already exists with correct size/checksum)", wc.WorkerID, fileInfo.SeriesInstanceUID)
 			wc.applyExistingSeriesDisposition(
 				fileInfo,
-				resolveExistingSeriesDisposition(false),
+				resolveExistingSeriesDisposition(),
 				fmt.Sprintf("Series already present with expected size: %s", displayName),
 			)
 			return
@@ -950,7 +981,16 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 
 	err := fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.Options, onProgress, onDecompress, &localAuth)
 
-	if err != nil && isAuthError(err) && wc.Options.AuthGate != nil {
+	// Only Gen3/DRS downloads (downloadFromGen3) actually apply gen3Auth to
+	// the request — plain NBIA/TCIA, direct-URL, and S3 downloads ignore it
+	// entirely. A 401/403 from those has nothing to do with the CRDC
+	// credentials file (transient rate limiting, an embargoed series, a
+	// WAF block, etc. can all produce one), so gating on isAuthError(err)
+	// alone was popping the "Authentication Required" modal for ordinary
+	// public downloads where re-selecting an auth file could never help.
+	isGen3Download := fileInfo.DRSURI != ""
+
+	if err != nil && isGen3Download && isAuthError(err) && wc.Options.AuthGate != nil {
 		// Distinguish format failure (already caught in Run) vs server rejection
 		Logger.Debugf("auth check: err=%v, Auth=%q, isAuthErr=%v", err, wc.Options.Auth, isAuthError(err))
 
@@ -963,7 +1003,7 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 		}
 	}
 
-	for err != nil && isAuthError(err) && wc.Options.AuthGate != nil {
+	for err != nil && isGen3Download && isAuthError(err) && wc.Options.AuthGate != nil {
 		// Try the saved auth file silently before opening the prompt.
 		if savedPath := LoadSavedAuthFilePath(); savedPath != "" && savedPath != wc.Options.Auth {
 			if silentAuth, silentErr := NewGen3AuthManager(wc.HTTPClient, savedPath); silentErr == nil {

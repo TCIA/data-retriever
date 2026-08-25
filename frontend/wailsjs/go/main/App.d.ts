@@ -45,3 +45,5 @@ export function ResumeManifest(arg1:string):Promise<void>;
 export function RunCLIFetch(arg1:string,arg2:string,arg3:number,arg4:number,arg5:number,arg6:boolean,arg7:boolean,arg8:string,arg9:string,arg10:boolean,arg11:number):Promise<string>;
 
 export function ShowDialog():Promise<void>;
+
+export function UpdateConcurrencySettings(arg1:number,arg2:number):Promise<void>;
