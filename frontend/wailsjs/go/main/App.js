@@ -34,6 +34,10 @@ export function GetDefaultOutputDirectory() {
   return window['go']['main']['App']['GetDefaultOutputDirectory']();
 }
 
+export function GetLatestSupportLogPath() {
+  return window['go']['main']['App']['GetLatestSupportLogPath']();
+}
+
 export function GetPendingFileOpen() {
   return window['go']['main']['App']['GetPendingFileOpen']();
 }
@@ -64,6 +68,10 @@ export function OpenDirectory(arg1) {
 
 export function OpenInputFileDialog() {
   return window['go']['main']['App']['OpenInputFileDialog']();
+}
+
+export function OpenLogLocation(arg1) {
+  return window['go']['main']['App']['OpenLogLocation'](arg1);
 }
 
 export function OpenOutputDirectoryDialog(arg1) {

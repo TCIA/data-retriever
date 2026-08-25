@@ -15,6 +15,8 @@ import {
   ResolveAuth,
   CancelAuth,
   DeclineLicense,
+  GetLatestSupportLogPath,
+  OpenLogLocation,
 } from '../../wailsjs/go/main/App';
 import { DownloadStatusService } from './services/download-status.service';
 import { RunState, RunOptions } from './models/run-state.model';
@@ -46,6 +48,10 @@ export class AppComponent implements OnInit, OnDestroy {
   showAdvancedModal = false;
   showManifestModal = false;
   showAuthModal = false;
+  showSendLogsModal = false;
+  latestSupportLogPath = '';
+  loadingLatestSupportLogPath = false;
+  openingLogLocation = false;
 
   authRequired = false;
 
@@ -226,6 +232,38 @@ export class AppComponent implements OnInit, OnDestroy {
     this.showAdvancedModal = true;
   }
 
+  async openSendLogsModal() {
+    this.showSendLogsModal = true;
+    this.loadingLatestSupportLogPath = true;
+    this.latestSupportLogPath = '';
+
+    try {
+      this.latestSupportLogPath = await GetLatestSupportLogPath();
+    } catch (err) {
+      console.error('Error retrieving latest support log path:', err);
+      this.latestSupportLogPath = 'Unable to determine log path.';
+    } finally {
+      this.loadingLatestSupportLogPath = false;
+    }
+  }
+
+  closeSendLogsModal() {
+    this.showSendLogsModal = false;
+  }
+
+  async openLogLocation() {
+    if (this.openingLogLocation) return;
+
+    this.openingLogLocation = true;
+    try {
+      await OpenLogLocation(this.latestSupportLogPath);
+    } catch (err) {
+      console.error('Error opening log location:', err);
+    } finally {
+      this.openingLogLocation = false;
+    }
+  }
+
   confirmAuth() {
     if (!this.authFilePath || this.pendingAuthRunId === null) return;
     const runId = this.pendingAuthRunId;
@@ -262,6 +300,7 @@ export class AppComponent implements OnInit, OnDestroy {
     if (this.showAuthModal) this.closeAuthModal();
     if (this.showAdvancedModal) this.closeAdvancedModal();
     if (this.showManifestModal) this.closeManifestModal();
+    if (this.showSendLogsModal) this.closeSendLogsModal();
   }
 
   openManifestModal() { this.showManifestModal = true; }

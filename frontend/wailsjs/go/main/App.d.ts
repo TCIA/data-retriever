@@ -18,6 +18,8 @@ export function FrontendReady():Promise<void>;
 
 export function GetDefaultOutputDirectory():Promise<string>;
 
+export function GetLatestSupportLogPath():Promise<string>;
+
 export function GetPendingFileOpen():Promise<string>;
 
 export function GetVersion():Promise<string>;
@@ -33,6 +35,8 @@ export function OpenAuthFileDialog():Promise<string>;
 export function OpenDirectory(arg1:string):Promise<void>;
 
 export function OpenInputFileDialog():Promise<string>;
+
+export function OpenLogLocation(arg1:string):Promise<void>;
 
 export function OpenOutputDirectoryDialog(arg1:string):Promise<string>;
 

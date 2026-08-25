@@ -493,6 +493,80 @@ func (b *App) CancelDownload() {
 	}
 }
 
+func resolveLogLocationTarget(inputPath string, fallbackDir string) (string, bool) {
+	trimmed := strings.TrimSpace(inputPath)
+	if trimmed == "" {
+		return fallbackDir, false
+	}
+
+	cleaned := filepath.Clean(trimmed)
+	info, err := os.Stat(cleaned)
+	if err != nil {
+		return fallbackDir, false
+	}
+
+	if info.IsDir() {
+		return cleaned, false
+	}
+
+	return cleaned, true
+}
+
+func openLogLocationCommandForOS(goos string, targetPath string, revealFile bool) (string, []string, error) {
+	target := strings.TrimSpace(targetPath)
+	if target == "" {
+		return "", nil, fmt.Errorf("target path is empty")
+	}
+
+	switch goos {
+	case "windows":
+		if revealFile {
+			return "explorer", []string{"/select," + target}, nil
+		}
+		return "explorer", []string{target}, nil
+	case "darwin":
+		if revealFile {
+			return "open", []string{"-R", target}, nil
+		}
+		return "open", []string{target}, nil
+	case "linux":
+		if revealFile {
+			target = filepath.Dir(target)
+		}
+		return "xdg-open", []string{target}, nil
+	default:
+		return "", nil, fmt.Errorf("unsupported operating system: %s", goos)
+	}
+}
+
+// OpenLogLocation opens log location in the default file manager.
+// If the input is an existing file path, macOS/Windows reveal the file while
+// Linux opens its containing directory. If the path does not resolve to an
+// existing file/directory (for example a placeholder pattern), the default log
+// directory is opened instead.
+func (b *App) OpenLogLocation(path string) error {
+	fallbackDir := app.DefaultLogDir()
+	targetPath, revealFile := resolveLogLocationTarget(path, fallbackDir)
+
+	if !revealFile {
+		if err := os.MkdirAll(targetPath, 0o755); err != nil {
+			return fmt.Errorf("failed to ensure log directory exists: %w", err)
+		}
+	}
+
+	cmdName, cmdArgs, err := openLogLocationCommandForOS(stdRuntime.GOOS, targetPath, revealFile)
+	if err != nil {
+		return err
+	}
+
+	cmd := exec.Command(cmdName, cmdArgs...)
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to open log location in file manager: %w", err)
+	}
+
+	return nil
+}
+
 func (b *App) OpenDirectory(path string) error {
 	trimmed := strings.TrimSpace(path)
 	if trimmed == "" {
@@ -533,6 +607,15 @@ func (b *App) OpenDirectory(path string) error {
 
 func (a *App) IsMac() bool {
 	return stdRuntime.GOOS == "darwin"
+}
+
+// GetLatestSupportLogPath returns the newest NBIA run log by modified time.
+// If no log file exists yet, it returns the expected timestamped log pattern.
+func (a *App) GetLatestSupportLogPath() string {
+	if latestPath, ok := app.LatestNBIALogFilePath(); ok {
+		return latestPath
+	}
+	return app.ExpectedNBIALogPathPattern()
 }
 
 type App struct {

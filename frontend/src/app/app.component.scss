@@ -103,6 +103,23 @@
   }
 }
 
+.send-logs-message {
+  margin: 0 0 12px;
+  color: #333;
+}
+
+.send-logs-path {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  background: #f7f7f7;
+  color: #444;
+  font-family: 'Fira Mono', 'Consolas', 'Menlo', monospace;
+  font-size: 12px;
+  word-break: break-all;
+}
+
 /* License */
 .license-scroll {
   height: 300px;
@@ -1052,6 +1069,16 @@
 
   .advanced-settings-close:hover {
     background: rgba(255, 255, 255, 0.08);
+  }
+
+  .send-logs-message {
+    color: #ddd;
+  }
+
+  .send-logs-path {
+    border-color: #4a4a4a;
+    background: #1f1f1f;
+    color: #d9d9d9;
   }
   
   .browse-btn {
