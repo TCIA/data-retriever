@@ -194,6 +194,18 @@
         <p class="send-logs-message">
           Please send an email to <strong>help@cancerimagingarchive.net</strong> and send the log file at the provided path.
         </p>
+        <div class="send-logs-support-info">
+          <p class="send-logs-support-title">Copy and paste this into the email body:</p>
+          <pre class="send-logs-support-body" *ngIf="!loadingSupportInfo; else loadingSupportInfoTemplate">{{ supportInfoEmailBody }}</pre>
+          <ng-template #loadingSupportInfoTemplate>
+            <p class="send-logs-support-body">Loading system information...</p>
+          </ng-template>
+          <button class="fetch-btn send-logs-copy-btn"
+                  (click)="copySupportInfo()"
+                  [disabled]="loadingSupportInfo">
+            {{ supportInfoCopyLabel }}
+          </button>
+        </div>
         <p class="send-logs-path" *ngIf="!loadingLatestSupportLogPath; else loadingLogPath">{{ latestSupportLogPath }}</p>
         <ng-template #loadingLogPath>
           <p class="send-logs-path">Loading log path...</p>

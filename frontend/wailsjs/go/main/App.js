@@ -42,6 +42,10 @@ export function GetPendingFileOpen() {
   return window['go']['main']['App']['GetPendingFileOpen']();
 }
 
+export function GetSupportInfo() {
+  return window['go']['main']['App']['GetSupportInfo']();
+}
+
 export function GetVersion() {
   return window['go']['main']['App']['GetVersion']();
 }

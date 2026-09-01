@@ -22,6 +22,8 @@ export function GetLatestSupportLogPath():Promise<string>;
 
 export function GetPendingFileOpen():Promise<string>;
 
+export function GetSupportInfo():Promise<main.SupportInfo>;
+
 export function GetVersion():Promise<string>;
 
 export function Greet(arg1:string):Promise<string>;

@@ -16,8 +16,10 @@ import {
   CancelAuth,
   DeclineLicense,
   GetLatestSupportLogPath,
+  GetSupportInfo,
   OpenLogLocation,
 } from '../../wailsjs/go/main/App';
+import { main } from '../../wailsjs/go/models';
 import { DownloadStatusService } from './services/download-status.service';
 import { RunState, RunOptions } from './models/run-state.model';
 import { EventsOn, BrowserOpenURL, WindowSetBackgroundColour } from '../../wailsjs/runtime/runtime';
@@ -51,7 +53,13 @@ export class AppComponent implements OnInit, OnDestroy {
   showSendLogsModal = false;
   latestSupportLogPath = '';
   loadingLatestSupportLogPath = false;
+  loadingSupportInfo = false;
   openingLogLocation = false;
+  supportInfoVersion = 'dev';
+  supportInfoPlatform = 'unknown';
+  supportInfoOSVersion = 'Unknown';
+  supportInfoCopyFeedback: 'idle' | 'copied' | 'error' = 'idle';
+  private supportInfoCopyFeedbackTimer?: ReturnType<typeof setTimeout>;
 
   authRequired = false;
 
@@ -171,6 +179,10 @@ export class AppComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.runsSubscription?.unsubscribe();
+    if (this.supportInfoCopyFeedbackTimer !== undefined) {
+      clearTimeout(this.supportInfoCopyFeedbackTimer);
+      this.supportInfoCopyFeedbackTimer = undefined;
+    }
   }
 
   // ── License ───────────────────────────────────────────────────────────────
@@ -232,23 +244,89 @@ export class AppComponent implements OnInit, OnDestroy {
     this.showAdvancedModal = true;
   }
 
+  get supportInfoEmailBody(): string {
+    return `Data Retriever Version: ${this.supportInfoVersion}\nOS: ${this.supportInfoPlatform} ${this.supportInfoOSVersion}`;
+  }
+
+  get supportInfoCopyLabel(): string {
+    switch (this.supportInfoCopyFeedback) {
+      case 'copied': return 'Copied!';
+      case 'error': return 'Copy failed';
+      default: return 'Copy Details';
+    }
+  }
+
+  private normalizeSupportInfoValue(value: string | undefined | null, fallback: string): string {
+    const trimmed = (value ?? '').trim();
+    return trimmed !== '' ? trimmed : fallback;
+  }
+
+  private applySupportInfo(info?: main.SupportInfo): void {
+    this.supportInfoVersion = this.normalizeSupportInfoValue(info?.appVersion ?? this.appVersion, 'dev');
+    this.supportInfoPlatform = this.normalizeSupportInfoValue(info?.osPlatform, 'unknown');
+    this.supportInfoOSVersion = this.normalizeSupportInfoValue(info?.osVersion, 'Unknown');
+  }
+
+  private setSupportInfoCopyFeedback(state: 'idle' | 'copied' | 'error'): void {
+    this.supportInfoCopyFeedback = state;
+    if (this.supportInfoCopyFeedbackTimer !== undefined) {
+      clearTimeout(this.supportInfoCopyFeedbackTimer);
+      this.supportInfoCopyFeedbackTimer = undefined;
+    }
+
+    if (state !== 'idle') {
+      this.supportInfoCopyFeedbackTimer = setTimeout(() => {
+        this.supportInfoCopyFeedback = 'idle';
+        this.supportInfoCopyFeedbackTimer = undefined;
+      }, 1500);
+    }
+  }
+
+  copySupportInfo() {
+    const text = this.supportInfoEmailBody;
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(text)
+        .then(() => this.setSupportInfoCopyFeedback('copied'))
+        .catch(() => this.setSupportInfoCopyFeedback('error'));
+      return;
+    }
+
+    this.setSupportInfoCopyFeedback('error');
+  }
+
   async openSendLogsModal() {
     this.showSendLogsModal = true;
     this.loadingLatestSupportLogPath = true;
+    this.loadingSupportInfo = true;
     this.latestSupportLogPath = '';
+    this.applySupportInfo();
+    this.setSupportInfoCopyFeedback('idle');
 
-    try {
-      this.latestSupportLogPath = await GetLatestSupportLogPath();
-    } catch (err) {
-      console.error('Error retrieving latest support log path:', err);
+    const [logPathResult, supportInfoResult] = await Promise.allSettled([
+      GetLatestSupportLogPath(),
+      GetSupportInfo(),
+    ]);
+
+    if (logPathResult.status === 'fulfilled') {
+      this.latestSupportLogPath = logPathResult.value;
+    } else {
+      console.error('Error retrieving latest support log path:', logPathResult.reason);
       this.latestSupportLogPath = 'Unable to determine log path.';
-    } finally {
-      this.loadingLatestSupportLogPath = false;
     }
+    this.loadingLatestSupportLogPath = false;
+
+    if (supportInfoResult.status === 'fulfilled') {
+      this.applySupportInfo(supportInfoResult.value);
+    } else {
+      console.error('Error retrieving support info:', supportInfoResult.reason);
+      this.applySupportInfo();
+    }
+    this.loadingSupportInfo = false;
   }
 
   closeSendLogsModal() {
     this.showSendLogsModal = false;
+    this.setSupportInfoCopyFeedback('idle');
   }
 
   async openLogLocation() {

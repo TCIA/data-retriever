@@ -120,6 +120,43 @@
   word-break: break-all;
 }
 
+.send-logs-support-info {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  background: #f7f7f7;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.send-logs-support-title {
+  margin: 0;
+  color: #333;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.send-logs-support-body {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #444;
+  font-family: 'Fira Mono', 'Consolas', 'Menlo', monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.send-logs-support-info .send-logs-copy-btn {
+  align-self: flex-start;
+  flex: 0 0 auto;
+  width: auto;
+}
+
 /* License */
 .license-scroll {
   height: 300px;
@@ -1078,6 +1115,21 @@
   .send-logs-path {
     border-color: #4a4a4a;
     background: #1f1f1f;
+    color: #d9d9d9;
+  }
+
+  .send-logs-support-info {
+    border-color: #4a4a4a;
+    background: #1f1f1f;
+  }
+
+  .send-logs-support-title {
+    color: #ddd;
+  }
+
+  .send-logs-support-body {
+    border-color: #4a4a4a;
+    background: #2a2a2a;
     color: #d9d9d9;
   }
   
