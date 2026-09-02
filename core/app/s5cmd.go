@@ -53,13 +53,27 @@ type SeriesMetadata struct {
 //go:embed parquet/idc_index.parquet
 var parquetFS embed.FS
 
-func safeStringCol(schema *arrow.Schema, cols []arrow.Array, name string) *array.String {
+// stringArray is satisfied by both *array.String (utf8) and
+// *array.LargeString (large_utf8) — different parquet writers pick
+// different offset widths for the same logical string column.
+type stringArray interface {
+	IsNull(i int) bool
+	Value(i int) string
+}
+
+func safeStringCol(schema *arrow.Schema, cols []arrow.Array, name string) stringArray {
 	idxs := schema.FieldIndices(name)
 	if len(idxs) == 0 {
 		return nil
 	}
-	col, _ := cols[idxs[0]].(*array.String)
-	return col
+	switch col := cols[idxs[0]].(type) {
+	case *array.String:
+		return col
+	case *array.LargeString:
+		return col
+	default:
+		return nil
+	}
 }
 
 func safeFloat64Col(schema *arrow.Schema, cols []arrow.Array, name string) *array.Float64 {
@@ -72,7 +86,7 @@ func safeFloat64Col(schema *arrow.Schema, cols []arrow.Array, name string) *arra
 }
 
 // stringVal returns "" if the column is missing or the cell is null.
-func stringVal(col *array.String, i int) string {
+func stringVal(col stringArray, i int) string {
 	if col == nil || col.IsNull(i) {
 		return ""
 	}
@@ -226,6 +240,10 @@ func loadSeriesMetadataFromParquet(
 		awsBucketCol          := safeStringCol(schema, cols, "aws_bucket")
 		crdcUUIDCol           := safeStringCol(schema, cols, "crdc_series_uuid")
 		sourceDOICol          := safeStringCol(schema, cols, "source_DOI")
+
+		if uidCol == nil || urlCol == nil {
+			return fmt.Errorf("parquet file missing required column 'SeriesInstanceUID' or 'series_aws_url'")
+		}
 
 		rows := int(rec.NumRows())
 		for i := 0; i < rows; i++ {

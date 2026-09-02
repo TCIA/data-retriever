@@ -14,25 +14,22 @@ import (
 const (
 	parquetAppName = "net.cancerimagingarchive.tciadataretriever"
 
-	// tcia_idc_subset — freshness checked via GCS ETag
-	idcParquetFileName = "tcia_idc_subset.parquet"
-	idcParquetURL      = "https://storage.googleapis.com/idc-index-data-artifacts/current/release_artifacts/tcia_idc_subset.parquet"
-	idcMetaFileName    = "tcia_idc_subset.parquet.meta.json"
+	// Both files are published as assets on each idc-index-data GitHub
+	// Release; freshness is checked via the latest release tag.
+	githubLatestReleaseAPI = "https://api.github.com/repos/ImagingDataCommons/idc-index-data/releases/latest"
 
-	// prior_versions_index — freshness checked via GitHub Releases latest tag
+	idcParquetFileName = "idc_index.parquet"
+	idcMetaFileName    = "idc_index.parquet.meta.json"
+	idcDownloadURLFmt  = "https://github.com/ImagingDataCommons/idc-index-data/releases/download/%s/idc_index.parquet"
+
 	priorParquetFileName = "prior_versions_index.parquet"
 	priorMetaFileName    = "prior_versions_index.parquet.meta.json"
-	priorGitHubLatestAPI = "https://api.github.com/repos/ImagingDataCommons/idc-index-data/releases/latest"
 	priorDownloadURLFmt  = "https://github.com/ImagingDataCommons/idc-index-data/releases/download/%s/prior_versions_index.parquet"
 )
 
 // parquetMeta is persisted alongside each parquet file so we can do
 // cheap freshness checks on subsequent launches without re-downloading.
 type parquetMeta struct {
-	// Used for GCS files (tcia_idc_subset)
-	ETag         string `json:"etag,omitempty"`
-	LastModified string `json:"last_modified,omitempty"`
-	// Used for GitHub release files (prior_versions_index)
 	GitHubTag    string    `json:"github_tag,omitempty"`
 	DownloadedAt time.Time `json:"downloaded_at"`
 }
@@ -77,8 +74,12 @@ func EnsureParquetsUpToDate() (ParquetPaths, error) {
 		return ParquetPaths{}, nil
 	}
 
-	idcPath := ensureGCSParquet(cacheDir)
-	priorPath := ensureGitHubParquet(cacheDir)
+	// Both files ship as assets on the same idc-index-data release, so
+	// resolve the latest tag once and reuse it for both downloads.
+	latestTag, tagErr := fetchLatestGitHubTag(githubLatestReleaseAPI)
+
+	idcPath := ensureGitHubParquet(cacheDir, idcParquetFileName, idcMetaFileName, idcDownloadURLFmt, latestTag, tagErr)
+	priorPath := ensureGitHubParquet(cacheDir, priorParquetFileName, priorMetaFileName, priorDownloadURLFmt, latestTag, tagErr)
 
 	return ParquetPaths{
 		IDCIndex:      idcPath,
@@ -86,73 +87,22 @@ func EnsureParquetsUpToDate() (ParquetPaths, error) {
 	}, nil
 }
 
-// ── GCS parquet (tcia_idc_subset) ────────────────────────────────────────────
+// ── GitHub release parquet (idc_index / prior_versions_index) ───────────────
 
-// ensureGCSParquet returns the local cached path, or "" to signal embedded fallback.
-func ensureGCSParquet(cacheDir string) string {
-	parquetPath := filepath.Join(cacheDir, idcParquetFileName)
-	metaPath := filepath.Join(cacheDir, idcMetaFileName)
-
-	savedMeta := loadMeta(metaPath)
-
-	remoteETag, remoteLastModified, err := fetchRemoteHeaders(idcParquetURL)
-	if err != nil {
-		// Network unavailable.
-		if fileExists(parquetPath) {
-			log.Printf("[parquet] could not reach GCS; using cached idc file")
-			return parquetPath
-		}
-		// No cache either — signal fallback to embedded.
-		return ""
-	}
-
-	// Cache is current — no download needed.
-	if savedMeta != nil && fileExists(parquetPath) {
-		if remoteETag != "" && savedMeta.ETag == remoteETag {
-			log.Printf("[parquet] idc index up to date (ETag match)")
-			return parquetPath
-		}
-		if remoteETag == "" && remoteLastModified != "" && savedMeta.LastModified == remoteLastModified {
-			log.Printf("[parquet] idc index up to date (Last-Modified match)")
-			return parquetPath
-		}
-	}
-
-	// Cache is stale or absent — download.
-	log.Printf("[parquet] downloading updated idc index from GCS")
-	if err := downloadFile(idcParquetURL, parquetPath); err != nil {
-		if fileExists(parquetPath) {
-			log.Printf("[parquet] WARN: download failed (%v); using stale idc cached file", err)
-			return parquetPath
-		}
-		// Download failed, no cache — signal fallback to embedded.
-		log.Printf("[parquet] WARN: download failed and no idc cache; using embedded file")
-		return ""
-	}
-
-	saveMeta(metaPath, &parquetMeta{
-		ETag:         remoteETag,
-		LastModified: remoteLastModified,
-		DownloadedAt: time.Now(),
-	})
-	log.Printf("[parquet] idc index cached at %s", parquetPath)
-	return parquetPath
-}
-
-// ── GitHub release parquet (prior_versions_index) ────────────────────────────
-
-// ensureGitHubParquet returns the local cached path, or "" to signal embedded fallback.
-func ensureGitHubParquet(cacheDir string) string {
-	parquetPath := filepath.Join(cacheDir, priorParquetFileName)
-	metaPath := filepath.Join(cacheDir, priorMetaFileName)
+// ensureGitHubParquet returns the local cached path for a parquet asset
+// published on the latest idc-index-data GitHub release, or "" to signal
+// embedded fallback. latestTag/tagErr come from a single shared call to
+// fetchLatestGitHubTag so both assets agree on the same release.
+func ensureGitHubParquet(cacheDir, fileName, metaFileName, downloadURLFmt, latestTag string, tagErr error) string {
+	parquetPath := filepath.Join(cacheDir, fileName)
+	metaPath := filepath.Join(cacheDir, metaFileName)
 
 	savedMeta := loadMeta(metaPath)
 
-	latestTag, err := fetchLatestGitHubTag(priorGitHubLatestAPI)
-	if err != nil {
+	if tagErr != nil {
 		// Network unavailable.
 		if fileExists(parquetPath) {
-			log.Printf("[parquet] could not reach GitHub; using cached prior_versions file")
+			log.Printf("[parquet] could not reach GitHub; using cached %s", fileName)
 			return parquetPath
 		}
 		// No cache either — signal fallback to embedded.
@@ -161,20 +111,20 @@ func ensureGitHubParquet(cacheDir string) string {
 
 	// Cache is current — no download needed.
 	if savedMeta != nil && fileExists(parquetPath) && savedMeta.GitHubTag == latestTag {
-		log.Printf("[parquet] prior_versions index up to date (tag %s)", latestTag)
+		log.Printf("[parquet] %s up to date (tag %s)", fileName, latestTag)
 		return parquetPath
 	}
 
 	// Cache is stale or absent — download.
-	downloadURL := fmt.Sprintf(priorDownloadURLFmt, latestTag)
-	log.Printf("[parquet] downloading prior_versions index (tag %s)", latestTag)
+	downloadURL := fmt.Sprintf(downloadURLFmt, latestTag)
+	log.Printf("[parquet] downloading %s (tag %s)", fileName, latestTag)
 	if err := downloadFile(downloadURL, parquetPath); err != nil {
 		if fileExists(parquetPath) {
-			log.Printf("[parquet] WARN: download failed (%v); using stale prior_versions cached file", err)
+			log.Printf("[parquet] WARN: download failed (%v); using stale cached %s", err, fileName)
 			return parquetPath
 		}
 		// Download failed, no cache — signal fallback to embedded.
-		log.Printf("[parquet] WARN: download failed and no prior_versions cache; using embedded file")
+		log.Printf("[parquet] WARN: download failed and no cache for %s; using embedded file", fileName)
 		return ""
 	}
 
@@ -182,7 +132,7 @@ func ensureGitHubParquet(cacheDir string) string {
 		GitHubTag:    latestTag,
 		DownloadedAt: time.Now(),
 	})
-	log.Printf("[parquet] prior_versions index cached at %s", parquetPath)
+	log.Printf("[parquet] %s cached at %s", fileName, parquetPath)
 	return parquetPath
 }
 
@@ -220,20 +170,6 @@ func fetchLatestGitHubTag(apiURL string) (string, error) {
 }
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
-
-func fetchRemoteHeaders(url string) (etag, lastModified string, err error) {
-	client := &http.Client{Timeout: 15 * time.Second}
-	resp, err := client.Head(url)
-	if err != nil {
-		return "", "", err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", "", fmt.Errorf("HEAD %s returned %s", url, resp.Status)
-	}
-	return resp.Header.Get("ETag"), resp.Header.Get("Last-Modified"), nil
-}
 
 func downloadFile(url, destPath string) error {
 	client := &http.Client{Timeout: 5 * time.Minute}

@@ -52,7 +52,7 @@
                 <input id="max-retries-input" type="number" [(ngModel)]="maxRetries" min="0" class="setting-input">
               </div>
               <div class="setting-item">
-                <label class="setting-label" for="simultaneous-downloads-input">Simultaneous Downloads</label>
+                <label class="setting-label" for="simultaneous-downloads-input">Simultaneous Downloads (Increases only affect new manifests)</label>
                 <input id="simultaneous-downloads-input" type="number" [(ngModel)]="simultaneousDownloads" (ngModelChange)="onConcurrencySettingsChanged()" min="1" class="setting-input">
               </div>
               <div class="setting-item setting-item--checkbox">
