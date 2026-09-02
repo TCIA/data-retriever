@@ -20,6 +20,7 @@ export namespace main {
 	    available: boolean;
 	    latestVersion: string;
 	    url: string;
+	    storeName: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new UpdateInfo(source);
@@ -30,6 +31,7 @@ export namespace main {
 	        this.available = source["available"];
 	        this.latestVersion = source["latestVersion"];
 	        this.url = source["url"];
+	        this.storeName = source["storeName"];
 	    }
 	}
 

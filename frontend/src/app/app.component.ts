@@ -76,6 +76,7 @@ export class AppComponent implements OnInit, OnDestroy {
   updateAvailable = false;
   updateVersion = '';
   updateUrl = '';
+  updateStoreName = '';
   showUpdateBanner = false;
 
   // ── Dark mode ─────────────────────────────────────────────────────────────
@@ -172,6 +173,7 @@ export class AppComponent implements OnInit, OnDestroy {
           this.updateAvailable = true;
           this.updateVersion = info.latestVersion;
           this.updateUrl = info.url;
+          this.updateStoreName = info.storeName;
           this.showUpdateBanner = true;
         });
       }

@@ -26,6 +26,7 @@ type UpdateInfo struct {
 	Available     bool   `json:"available"`
 	LatestVersion string `json:"latestVersion"`
 	URL           string `json:"url"`
+	StoreName     string `json:"storeName"`
 }
 
 type SupportInfo struct {
@@ -155,15 +156,25 @@ func (a *App) GetSupportInfo() SupportInfo {
 	return buildSupportInfo(version, stdRuntime.GOOS, detectOSVersion(stdRuntime.GOOS))
 }
 
+// storeDisplayName returns the human-readable storefront name for a
+// distChannel value, or "" for GitHub (non-store) builds.
+func storeDisplayName(channel string) string {
+	switch channel {
+	case "appstore":
+		return "App Store"
+	case "msstore":
+		return "Microsoft Store"
+	default:
+		return ""
+	}
+}
+
 func (a *App) CheckForUpdate() (UpdateInfo, error) {
 	if version == "" || version == "dev" {
 		return UpdateInfo{}, nil
 	}
-	// Store builds (Mac App Store, Microsoft Store) update through their
-	// respective storefronts, so skip the GitHub release check entirely.
-	if distChannel != "" && distChannel != "github" {
-		return UpdateInfo{}, nil
-	}
+
+	storeName := storeDisplayName(distChannel)
 
 	const apiURL = "https://api.github.com/repos/TCIA/data-retriever/releases/latest"
 	client := &http.Client{Timeout: 10 * time.Second}
@@ -195,11 +206,17 @@ func (a *App) CheckForUpdate() (UpdateInfo, error) {
 	current := strings.TrimPrefix(strings.TrimSpace(version), "v")
 	latest := strings.TrimPrefix(strings.TrimSpace(release.TagName), "v")
 
-	return UpdateInfo{
+	info := UpdateInfo{
 		Available:     latest != "" && latest != current,
 		LatestVersion: release.TagName,
-		URL:           release.HTMLURL,
-	}, nil
+		StoreName:     storeName,
+	}
+	// Store builds (Mac App Store, Microsoft Store) update through their
+	// respective storefronts, so don't point users at the GitHub release.
+	if storeName == "" {
+		info.URL = release.HTMLURL
+	}
+	return info, nil
 }
 
 func (b *App) GetPendingFileOpen() string {

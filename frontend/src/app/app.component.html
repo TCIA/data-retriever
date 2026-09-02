@@ -271,8 +271,13 @@
   <!-- Update banner -->
   <div class="update-banner" *ngIf="showUpdateBanner">
     <span class="material-icons-outlined update-banner-icon">system_update_alt</span>
-    <span>{{ updateVersion }} is available.</span>
-    <button class="update-banner-link" (click)="openUpdateUrl()">Download</button>
+    <ng-container *ngIf="updateStoreName; else githubUpdate">
+      <span>A new version {{ updateVersion }} is available on the {{ updateStoreName }}.</span>
+    </ng-container>
+    <ng-template #githubUpdate>
+      <span>{{ updateVersion }} is available.</span>
+      <button class="update-banner-link" (click)="openUpdateUrl()">Download</button>
+    </ng-template>
     <button class="update-banner-dismiss" (click)="dismissUpdateBanner()" title="Dismiss">
       <span class="material-icons-outlined">close</span>
     </button>

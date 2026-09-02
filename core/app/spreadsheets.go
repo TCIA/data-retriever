@@ -133,7 +133,7 @@ func decodeSpreadsheet(filePath string) ([]*FileInfo, error) {
 	studyDescIndex := -1
 	for i, col := range header {
 		switch normalize(col) {
-		case "drsuri", "fileid":
+		case "drsuri", "fileid", "access":
 			drsURIIndex = i
 		case "imageurl","wsiimageurl" :
 			imageURLIndex = i
