@@ -103,6 +103,60 @@
   }
 }
 
+.send-logs-message {
+  margin: 0 0 12px;
+  color: #333;
+}
+
+.send-logs-path {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  background: #f7f7f7;
+  color: #444;
+  font-family: 'Fira Mono', 'Consolas', 'Menlo', monospace;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.send-logs-support-info {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  background: #f7f7f7;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.send-logs-support-title {
+  margin: 0;
+  color: #333;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.send-logs-support-body {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #444;
+  font-family: 'Fira Mono', 'Consolas', 'Menlo', monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.send-logs-support-info .send-logs-copy-btn {
+  align-self: flex-start;
+  flex: 0 0 auto;
+  width: auto;
+}
+
 /* License */
 .license-scroll {
   height: 300px;
@@ -187,7 +241,8 @@
   }
 }
 
-.advanced-settings-btn {
+.advanced-settings-btn,
+.send-logs-btn {
   background: transparent;
   border: none;
   font-size: 20px;
@@ -911,11 +966,13 @@
     color: #e0e0e0;
   }
 
-  .advanced-settings-btn:hover {
+  .advanced-settings-btn:hover,
+  .send-logs-btn:hover {
     background: rgba(255, 255, 255, 0.1);
   }
 
-  .advanced-settings-btn .material-icons-outlined {
+  .advanced-settings-btn .material-icons-outlined,
+  .send-logs-btn .material-icons-outlined {
     color: #e0e0e0;
   }
   
@@ -1049,6 +1106,31 @@
 
   .advanced-settings-close:hover {
     background: rgba(255, 255, 255, 0.08);
+  }
+
+  .send-logs-message {
+    color: #ddd;
+  }
+
+  .send-logs-path {
+    border-color: #4a4a4a;
+    background: #1f1f1f;
+    color: #d9d9d9;
+  }
+
+  .send-logs-support-info {
+    border-color: #4a4a4a;
+    background: #1f1f1f;
+  }
+
+  .send-logs-support-title {
+    color: #ddd;
+  }
+
+  .send-logs-support-body {
+    border-color: #4a4a4a;
+    background: #2a2a2a;
+    color: #d9d9d9;
   }
   
   .browse-btn {

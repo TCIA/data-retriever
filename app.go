@@ -28,8 +28,131 @@ type UpdateInfo struct {
 	URL           string `json:"url"`
 }
 
+type SupportInfo struct {
+	AppVersion string `json:"appVersion"`
+	OSPlatform string `json:"osPlatform"`
+	OSVersion  string `json:"osVersion"`
+}
+
 func (a *App) GetVersion() string {
 	return version
+}
+
+func buildSupportInfo(appVersion string, osPlatform string, osVersion string) SupportInfo {
+	appVersion = strings.TrimSpace(appVersion)
+	if appVersion == "" {
+		appVersion = "dev"
+	}
+
+	osPlatform = strings.TrimSpace(osPlatform)
+	if osPlatform == "" {
+		osPlatform = "unknown"
+	}
+
+	osVersion = strings.TrimSpace(osVersion)
+	if osVersion == "" {
+		osVersion = "Unknown"
+	}
+
+	return SupportInfo{
+		AppVersion: appVersion,
+		OSPlatform: osPlatform,
+		OSVersion:  osVersion,
+	}
+}
+
+func parseLinuxOSRelease(content string) string {
+	var prettyName string
+	var name string
+	var versionID string
+
+	for _, rawLine := range strings.Split(content, "\n") {
+		line := strings.TrimSpace(rawLine)
+		if line == "" || strings.HasPrefix(line, "#") || !strings.Contains(line, "=") {
+			continue
+		}
+
+		parts := strings.SplitN(line, "=", 2)
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+		value = strings.Trim(value, `"'`)
+
+		switch key {
+		case "PRETTY_NAME":
+			prettyName = value
+		case "NAME":
+			name = value
+		case "VERSION_ID":
+			versionID = value
+		}
+	}
+
+	if prettyName != "" {
+		return prettyName
+	}
+	if name != "" && versionID != "" {
+		return name + " " + versionID
+	}
+	if name != "" {
+		return name
+	}
+
+	return ""
+}
+
+func detectLinuxVersion() string {
+	if osRelease, err := os.ReadFile("/etc/os-release"); err == nil {
+		if parsed := parseLinuxOSRelease(string(osRelease)); parsed != "" {
+			return parsed
+		}
+	}
+
+	output, err := exec.Command("uname", "-r").Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(output))
+}
+
+func detectWindowsVersion() string {
+	output, err := exec.Command("cmd", "/C", "ver").Output()
+	if err != nil {
+		return ""
+	}
+
+	cleaned := strings.ReplaceAll(string(output), "\r", "")
+	return strings.TrimSpace(cleaned)
+}
+
+func detectDarwinVersion() string {
+	output, err := exec.Command("sw_vers", "-productVersion").Output()
+	if err != nil {
+		return ""
+	}
+
+	versionText := strings.TrimSpace(string(output))
+	if versionText == "" {
+		return ""
+	}
+
+	return "macOS " + versionText
+}
+
+func detectOSVersion(goos string) string {
+	switch goos {
+	case "linux":
+		return detectLinuxVersion()
+	case "windows":
+		return detectWindowsVersion()
+	case "darwin":
+		return detectDarwinVersion()
+	default:
+		return ""
+	}
+}
+
+func (a *App) GetSupportInfo() SupportInfo {
+	return buildSupportInfo(version, stdRuntime.GOOS, detectOSVersion(stdRuntime.GOOS))
 }
 
 func (a *App) CheckForUpdate() (UpdateInfo, error) {
@@ -533,6 +656,80 @@ func (b *App) UpdateConcurrencySettings(simultaneousDownloads int, maxConnection
 	app.SetMaxConnsPerHost(b.httpClient, maxConnections)
 }
 
+func resolveLogLocationTarget(inputPath string, fallbackDir string) (string, bool) {
+	trimmed := strings.TrimSpace(inputPath)
+	if trimmed == "" {
+		return fallbackDir, false
+	}
+
+	cleaned := filepath.Clean(trimmed)
+	info, err := os.Stat(cleaned)
+	if err != nil {
+		return fallbackDir, false
+	}
+
+	if info.IsDir() {
+		return cleaned, false
+	}
+
+	return cleaned, true
+}
+
+func openLogLocationCommandForOS(goos string, targetPath string, revealFile bool) (string, []string, error) {
+	target := strings.TrimSpace(targetPath)
+	if target == "" {
+		return "", nil, fmt.Errorf("target path is empty")
+	}
+
+	switch goos {
+	case "windows":
+		if revealFile {
+			return "explorer", []string{"/select," + target}, nil
+		}
+		return "explorer", []string{target}, nil
+	case "darwin":
+		if revealFile {
+			return "open", []string{"-R", target}, nil
+		}
+		return "open", []string{target}, nil
+	case "linux":
+		if revealFile {
+			target = filepath.Dir(target)
+		}
+		return "xdg-open", []string{target}, nil
+	default:
+		return "", nil, fmt.Errorf("unsupported operating system: %s", goos)
+	}
+}
+
+// OpenLogLocation opens log location in the default file manager.
+// If the input is an existing file path, macOS/Windows reveal the file while
+// Linux opens its containing directory. If the path does not resolve to an
+// existing file/directory (for example a placeholder pattern), the default log
+// directory is opened instead.
+func (b *App) OpenLogLocation(path string) error {
+	fallbackDir := app.DefaultLogDir()
+	targetPath, revealFile := resolveLogLocationTarget(path, fallbackDir)
+
+	if !revealFile {
+		if err := os.MkdirAll(targetPath, 0o755); err != nil {
+			return fmt.Errorf("failed to ensure log directory exists: %w", err)
+		}
+	}
+
+	cmdName, cmdArgs, err := openLogLocationCommandForOS(stdRuntime.GOOS, targetPath, revealFile)
+	if err != nil {
+		return err
+	}
+
+	cmd := exec.Command(cmdName, cmdArgs...)
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to open log location in file manager: %w", err)
+	}
+
+	return nil
+}
+
 func (b *App) OpenDirectory(path string) error {
 	trimmed := strings.TrimSpace(path)
 	if trimmed == "" {
@@ -573,6 +770,15 @@ func (b *App) OpenDirectory(path string) error {
 
 func (a *App) IsMac() bool {
 	return stdRuntime.GOOS == "darwin"
+}
+
+// GetLatestSupportLogPath returns the newest NBIA run log by modified time.
+// If no log file exists yet, it returns the expected timestamped log pattern.
+func (a *App) GetLatestSupportLogPath() string {
+	if latestPath, ok := app.LatestNBIALogFilePath(); ok {
+		return latestPath
+	}
+	return app.ExpectedNBIALogPathPattern()
 }
 
 type App struct {

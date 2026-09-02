@@ -167,12 +167,56 @@
       <button class="theme-toggle" (click)="toggleDarkMode()" title="Toggle theme">
         <span class="material-icons-outlined">{{ isDarkMode ? 'light_mode' : 'dark_mode' }}</span>
       </button>
+      <button class="send-logs-btn" (click)="openSendLogsModal()" title="Send logs">
+        <span class="material-icons-outlined">mail</span>
+      </button>
       <button class="advanced-settings-btn" (click)="openAdvancedModal()" title="Advanced Settings">
         <span class="material-icons-outlined">settings</span>
       </button>
       <button class="fetch-manifest-btn" (click)="openManifestModal()" title="Add a Manifest">
         <span class="material-icons">add</span>
       </button>
+    </div>
+  </div>
+
+  <!-- Send Logs Modal -->
+  <div class="advanced-settings-overlay" *ngIf="showSendLogsModal"
+       (click)="closeSendLogsModal()"
+       role="dialog" aria-modal="true" aria-label="Send Logs">
+    <div class="advanced-settings-modal send-logs-modal" (click)="$event.stopPropagation()">
+      <div class="advanced-settings-header">
+        <span>Send Logs</span>
+        <button class="advanced-settings-close" (click)="closeSendLogsModal()" title="Close">
+          <span class="material-icons-outlined">close</span>
+        </button>
+      </div>
+      <div class="advanced-settings-body">
+        <p class="send-logs-message">
+          Please send an email to <strong>help@cancerimagingarchive.net</strong> and send the log file at the provided path.
+        </p>
+        <div class="send-logs-support-info">
+          <p class="send-logs-support-title">Copy and paste this into the email body:</p>
+          <pre class="send-logs-support-body" *ngIf="!loadingSupportInfo; else loadingSupportInfoTemplate">{{ supportInfoEmailBody }}</pre>
+          <ng-template #loadingSupportInfoTemplate>
+            <p class="send-logs-support-body">Loading system information...</p>
+          </ng-template>
+          <button class="fetch-btn send-logs-copy-btn"
+                  (click)="copySupportInfo()"
+                  [disabled]="loadingSupportInfo">
+            {{ supportInfoCopyLabel }}
+          </button>
+        </div>
+        <p class="send-logs-path" *ngIf="!loadingLatestSupportLogPath; else loadingLogPath">{{ latestSupportLogPath }}</p>
+        <ng-template #loadingLogPath>
+          <p class="send-logs-path">Loading log path...</p>
+        </ng-template>
+        <div class="action-bar" style="justify-content: flex-end; gap: 8px;">
+          <button class="fetch-btn" (click)="openLogLocation()" [disabled]="openingLogLocation">
+            Open Log Location
+          </button>
+          <button class="fetch-btn" (click)="closeSendLogsModal()">Close</button>
+        </div>
+      </div>
     </div>
   </div>
 
