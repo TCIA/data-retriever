@@ -823,6 +823,7 @@ type FileInfo struct {
 	FileName                            string `json:"file_name,omitempty"`
 	OriginalS5cmdURI                    string `json:"original_s5cmd_uri,omitempty"`
 	IsSyncJob                           bool   `json:"is_sync_job,omitempty"`
+	DownloadSource                      string `csv:"DownloadSource" json:"download_source,omitempty"`
 }
 
 // GetOutput construct the output directory (thread-safe)
@@ -1262,6 +1263,25 @@ func isRetryableError(err error) bool {
 		strings.Contains(errStr, "502") || // Bad gateway
 		strings.Contains(errStr, "503") || // Service unavailable
 		strings.Contains(errStr, "504") // Gateway timeout
+}
+
+// downloadSourceLabel classifies which download source doDownload will route
+// this file to, for display/logging purposes (e.g. the metadata.csv
+// DownloadSource column). Keep this in sync with doDownload's dispatch order.
+func (info *FileInfo) downloadSourceLabel() string {
+	if info.S5cmdManifestPath != "" || strings.HasPrefix(info.DownloadURL, "s3://") {
+		return "S3"
+	}
+	if info.DRSURI != "" {
+		if parsed, err := url.Parse(info.DRSURI); err == nil && parsed.Host != "" {
+			return "DRS (" + parsed.Host + ")"
+		}
+		return "DRS"
+	}
+	if info.DownloadURL != "" {
+		return "Direct URL"
+	}
+	return "NBIA/TCIA"
 }
 
 // doDownload is a dispatcher for different download types
@@ -2102,12 +2122,21 @@ func SeriesUpToDate(seriesDir string) bool {
 	return true
 }
 
+// joinParts joins the non-empty parts with "-". Callers pass a trailing
+// UID-tail part last; if that ends up being the only non-empty part, it's
+// dropped rather than producing a directory segment that's just a handful
+// of otherwise-meaningless UID characters.
 func joinParts(parts ...string) string {
 	var nonEmpty []string
-	for _, p := range parts {
+	lastSetIdx := -1
+	for i, p := range parts {
 		if p != "" {
 			nonEmpty = append(nonEmpty, p)
+			lastSetIdx = i
 		}
+	}
+	if len(nonEmpty) == 1 && lastSetIdx == len(parts)-1 {
+		return ""
 	}
 	return strings.Join(nonEmpty, "-")
 }

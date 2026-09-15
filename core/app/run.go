@@ -905,7 +905,7 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 		return
 	}
 
-	wc.emitSeriesEvent(fileInfo, seriesStatusDownloadInitiated, fmt.Sprintf("[Worker %d] Download initiated for %s", wc.WorkerID, displayName), 30)
+	wc.emitSeriesEvent(fileInfo, seriesStatusDownloadInitiated, fmt.Sprintf("[Worker %d] Download initiated for %s via %s", wc.WorkerID, displayName, fileInfo.downloadSourceLabel()), 30)
 
 	var lastCompressedTotal int64
 	var lastDownloadHeartbeat time.Time

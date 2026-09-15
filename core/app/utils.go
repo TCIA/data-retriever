@@ -88,6 +88,12 @@ func WriteAllMetadataToCSV(files []*FileInfo, outPath string) error {
 		return nil
 	}
 
+	for _, file := range files {
+		if file.DownloadSource == "" {
+			file.DownloadSource = file.downloadSourceLabel()
+		}
+	}
+
 	// Open file
 	f, err := os.Create(outPath)
 	if err != nil {
