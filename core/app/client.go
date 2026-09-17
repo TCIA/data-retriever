@@ -23,7 +23,7 @@ func newClient(proxy string, maxConnsPerHost int) *http.Client {
 		TLSHandshakeTimeout:   20 * time.Second,
 		DisableKeepAlives:     false,
 		DisableCompression:    true,
-		ForceAttemptHTTP2:     false,
+		ForceAttemptHTTP2:     true,
 		ResponseHeaderTimeout: 300 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
 		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
