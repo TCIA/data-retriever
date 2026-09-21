@@ -60,6 +60,25 @@ func NewSharedHTTPClient(maxConnsPerHost int) *http.Client {
 	return newClient("", maxConnsPerHost)
 }
 
+// streamingClient returns a client that shares the caller's transport and
+// redirect/cookie policy but does not impose http.Client's whole-request
+// timeout. A Client timeout includes reading the complete response body, so
+// it is unsuitable for multi-gigabyte downloads. Long-running transfer paths
+// must instead attach their intended lifetime to the request context.
+func streamingClient(client *http.Client) *http.Client {
+	if client == nil {
+		client = http.DefaultClient
+	}
+	if client.Timeout == 0 {
+		return client
+	}
+	return &http.Client{
+		Transport:     client.Transport,
+		CheckRedirect: client.CheckRedirect,
+		Jar:           client.Jar,
+	}
+}
+
 // SetMaxConnsPerHost resizes a client's per-host connection cap in place,
 // the same way WorkerSemaphore.SetLimit resizes the download concurrency
 // limit. It takes effect for connections dialed after the call; connections

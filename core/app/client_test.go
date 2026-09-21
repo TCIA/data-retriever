@@ -1,10 +1,14 @@
 package app
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestNewClientNegotiatesHTTP2(t *testing.T) {
@@ -52,5 +56,44 @@ func TestNewClientFallsBackToHTTP1(t *testing.T) {
 
 	if resp.ProtoMajor != 1 {
 		t.Fatalf("expected HTTP/1.x fallback, got %s", resp.Proto)
+	}
+}
+
+func TestDirectDownloadOutlivesSharedClientTimeout(t *testing.T) {
+	const content = "large-file-content"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Length", "18")
+		w.WriteHeader(http.StatusOK)
+		if flusher, ok := w.(http.Flusher); ok {
+			flusher.Flush()
+		}
+		time.Sleep(75 * time.Millisecond)
+		_, _ = io.WriteString(w, content)
+	}))
+	t.Cleanup(server.Close)
+
+	client := &http.Client{Timeout: 20 * time.Millisecond}
+	info := &FileInfo{
+		Collection:        "collection",
+		PatientID:         "patient",
+		StudyInstanceUID:  "study",
+		SeriesInstanceUID: "series",
+		DownloadURL:       server.URL,
+		FileName:          "large.svs",
+	}
+	output := t.TempDir()
+	options := &Options{}
+
+	if err := info.downloadDirect(context.Background(), output, client, options, nil, nil); err != nil {
+		t.Fatalf("direct download was canceled by the shared client timeout: %v", err)
+	}
+
+	path := filepath.Join(info.DcimFiles(output, options), info.FileName)
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading downloaded file: %v", err)
+	}
+	if string(got) != content {
+		t.Fatalf("downloaded content = %q, want %q", got, content)
 	}
 }

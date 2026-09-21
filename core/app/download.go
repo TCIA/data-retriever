@@ -1759,17 +1759,16 @@ func (info *FileInfo) downloadDirect(ctx context.Context, output string, httpCli
 		os.Remove(tempPath)
 	}
 
-	req, err := http.NewRequest("GET", info.DownloadURL, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", info.DownloadURL, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %v", err)
 	}
 
-	// Use a reasonable timeout for direct downloads
-	reqCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
-	defer cancel()
-	req = req.WithContext(reqCtx)
-
-	resp, err := doRequest(httpClient, req)
+	// Direct downloads can be multi-gigabyte files whose valid transfer time
+	// cannot be predicted from the URL. The shared transport still bounds
+	// dialing, TLS negotiation, and response headers; the caller's context
+	// provides cancellation without imposing an arbitrary whole-file timeout.
+	resp, err := doRequest(streamingClient(httpClient), req)
 	if err != nil {
 		return fmt.Errorf("failed to do request: %v", err)
 	}
@@ -1882,7 +1881,9 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 	defer cancel()
 	req = req.WithContext(reqCtx)
 
-	resp, err := doRequest(httpClient, req)
+	// Do not let the shared client's shorter whole-request timeout override the
+	// size-based request context above while the response body is streaming.
+	resp, err := doRequest(streamingClient(httpClient), req)
 	if err != nil {
 		return fmt.Errorf("failed to do request: %v", err)
 	}
