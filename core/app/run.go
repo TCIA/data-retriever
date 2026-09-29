@@ -293,16 +293,14 @@ type existingSeriesDisposition struct {
 // resolveExistingSeriesDisposition reports a series that was left alone
 // because it already exists on disk with the expected size — whether that
 // was found via the --skip-existing/resume check (which ignores --force)
-// or the plain already-exists check (which respects --force). Either way,
-// nothing was actually transferred this run, so it's always reported as
-// skipped rather than downloaded: previously the resume path reported
-// "succeeded", which made a repeated download where every series already
-// existed show as "Downloaded" across the board instead of "Skipped".
+// or the plain already-exists check (which respects --force). There is no
+// separate "skipped" category: a series that's already present is reported
+// the same as one downloaded this run.
 func resolveExistingSeriesDisposition() existingSeriesDisposition {
 	return existingSeriesDisposition{
-		status:            seriesStatusSkipped,
-		completionSkipped: true,
-		countAsDownloaded: false,
+		status:            seriesStatusSucceeded,
+		completionSkipped: false,
+		countAsDownloaded: true,
 	}
 }
 
@@ -1063,10 +1061,10 @@ func (wc *WorkerContext) handleMetadataOnly(fileInfo *FileInfo, isSpreadsheetInp
 	displayName := seriesDisplayLabel(fileInfo)
 
 	if isSpreadsheetInput {
-		Logger.Debugf("[Worker %d] Skipping metadata for item %s", wc.WorkerID, fileInfo.SeriesInstanceUID)
-		atomic.AddInt32(&wc.Stats.Skipped, 1)
+		Logger.Debugf("[Worker %d] No metadata endpoint for spreadsheet item %s", wc.WorkerID, fileInfo.SeriesInstanceUID)
+		atomic.AddInt32(&wc.Stats.Downloaded, 1)
 		updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
-		wc.emitSeriesEvent(fileInfo, seriesStatusSkipped, fmt.Sprintf("Spreadsheet inputs do not expose metadata: %s", displayName), 100)
+		wc.emitSeriesEvent(fileInfo, seriesStatusSucceeded, fmt.Sprintf("Spreadsheet inputs do not expose metadata: %s", displayName), 100)
 		return
 	}
 

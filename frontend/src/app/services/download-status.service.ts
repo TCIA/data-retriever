@@ -16,7 +16,6 @@ const RATE_SAMPLE_WINDOW_SECONDS = 1;
 const TERMINAL_STATUSES = new Set<SeriesDownloadSnapshot['status']>([
   'succeeded',
   'failed',
-  'skipped',
   'cancelled',
 ]);
 
@@ -35,7 +34,6 @@ const EMPTY_OVERVIEW: DownloadOverviewSnapshot = {
   active: 0,
   completed: 0,
   failed: 0,
-  skipped: 0,
   cancelled: 0,
   progressPercent: 0,
 };
@@ -646,7 +644,7 @@ export class DownloadStatusService implements OnDestroy {
     // "done" can't equal "total" — and progress can't read 100% — before
     // metadata fetching has actually finished.
     const total = Math.max(snapshots.length, run.expectedTotal ?? 0);
-    let queued = 0, active = 0, completed = 0, failed = 0, skipped = 0, cancelled = 0;
+    let queued = 0, active = 0, completed = 0, failed = 0, cancelled = 0;
     for (const s of snapshots) {
       if (s.status === 'queued') queued++;
       else if (
@@ -659,13 +657,12 @@ export class DownloadStatusService implements OnDestroy {
       ) active++;
       else if (s.status === 'succeeded') completed++;
       else if (s.status === 'failed') failed++;
-      else if (s.status === 'skipped') skipped++;
       else if (s.status === 'cancelled') cancelled++;
     }
     // Progress reflects successful outcomes only — a failed series never
     // advances it, so a run that finishes with failures reads e.g. 95%
     // (95 of 100 succeeded) instead of jumping to 100%.
-    const successCount = completed + skipped;
+    const successCount = completed;
     let progressPercent = total > 0 ? Math.round((successCount / total) * 100) : 0;
     // Math.round can bump a near-total success rate (e.g. 279/280 = 99.64%)
     // up to a misleading 100%, so only ever show 100 when every series
@@ -686,7 +683,6 @@ export class DownloadStatusService implements OnDestroy {
       active,
       completed,
       failed,
-      skipped,
       cancelled,
       progressPercent,
     };
@@ -845,7 +841,7 @@ export class DownloadStatusService implements OnDestroy {
       'download-initiated': 30,
       downloading: 35,
       decompressing: 80,
-      skipped: 100, succeeded: 100, failed: 100, cancelled: 100,
+      succeeded: 100, failed: 100, cancelled: 100,
     };
     return this.clampProgress(statusDefaults[status] ?? current ?? 0);
   }
@@ -881,7 +877,7 @@ export class DownloadStatusService implements OnDestroy {
       case 'download-initiated':
       case 'downloading': return 'download';
       case 'decompressing': return 'decompress';
-      case 'succeeded': case 'skipped': return 'complete';
+      case 'succeeded': return 'complete';
       case 'failed': case 'cancelled': return 'failed';
       default: return currentPhase ?? 'download';
     }

@@ -785,6 +785,38 @@ func (b *App) OpenDirectory(path string) error {
 	return nil
 }
 
+// GetDirectorySize returns the total size in bytes of every regular file
+// under path, recursively. Used to show the actual on-disk footprint of a
+// run's output directory (which can differ from the sum of reported
+// download sizes, e.g. due to decompression or files left over from a
+// prior run).
+func (a *App) GetDirectorySize(path string) (int64, error) {
+	trimmed := strings.TrimSpace(path)
+	if trimmed == "" {
+		return 0, fmt.Errorf("directory path is empty")
+	}
+
+	cleaned := filepath.Clean(trimmed)
+	var size int64
+	err := filepath.Walk(cleaned, func(_ string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			size += info.Size()
+		}
+		return nil
+	})
+	if err != nil {
+		if os.IsNotExist(err) {
+			return 0, fmt.Errorf("directory does not exist: %s", cleaned)
+		}
+		return 0, fmt.Errorf("failed to compute directory size: %w", err)
+	}
+
+	return size, nil
+}
+
 func (a *App) IsMac() bool {
 	return stdRuntime.GOOS == "darwin"
 }

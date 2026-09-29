@@ -18,6 +18,8 @@ export function FrontendReady():Promise<void>;
 
 export function GetDefaultOutputDirectory():Promise<string>;
 
+export function GetDirectorySize(arg1:string):Promise<number>;
+
 export function GetLatestSupportLogPath():Promise<string>;
 
 export function GetPendingFileOpen():Promise<string>;

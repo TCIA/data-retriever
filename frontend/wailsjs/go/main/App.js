@@ -34,6 +34,10 @@ export function GetDefaultOutputDirectory() {
   return window['go']['main']['App']['GetDefaultOutputDirectory']();
 }
 
+export function GetDirectorySize(arg1) {
+  return window['go']['main']['App']['GetDirectorySize'](arg1);
+}
+
 export function GetLatestSupportLogPath() {
   return window['go']['main']['App']['GetLatestSupportLogPath']();
 }

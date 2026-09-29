@@ -141,17 +141,14 @@
           <span class="stat-value">{{ run.overview.active }}</span>
           <span class="stat-label">In-Progress</span>
         </div>
-        <div class="stat-item">
-          <span class="stat-value">{{ run.overview.skipped }}</span>
-          <span class="stat-label">Skipped</span>
-        </div>
       </div>
 
-      <div class="transfer-status" *ngIf="showTransferSpinner || transferStatusText || elapsedText || totalDownloadedText || averageSpeedText">
+      <div class="transfer-status" *ngIf="showTransferSpinner || transferStatusText || elapsedText || totalDownloadedText || directorySizeText || averageSpeedText">
         <span class="spinner" *ngIf="showTransferSpinner" aria-hidden="true"></span>
         <span class="transfer-detail" *ngIf="elapsedText" [title]="elapsedText">{{ elapsedText }}</span>
         <span class="transfer-detail" *ngIf="transferStatusText" [title]="transferStatusText">{{ transferStatusText }}</span>
         <span class="transfer-detail" *ngIf="totalDownloadedText" [title]="totalDownloadedText">{{ totalDownloadedText }}</span>
+        <span class="transfer-detail" *ngIf="directorySizeText" [title]="directorySizeText">{{ directorySizeText }}</span>
         <span class="transfer-detail" *ngIf="averageSpeedText" [title]="averageSpeedText">{{ averageSpeedText }}</span>
       </div>
 

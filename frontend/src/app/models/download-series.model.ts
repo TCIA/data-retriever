@@ -6,7 +6,6 @@ export type SeriesDownloadStatus =
   | 'download-initiated'
   | 'downloading'
   | 'decompressing'
-  | 'skipped'
   | 'succeeded'
   | 'failed'
   | 'cancelled';
@@ -66,7 +65,6 @@ export interface DownloadOverviewSnapshot {
   active: number;
   completed: number;
   failed: number;
-  skipped: number;
   cancelled: number;
   progressPercent: number;
 }
@@ -79,7 +77,6 @@ export interface ManifestDownloadSnapshot {
   active: number;
   completed: number;
   failed: number;
-  skipped: number;
   cancelled: number;
   progressPercent: number;
   bytesDownloaded?: number;

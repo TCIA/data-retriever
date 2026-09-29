@@ -46,8 +46,6 @@ export class DownloadCardComponent {
         return 'Downloading';
       case 'decompressing':
         return 'Decompressing';
-      case 'skipped':
-        return 'Skipped';
       case 'succeeded':
         return 'Completed';
       case 'failed':
@@ -75,7 +73,6 @@ export class DownloadCardComponent {
         return '#4caf50';
       case 'failed':
         return '#f44336';
-      case 'skipped':
       case 'cancelled':
         return '#9e9e9e';
       default:

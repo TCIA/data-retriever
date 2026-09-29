@@ -19,7 +19,6 @@ describe('ManifestDownloadCardComponent', () => {
         active: 0,
         completed: 2,
         failed: 0,
-        skipped: 0,
         cancelled: 0,
         progressPercent: 100,
       },
@@ -63,42 +62,6 @@ describe('ManifestDownloadCardComponent', () => {
     expect(component.canOpenOutputDirectory).toBeTrue();
   });
 
-  it('shows Open Folder when all series are skipped', () => {
-    const component = createComponent();
-    component.run = createRunState({
-      overview: {
-        total: 3,
-        queued: 0,
-        active: 0,
-        completed: 0,
-        failed: 0,
-        skipped: 3,
-        cancelled: 0,
-        progressPercent: 100,
-      },
-    });
-
-    expect(component.canOpenOutputDirectory).toBeTrue();
-  });
-
-  it('shows Open Folder when completed + skipped equals total', () => {
-    const component = createComponent();
-    component.run = createRunState({
-      overview: {
-        total: 4,
-        queued: 0,
-        active: 0,
-        completed: 1,
-        failed: 0,
-        skipped: 3,
-        cancelled: 0,
-        progressPercent: 100,
-      },
-    });
-
-    expect(component.canOpenOutputDirectory).toBeTrue();
-  });
-
   it('hides Open Folder when any series failed', () => {
     const component = createComponent();
     component.run = createRunState({
@@ -108,7 +71,6 @@ describe('ManifestDownloadCardComponent', () => {
         active: 0,
         completed: 1,
         failed: 1,
-        skipped: 0,
         cancelled: 0,
         progressPercent: 100,
       },
@@ -126,7 +88,6 @@ describe('ManifestDownloadCardComponent', () => {
         active: 0,
         completed: 2,
         failed: 0,
-        skipped: 0,
         cancelled: 1,
         progressPercent: 100,
       },
@@ -142,16 +103,15 @@ describe('ManifestDownloadCardComponent', () => {
     expect(component.canOpenOutputDirectory).toBeFalse();
   });
 
-  it('shows downloaded fraction as completed plus skipped over total', () => {
+  it('shows downloaded fraction as completed over total', () => {
     const component = createComponent();
     component.run = createRunState({
       overview: {
         total: 5,
         queued: 0,
         active: 0,
-        completed: 2,
+        completed: 3,
         failed: 0,
-        skipped: 1,
         cancelled: 0,
         progressPercent: 60,
       },
@@ -191,7 +151,6 @@ describe('ManifestDownloadCardComponent', () => {
         active: 0,
         completed: 2,
         failed: 0,
-        skipped: 0,
         cancelled: 0,
         progressPercent: 100,
       },
@@ -211,7 +170,6 @@ describe('ManifestDownloadCardComponent', () => {
         active: 1,
         completed: 42,
         failed: 0,
-        skipped: 0,
         cancelled: 0,
         progressPercent: 98,
       },
@@ -231,7 +189,6 @@ describe('ManifestDownloadCardComponent', () => {
         active: 1,
         completed: 42,
         failed: 0,
-        skipped: 0,
         cancelled: 0,
         progressPercent: 98,
       },

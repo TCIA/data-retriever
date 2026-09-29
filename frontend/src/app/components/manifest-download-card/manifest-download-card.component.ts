@@ -4,11 +4,12 @@ import {
   Component,
   EventEmitter,
   Input,
+  OnChanges,
   OnDestroy,
   OnInit,
   Output,
 } from '@angular/core';
-import { OpenDirectory } from '../../../../wailsjs/go/main/App';
+import { GetDirectorySize, OpenDirectory } from '../../../../wailsjs/go/main/App';
 import { RunState } from '../../models/run-state.model';
 
 @Component({
@@ -17,10 +18,15 @@ import { RunState } from '../../models/run-state.model';
   styleUrls: ['./manifest-download-card.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ManifestDownloadCardComponent implements OnInit, OnDestroy {
+export class ManifestDownloadCardComponent implements OnInit, OnChanges, OnDestroy {
   @Input() run!: RunState;
 
   private elapsedTickId?: ReturnType<typeof setInterval>;
+
+  /** Output directory path the on-disk size was last fetched (or is being
+   * fetched) for — guards against re-fetching on every change-detection pass. */
+  private directorySizeFetchedFor?: string;
+  private directorySizeBytes?: number;
 
   constructor(private readonly cdr: ChangeDetectorRef) {}
 
@@ -28,6 +34,30 @@ export class ManifestDownloadCardComponent implements OnInit, OnDestroy {
     // 1Hz tick so the elapsed-time indicator advances between progress events
     // (and during quiet periods like TCIA metadata fetches).
     this.elapsedTickId = setInterval(() => this.cdr.markForCheck(), 1000);
+    this.maybeFetchDirectorySize();
+  }
+
+  ngOnChanges(): void {
+    this.maybeFetchDirectorySize();
+  }
+
+  /** Once a run is done, fetch the actual on-disk size of its output
+   * directory — the reported download total can differ (decompression,
+   * files left over from a prior run into the same folder, etc.). */
+  private maybeFetchDirectorySize(): void {
+    const path = this.run?.outputDirPath;
+    if (!this.isTerminal || !path || this.directorySizeFetchedFor === path) {
+      return;
+    }
+    this.directorySizeFetchedFor = path;
+    GetDirectorySize(path)
+      .then(bytes => {
+        this.directorySizeBytes = bytes;
+        this.cdr.markForCheck();
+      })
+      .catch(() => {
+        // Leave directorySizeBytes unset — directorySizeText stays empty.
+      });
   }
 
   ngOnDestroy(): void {
@@ -67,12 +97,10 @@ export class ManifestDownloadCardComponent implements OnInit, OnDestroy {
     const active = m.active ?? 0;
     const completed = m.completed ?? 0;
     const failed = m.failed ?? 0;
-    const skipped = m.skipped ?? 0;
     const cancelled = m.cancelled ?? 0;
     const segments: string[] = [];
     segments.push(`${completed} completed`);
     if (failed) segments.push(`${failed} failed`);
-    if (skipped) segments.push(`${skipped} skipped`);
     if (cancelled) segments.push(`${cancelled} cancelled`);
     if (queued) segments.push(`${queued} queued`);
     segments.push(`${active} in progress`);
@@ -94,7 +122,7 @@ export class ManifestDownloadCardComponent implements OnInit, OnDestroy {
   get displayProgressValue(): number {
     if (this.isPaused) {
       const total = this.run?.overview?.total ?? 0;
-      const done = (this.run?.overview?.completed ?? 0) + (this.run?.overview?.skipped ?? 0);
+      const done = this.run?.overview?.completed ?? 0;
       return total > 0 ? Math.round((done / total) * 100) : 0;
     }
     return this.progressValue;
@@ -108,7 +136,7 @@ export class ManifestDownloadCardComponent implements OnInit, OnDestroy {
     if (this.isPaused) return false;
     const o = this.run?.overview;
     const total = o?.total ?? 0;
-    const done = (o?.completed ?? 0) + (o?.failed ?? 0) + (o?.skipped ?? 0) + (o?.cancelled ?? 0);
+    const done = (o?.completed ?? 0) + (o?.failed ?? 0) + (o?.cancelled ?? 0);
     return total > 0 && done >= total;
   }
 
@@ -150,7 +178,7 @@ export class ManifestDownloadCardComponent implements OnInit, OnDestroy {
   }
 
   get completedSeriesFraction(): string {
-    const downloaded = (this.run?.overview?.completed ?? 0) + (this.run?.overview?.skipped ?? 0);
+    const downloaded = this.run?.overview?.completed ?? 0;
     const total = this.run?.overview?.total ?? 0;
     return `${downloaded} / ${total} downloaded`;
   }
@@ -179,8 +207,8 @@ export class ManifestDownloadCardComponent implements OnInit, OnDestroy {
     const units = ['B', 'KB', 'MB', 'GB', 'TB'];
     let value = bytes;
     let unitIndex = 0;
-    while (value >= 1024 && unitIndex < units.length - 1) {
-      value /= 1024;
+    while (value >= 1000 && unitIndex < units.length - 1) {
+      value /= 1000;
       unitIndex++;
     }
     const decimals = value >= 100 || unitIndex === 0 ? 0 : value >= 10 ? 1 : 2;
@@ -192,6 +220,12 @@ export class ManifestDownloadCardComponent implements OnInit, OnDestroy {
     const bytes = this.run?.bytesDownloaded;
     if (typeof bytes !== 'number' || !isFinite(bytes) || bytes <= 0) return '';
     return `Total downloaded: ${this.formatBytes(bytes)}`;
+  }
+
+  get directorySizeText(): string {
+    if (!this.isTerminal) return '';
+    if (typeof this.directorySizeBytes !== 'number' || !isFinite(this.directorySizeBytes)) return '';
+    return `Directory size: ${this.formatBytes(this.directorySizeBytes)}`;
   }
 
   /**
@@ -266,9 +300,8 @@ export class ManifestDownloadCardComponent implements OnInit, OnDestroy {
     const total = o?.total ?? 0;
     const completed = o?.completed ?? 0;
     const failed = o?.failed ?? 0;
-    const skipped = o?.skipped ?? 0;
     const cancelled = o?.cancelled ?? 0;
-    const successfulTerminal = completed + skipped;
+    const successfulTerminal = completed;
     const outputDirPath = this.run?.outputDirPath ?? '';
     return total > 0 && successfulTerminal === total && failed === 0 && cancelled === 0 && outputDirPath.length > 0;
   }
