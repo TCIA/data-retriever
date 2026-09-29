@@ -44,9 +44,11 @@ func newClient(proxy string, maxConnsPerHost int) *http.Client {
 		transport.Proxy = http.ProxyURL(p)
 	}
 
+	// No client-wide Timeout: it would bound the entire request (connect
+	// through full body read) and override the size-aware per-request
+	// context deadlines set in download.go's downloadFromTCIA/downloadDirect.
 	client := &http.Client{
 		Transport: transport,
-		Timeout:   10 * time.Minute,
 	}
 
 	return client
