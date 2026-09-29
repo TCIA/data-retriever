@@ -70,3 +70,12 @@ Thumbs.db
 checksums.txt
 go.mod
 go.mod
+
+# scripts/bench_http.sh scratch data: manifests dropped in for benchmarking
+# and the per-run results/downloaded files it produces. Keep the directories
+# themselves in git (via .gitkeep) so the script's default paths exist in a
+# fresh checkout, but never their contents.
+/benchmarkManifests/*
+!/benchmarkManifests/.gitkeep
+/bench-http-results/*
+!/bench-http-results/.gitkeep

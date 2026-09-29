@@ -63,6 +63,12 @@ type Options struct {
 	DirectoryMode         string
 	IDCParquetPath        string
 	PriorParquetPath      string
+	// HTTPVersion pins the download client's transport protocol: "1.1"
+	// (default) forces HTTP/1.1 even against servers that advertise HTTP/2;
+	// "2" lets the transport negotiate HTTP/2 via ALPN where the server
+	// offers it. Intended for running the same manifest twice to compare
+	// protocol performance; see HTTPVersion1_1/HTTPVersion2.
+	HTTPVersion string
 	AuthGate              *AuthGate
 	CLI                   bool
 	AcceptDataPolicy      bool
@@ -125,6 +131,7 @@ func ParseOptions(args []string, promptReader io.Reader) (*Options, error) {
 		MaxConnsPerHost:       8,
 		RequestDelay:          500 * time.Millisecond,
 		MetadataWorkers:       20,
+		HTTPVersion:           HTTPVersion1_1,
 	}
 
 	setLogger(false, false, "")
@@ -159,6 +166,7 @@ func ParseOptions(args []string, promptReader io.Reader) (*Options, error) {
 	opt.opt.StringVar(&opt.DirectoryMode, "directory-mode", "descriptive",
 		opt.opt.Description("Directory structure of saved files: classic or descriptive"))
 	opt.opt.BoolVar(&opt.CLI, "cli", false, opt.opt.Description("Run in CLI mode"))
+	opt.opt.StringVar(&opt.HTTPVersion, "http-version", HTTPVersion1_1, opt.opt.Description("HTTP protocol to use for downloads: 1.1 or 2 (for A/B performance testing)"))
 	opt.opt.BoolVar(&opt.AcceptDataPolicy, "accept-data-policy", false, opt.opt.Description("accept the TCIA data usage policy without interactive prompt"))
 
 	if _, err := opt.opt.Parse(args); err != nil {
@@ -184,6 +192,10 @@ func ParseOptions(args []string, promptReader io.Reader) (*Options, error) {
 
 	if !opt.NoMD5 && opt.NoDecompress {
 		return opt, fmt.Errorf("MD5 validation (default) and --no-decompress are incompatible. Use --no-md5 with --no-decompress")
+	}
+
+	if opt.HTTPVersion != HTTPVersion1_1 && opt.HTTPVersion != HTTPVersion2 {
+		return opt, fmt.Errorf("--http-version must be %q or %q, got %q", HTTPVersion1_1, HTTPVersion2, opt.HTTPVersion)
 	}
 
 	if opt.TokenUrl != "" && opt.TokenUrl != TokenUrl {

@@ -864,7 +864,7 @@ func NewApp() *App {
 		pausedBatches:     make(map[string]*DownloadBatch),
 		frontendReady:     make(chan struct{}),
 		downloadSemaphore: app.NewWorkerSemaphore(8),
-		httpClient:        app.NewSharedHTTPClient(8),
+		httpClient:        app.NewSharedHTTPClient(8, app.HTTPVersion1_1),
 	}
 }
 

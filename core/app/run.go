@@ -448,7 +448,14 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 
 	client := options.SharedHTTPClient
 	if client == nil {
-		client = newClient(options.Proxy, options.MaxConnsPerHost)
+		// Only a freshly built (non-shared) client is tallied: a shared GUI
+		// client spans multiple concurrently running manifests, so per-run
+		// protocol stats wouldn't mean anything attributable to this call.
+		protocolStats := NewProtocolStats()
+		client = newClientWithStats(options.Proxy, options.MaxConnsPerHost, options.HTTPVersion, protocolStats)
+		defer func() {
+			callbacks.emitStdout(fmt.Sprintf("%s\n", FormatProtocolStatsLine(protocolStats.Snapshot())))
+		}()
 	}
 
 	if err := os.MkdirAll(options.Output, os.ModePerm); err != nil {
