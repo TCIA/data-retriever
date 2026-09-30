@@ -182,6 +182,9 @@ Launch with `--cli` (or `-cli`) to skip the GUI entirely:
 
 - Supported Croissant row roles: `data file`, `manifest`.
 - `manifest` rows marked for **TCIA Data Retriever** are expanded through the linked nested manifest.
+- Standard Croissant `RecordSet` fields backed by an external CSV `FileObject`
+  are expanded automatically. The CSV must use a supported Data Retriever
+  route column: `SeriesInstanceUID`, `imageUrl`, or `drs_uri`.
 - Unsupported transfer-package rows (for example Aspera handoffs) are skipped with warnings.
 
 ### Examples
