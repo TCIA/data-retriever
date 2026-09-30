@@ -25,6 +25,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -1411,6 +1412,20 @@ func (info *FileInfo) downloadFromS3(
 			d.Concurrency = 16
 		})
 
+		// A sync job can span many objects under the series' S3 prefix
+		// (one per DICOM instance). seriesTotalBytes/bytesSoFar let
+		// onProgress report bytes accumulated across the whole job instead
+		// of just the most recently finished object — otherwise each
+		// object's onProgress call overwrote the series' reported total
+		// with that single file's size, undercounting it by up to the full
+		// series (UI "Total downloaded" could read a few MB when hundreds
+		// of MB had actually been written to disk).
+		var seriesTotalBytes int64
+		for _, obj := range objects {
+			seriesTotalBytes += obj.size
+		}
+		var bytesSoFar int64
+
 		workCh := make(chan s3Object)
 		errCh := make(chan error, 1)
 		var wg sync.WaitGroup
@@ -1477,7 +1492,15 @@ func (info *FileInfo) downloadFromS3(
 					}
 
 					if onProgress != nil {
-						onProgress(100.0, numBytes, numBytes)
+						cumulative := atomic.AddInt64(&bytesSoFar, numBytes)
+						percent := 0.0
+						if seriesTotalBytes > 0 {
+							percent = float64(cumulative) / float64(seriesTotalBytes) * 100
+							if percent > 100 {
+								percent = 100
+							}
+						}
+						onProgress(percent, cumulative, seriesTotalBytes)
 					}
 				}
 			}()

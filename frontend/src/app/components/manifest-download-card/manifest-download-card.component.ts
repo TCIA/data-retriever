@@ -219,13 +219,13 @@ export class ManifestDownloadCardComponent implements OnInit, OnChanges, OnDestr
     if (!this.isTerminal) return '';
     const bytes = this.run?.bytesDownloaded;
     if (typeof bytes !== 'number' || !isFinite(bytes) || bytes <= 0) return '';
-    return `Total downloaded: ${this.formatBytes(bytes)}`;
+    return `Downloaded: ${this.formatBytes(bytes)}`;
   }
 
   get directorySizeText(): string {
     if (!this.isTerminal) return '';
     if (typeof this.directorySizeBytes !== 'number' || !isFinite(this.directorySizeBytes)) return '';
-    return `Directory size: ${this.formatBytes(this.directorySizeBytes)}`;
+    return `Size on disk: ${this.formatBytes(this.directorySizeBytes)}`;
   }
 
   /**
@@ -247,7 +247,14 @@ export class ManifestDownloadCardComponent implements OnInit, OnChanges, OnDestr
   }
 
   get elapsedText(): string {
-    const elapsedSec = this.elapsedSeconds();
+    // Based on downloadStartedAt (when the first series actually began
+    // transferring), not startedAt, so this doesn't tick up during
+    // metadata preparation/"Initializing" — nothing to show yet until a
+    // download has actually started.
+    const downloadStartedISO = this.run?.downloadStartedAt;
+    if (!downloadStartedISO) return '';
+
+    const elapsedSec = this.elapsedSeconds(downloadStartedISO);
     if (elapsedSec === null) return '';
 
     const completedISO = this.run?.completedAt;

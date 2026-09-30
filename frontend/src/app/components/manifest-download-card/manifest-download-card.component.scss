@@ -282,9 +282,11 @@
   margin-top: 4px;
   padding-top: 8px;
   border-top: 1px solid #e6e6e6;
-  display: inline-flex;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  row-gap: 4px;
+  column-gap: 8px;
 }
 
 .completion-fraction {
