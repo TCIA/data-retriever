@@ -1,0 +1,465 @@
+{
+  "@context": {
+    "@language": "en",
+    "@vocab": "https://schema.org/",
+    "@base": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/",
+    "sc": "https://schema.org/",
+    "cr": "http://mlcommons.org/croissant/",
+    "rai": "http://mlcommons.org/croissant/RAI/",
+    "dct": "http://purl.org/dc/terms/",
+    "prov": "http://www.w3.org/ns/prov#",
+    "odrl": "http://www.w3.org/ns/odrl/2/",
+    "duo": "http://purl.obolibrary.org/obo/DUO_",
+    "description": {
+      "@container": "@language"
+    },
+    "arrayShape": "cr:arrayShape",
+    "citeAs": "cr:citeAs",
+    "conformsTo": "dct:conformsTo",
+    "data": {
+      "@id": "cr:data",
+      "@type": "@json"
+    },
+    "dataType": {
+      "@id": "cr:dataType",
+      "@type": "@vocab"
+    },
+    "field": "cr:field",
+    "isLiveDataset": "cr:isLiveDataset",
+    "isArray": "cr:isArray",
+    "key": "cr:key",
+    "recordSet": "cr:recordSet",
+    "sdVersion": "cr:sdVersion",
+    "sha256": "cr:sha256",
+    "value": "cr:value",
+    "annotation": "cr:annotation",
+    "source": "cr:source",
+    "fileObject": "cr:fileObject",
+    "fileSet": "cr:fileSet",
+    "extract": "cr:extract",
+    "column": "cr:column",
+    "fileProperty": "cr:fileProperty",
+    "format": "cr:format",
+    "transform": "cr:transform",
+    "separator": "cr:separator",
+    "regex": "cr:regex",
+    "readLines": "cr:readLines",
+    "unArchive": "cr:unArchive",
+    "jsonPath": "cr:jsonPath",
+    "examples": {
+      "@id": "cr:examples",
+      "@type": "@json"
+    },
+    "subField": "cr:subField",
+    "parentField": "cr:parentField",
+    "references": "cr:references",
+    "equivalentProperty": "cr:equivalentProperty",
+    "includes": "cr:includes",
+    "excludes": "cr:excludes",
+    "containedIn": "cr:containedIn",
+    "md5": "cr:md5",
+    "name": {
+      "@container": "@language"
+    },
+    "path": "cr:path",
+    "repeated": "cr:repeated",
+    "replace": "cr:replace",
+    "samplingRate": "cr:samplingRate"
+  },
+  "@type": "sc:Dataset",
+  "@id": "https://doi.org/10.7937/TCIA.2020.T90F-WB82",
+  "conformsTo": "http://mlcommons.org/croissant/1.1",
+  "name": "AI-ready restained and co-registered multiplex dataset for head-and-neck carcinoma",
+  "alternateName": "HNSCC-mIF-mIHC-comparison",
+  "description": "We introduce a new AI-ready computational pathology dataset containing restained and co-registered digitized images from eight head-and-neck squamous cell carcinoma patients. Specifically, the same tumor sections were stained with the expensive multiplex immunofluorescence (mIF) assay first and then restained with cheaper multiplex immunohistochemistry (mIHC). This is a first public dataset that demonstrates the equivalence of these two staining methods which in turn allows several use cases; due to the equivalence, our cheaper mIHC staining protocol can offset the need for expensive mIF staining/scanning which requires highly skilled lab technicians. As opposed to subjective and error-prone immune cell annotations from individual pathologists (disagreement > 50%) to drive SOTA deep learning approaches, this dataset provides objective immune and tumor cell annotations via mIF/mIHC restaining for more reproducible and accurate characterization of tumor immune microenvironment (e.g. for immunotherapy). We demonstrate the effectiveness of this dataset in three use cases: (1) IHC quantification of CD3/CD8 tumor-infiltrating lymphocytes via style transfer, (2) virtual translation of cheap mIHC stains to more expensive mIF stains, and (3) virtual tumor/immune cellular phenotyping on standard hematoxylin images. The code for stain translation is available at https://github.com/nadeemlab/DeepLIIF and the code for performing interactive deep learning whole-cell/nuclear segmentation is available at https://github.com/nadeemlab/impartial . After scanning the full images, nine regions of interest (ROIs) from each slide/ Case were chosen by an experienced pathologist on both mIF and mIHC images: three in the tumor core ( T ), three at the tumor margin ( M ),and three outside in the adjacent stroma ( S ) area. These individual ROIs were further subdivided into four 512x512 patches with indices [0_0], [0_1], [1_0], [1_1]. The final notation for each file is Case[patient_id]_[T/M/S][1/2/3]_[ROI_index]_[Marker_name]. More details can be found in the paper.",
+  "url": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/",
+  "identifier": "https://doi.org/10.7937/TCIA.2020.T90F-WB82",
+  "license": [
+    "https://creativecommons.org/licenses/by/4.0/"
+  ],
+  "citeAs": "https://doi.org/10.7937/TCIA.2020.T90F-WB82",
+  "dateModified": "2023-08-31",
+  "version": "2",
+  "sdVersion": "0.2.0-draft",
+  "isLiveDataset": true,
+  "conditionsOfAccess": "Open metadata and payloads subject to the listed license and TCIA usage policy.",
+  "usageInfo": [
+    {
+      "@type": "sc:CreativeWork",
+      "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+      "name": "TCIA Data Usage Policies and Restrictions",
+      "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+    }
+  ],
+  "recordSet": [
+    {
+      "@type": "cr:RecordSet",
+      "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images/records",
+      "name": "PathDB public image files",
+      "description": "One CSV row per directly downloadable PathDB image, with the original PathDB discovery and scientific metadata retained.",
+      "key": {
+        "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images/records/imageUrl"
+      },
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images/records/Collection",
+          "name": "Collection",
+          "dataType": "sc:Text",
+          "description": "Source field 'collection'; values are retained without semantic substitution.",
+          "alternateName": "collection",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images.csv"
+            },
+            "extract": {
+              "column": "Collection"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images/records/PatientID",
+          "name": "PatientID",
+          "dataType": "sc:Text",
+          "description": "Dataset-scoped participant identifier supplied by PathDB metadata.",
+          "alternateName": "patient_id",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images.csv"
+            },
+            "extract": {
+              "column": "PatientID"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images/records/SlideID",
+          "name": "SlideID",
+          "dataType": "sc:Text",
+          "description": "Source field 'slide_id'; values are retained without semantic substitution.",
+          "alternateName": "slide_id",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images.csv"
+            },
+            "extract": {
+              "column": "SlideID"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images/records/caMicroscopeSlideID",
+          "name": "caMicroscopeSlideID",
+          "dataType": "sc:Text",
+          "description": "Source field 'camic_id'; values are retained without semantic substitution.",
+          "alternateName": "camic_id",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images.csv"
+            },
+            "extract": {
+              "column": "caMicroscopeSlideID"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images/records/viewerUrl",
+          "name": "viewerUrl",
+          "dataType": "sc:URL",
+          "description": "Public caMicroscope viewer URL; this is not the payload URL.",
+          "alternateName": "camicroscope_url",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images.csv"
+            },
+            "extract": {
+              "column": "viewerUrl"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images/records/imageUrl",
+          "name": "imageUrl",
+          "dataType": "sc:URL",
+          "description": "Direct public image byte URL and retrieval key.",
+          "alternateName": "wsiimage_url",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images.csv"
+            },
+            "extract": {
+              "column": "imageUrl"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images/records/species",
+          "name": "species",
+          "dataType": "sc:Text",
+          "description": "Source field 'species'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images.csv"
+            },
+            "extract": {
+              "column": "species"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images/records/CancerType",
+          "name": "CancerType",
+          "dataType": "sc:Text",
+          "description": "Source field 'cancer_type'; values are retained without semantic substitution.",
+          "alternateName": "cancer_type",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images.csv"
+            },
+            "extract": {
+              "column": "CancerType"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images/records/CancerLocation",
+          "name": "CancerLocation",
+          "dataType": "sc:Text",
+          "description": "Source field 'cancer_location'; values are retained without semantic substitution.",
+          "alternateName": "cancer_location",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images.csv"
+            },
+            "extract": {
+              "column": "CancerLocation"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images/records/FileFormat",
+          "name": "FileFormat",
+          "dataType": "sc:Text",
+          "description": "Source field 'data_format'; values are retained without semantic substitution.",
+          "alternateName": "data_format",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images.csv"
+            },
+            "extract": {
+              "column": "FileFormat"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images/records/Modality",
+          "name": "Modality",
+          "dataType": "sc:Text",
+          "description": "Source field 'modality'; values are retained without semantic substitution.",
+          "alternateName": "modality",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images.csv"
+            },
+            "extract": {
+              "column": "Modality"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images/records/protocol",
+          "name": "protocol",
+          "dataType": "sc:Text",
+          "description": "Source field 'protocol'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images.csv"
+            },
+            "extract": {
+              "column": "protocol"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images/records/par",
+          "name": "par",
+          "dataType": "sc:Text",
+          "description": "Source field 'par'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images.csv"
+            },
+            "extract": {
+              "column": "par"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images/records/Magnification",
+          "name": "Magnification",
+          "dataType": "sc:Text",
+          "description": "Source field 'magnification'; values are retained without semantic substitution.",
+          "alternateName": "magnification",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images.csv"
+            },
+            "extract": {
+              "column": "Magnification"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images/records/SourceUpdated",
+          "name": "SourceUpdated",
+          "dataType": "sc:Text",
+          "description": "Source field 'update_value'; values are retained without semantic substitution.",
+          "alternateName": "update_value",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images.csv"
+            },
+            "extract": {
+              "column": "SourceUpdated"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images/records/accessLevel",
+          "name": "accessLevel",
+          "description": "Constant recordset-level value applied to every record.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images.csv"
+            },
+            "extract": {
+              "column": "accessLevel"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images/records/retrievalRoute",
+          "name": "retrievalRoute",
+          "description": "Constant recordset-level value applied to every record.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images.csv"
+            },
+            "extract": {
+              "column": "retrievalRoute"
+            }
+          }
+        }
+      ],
+      "conditionsOfAccess": "Open metadata and payloads subject to the listed license and TCIA usage policy.",
+      "usageInfo": [
+        {
+          "@type": "sc:CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": "sc:CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by/4.0/",
+          "name": "License or access policy supplied by TCIA",
+          "url": "https://creativecommons.org/licenses/by/4.0/"
+        }
+      ],
+      "prov:wasDerivedFrom": [
+        {
+          "@type": [
+            "sc:CreativeWork",
+            "prov:Entity"
+          ],
+          "@id": "https://github.com/kirbyju/tcia-query-skill/releases/tag/tcia-metadata-v2-latest",
+          "name": "TCIA query-skill snapshot PathDB projection",
+          "url": "https://github.com/kirbyju/tcia-query-skill/releases/tag/tcia-metadata-v2-latest",
+          "sha256": "cd23b5b89659563614b03bb4f2b5e100c6f13fa623a43ec91df18a53e38b9ba1",
+          "description": "Snapshot timestamp: 2026-08-13T12:04:53.537235+00:00."
+        }
+      ],
+      "additionalProperty": [
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA WordPress download id",
+          "value": "pathdb-images"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "Record grain",
+          "value": "public image file"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "Retrieval key field",
+          "value": "imageUrl"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "CSV record count",
+          "value": 3212
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "External CSV model",
+          "value": "The complete record inventory is stored in a route-specific CSV FileObject. Each Croissant Field identifies its CSV column through a DataSource."
+        }
+      ]
+    }
+  ],
+  "prov:wasGeneratedBy": {
+    "@type": "prov:Activity",
+    "name": "TCIA Croissant recordset draft generation",
+    "description": "Deterministic projection from explicit TCIA query-skill artifacts and official manifest inputs."
+  },
+  "additionalProperty": [
+    {
+      "@type": "sc:PropertyValue",
+      "name": "Document role",
+      "value": "dataset Croissant with external recordset CSV files"
+    },
+    {
+      "@type": "sc:PropertyValue",
+      "name": "Recordset count",
+      "value": 1
+    },
+    {
+      "@type": "sc:PropertyValue",
+      "name": "External CSV model",
+      "value": "The complete record inventory is stored in a route-specific CSV FileObject. Each Croissant Field identifies its CSV column through a DataSource."
+    }
+  ],
+  "datePublished": "2020-06-04",
+  "distribution": [
+    {
+      "@type": "cr:FileObject",
+      "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images.csv",
+      "name": "pathdb-images.csv",
+      "description": "Complete tabular inventory for the PathDB public image files recordset.",
+      "contentUrl": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/recordsets/pathdb-images.csv",
+      "encodingFormat": "text/csv",
+      "contentSize": "1497579 B",
+      "sha256": "e424bf74370020a34d88adc2b1f632dc10a4416d646383305e8a97d7bb916396",
+      "license": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  ]
+}
