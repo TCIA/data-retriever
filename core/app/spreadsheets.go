@@ -3,10 +3,10 @@ package app
 import (
 	"encoding/csv"
 	"fmt"
+	"github.com/tealeg/xlsx"
 	"os"
 	"path/filepath"
 	"strings"
-	"github.com/tealeg/xlsx"
 	"unicode"
 )
 
@@ -38,6 +38,9 @@ func (d *TSVDecoder) Decode(file *os.File) ([][]string, error) {
 func decodesv(file *os.File, separator rune) ([][]string, error) {
 	reader := csv.NewReader(file)
 	reader.Comma = separator
+	// Accept ragged records so a single row with an extra trailing delimiter
+	// does not fail parsing for the entire manifest.
+	reader.FieldsPerRecord = -1
 	records, err := reader.ReadAll()
 	if err != nil {
 		return nil, err
@@ -69,7 +72,6 @@ func (d *XLSXDecoder) Decode(file *os.File) ([][]string, error) {
 		}
 	}
 
-
 	return records, nil
 }
 
@@ -88,17 +90,17 @@ func getSpreadsheetDecoder(filename string) (SpreadSheetDecoder, error) {
 }
 
 func normalize(s string) string {
-    s = strings.TrimSpace(s)
-    s = strings.ToLower(s)
+	s = strings.TrimSpace(s)
+	s = strings.ToLower(s)
 
-    // remove non letters/numbers
-    var b strings.Builder
-    for _, r := range s {
-        if unicode.IsLetter(r) || unicode.IsDigit(r) {
-            b.WriteRune(r)
-        }
-    }
-    return b.String()
+	// remove non letters/numbers
+	var b strings.Builder
+	for _, r := range s {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }
 
 func decodeSpreadsheet(filePath string) ([]*FileInfo, error) {
@@ -133,9 +135,9 @@ func decodeSpreadsheet(filePath string) ([]*FileInfo, error) {
 	studyDescIndex := -1
 	for i, col := range header {
 		switch normalize(col) {
-		case "drsuri", "fileid", "access":
+		case "drsuri", "fileid", "access", "guid", "fileguid", "drsguid":
 			drsURIIndex = i
-		case "imageurl","wsiimageurl" :
+		case "imageurl", "wsiimageurl":
 			imageURLIndex = i
 		case "name", "filename":
 			nameIndex = i
@@ -157,7 +159,7 @@ func decodeSpreadsheet(filePath string) ([]*FileInfo, error) {
 	}
 
 	var fileInfos []*FileInfo
-		for _, record := range records[1:] {
+	for _, record := range records[1:] {
 		var fileName string
 		var collection string
 		var patientId string
@@ -187,7 +189,7 @@ func decodeSpreadsheet(filePath string) ([]*FileInfo, error) {
 			if len(record) > drsURIIndex {
 				uri := record[drsURIIndex]
 				if !strings.HasPrefix(uri, "drs:") {
-			    uri = "drs://nci-crdc.datacommons.io/" + uri
+					uri = "drs://nci-crdc.datacommons.io/" + uri
 				}
 				if fileName == "" {
 					fileName = filepath.Base(uri)
@@ -195,14 +197,14 @@ func decodeSpreadsheet(filePath string) ([]*FileInfo, error) {
 				base := filepath.Base(uri)
 				ext := filepath.Ext(base)
 				fileInfos = append(fileInfos, &FileInfo{
-					DRSURI:    uri,
-					SeriesInstanceUID:  strings.TrimSuffix(base, ext), 
-					FileName:  fileName,
-					Collection: collection,
-					PatientID: patientId,
-					StudyID: studyId,
-					StudyDesc: studyDesc,
-					StudyDate: studyDate,
+					DRSURI:            uri,
+					SeriesInstanceUID: strings.TrimSuffix(base, ext),
+					FileName:          fileName,
+					Collection:        collection,
+					PatientID:         patientId,
+					StudyID:           studyId,
+					StudyDesc:         studyDesc,
+					StudyDate:         studyDate,
 				})
 			}
 		} else {
@@ -214,14 +216,14 @@ func decodeSpreadsheet(filePath string) ([]*FileInfo, error) {
 				base := filepath.Base(url)
 				ext := filepath.Ext(base)
 				fileInfos = append(fileInfos, &FileInfo{
-					DownloadURL: url,
-					SeriesInstanceUID:  strings.TrimSuffix(base, ext), 
-					FileName:    fileName,
-					Collection: collection,
-					PatientID: patientId,
-					StudyID: studyId,
-					StudyDesc: studyDesc,
-					StudyDate: studyDate,
+					DownloadURL:       url,
+					SeriesInstanceUID: strings.TrimSuffix(base, ext),
+					FileName:          fileName,
+					Collection:        collection,
+					PatientID:         patientId,
+					StudyID:           studyId,
+					StudyDesc:         studyDesc,
+					StudyDate:         studyDate,
 				})
 			}
 		}
@@ -229,7 +231,6 @@ func decodeSpreadsheet(filePath string) ([]*FileInfo, error) {
 
 	return fileInfos, nil
 }
-
 
 var ErrSeriesInstanceUIDColumnNotFound = fmt.Errorf("no 'SeriesInstanceUID' column found")
 

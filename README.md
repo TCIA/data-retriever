@@ -28,6 +28,8 @@ Please note that this is a beta release version.  Full feature implementation is
 
 TCIA Data Retriever is a desktop application for downloading datasets from the [Cancer Imaging Archive (TCIA)](https://www.cancerimagingarchive.net/). It accepts TCIA manifest files (`.tcia`), s5cmd manifests (`.s5cmd`), spreadsheets (`.csv`, `.tsv`, `.xlsx`), and Croissant manifests (`.json`, `.jsonld`) and downloads the associated data with parallel workers, retry logic, and real-time progress tracking.
 
+For spreadsheet manifests, DRS identifier columns can use `drs_uri`, `file_id`, `access`, or `GUID` (including case/format variants).
+
 ---
 
 ## Features
@@ -268,6 +270,7 @@ wails build --platform darwin/universal -ldflags "-X main.version=$(git describe
 | App won't open `.tcia` files | File association not set | Right-click the file → Open With → select the app |
 | `parquet init failed` on startup | First launch, parquet index download failed | Check network; the app still works, IDC downloads may not resolve |
 | Croissant manifest fails to decode | Invalid JSON-LD shape or no actionable rows | Validate JSON syntax and ensure rows include supported `data file` or `manifest` download URLs |
+| Spreadsheet parse fails due to one malformed row | CSV/TSV row has an extra trailing delimiter | Retry with the latest build, which tolerates ragged rows such as a one-off trailing comma/tab |
 
 ### Debug Logging (CLI)
 
