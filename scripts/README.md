@@ -31,6 +31,11 @@ The examples directory is deliberately not scanned by the no-argument command.
 Passing the whole directory explicitly runs every example and requires enough
 space for all payloads.
 
+Curated Croissant JSON-LD inputs are in
+`benchmarkManifests/examples/croissant/`. Pass one file explicitly; each can
+expand into a large dataset download, and controlled routes require the
+tester's own authorization and credential file.
+
 ## Usage
 
 ```
