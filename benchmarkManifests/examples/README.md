@@ -6,12 +6,16 @@ directory for every trial.
 
 | Manifest | Route and payload shape | Approximate transfer |
 | --- | --- | ---: |
-| `idc-rider-lung-pet-ct-pt.csv` | IDC/S3: 509 PT series, 115,076 DICOM instances | 4.73 GiB |
-| `nbia-a091105-annotations.csv` | NBIA v4: 2,445 one-object annotation series | 264.91 MB |
-| `general-commons-lgg-1p19qdeletion.csv` | General Commons DRS: 478 unique ZIP objects, including source imaging and SEG | 2.54 GiB |
-| `ctdc-cmb-pca.csv` | CTDC DRS: 73 CT/MR/PT ZIP objects | 2.96 GiB |
-| `pathdb-many-small-{prod,tst}.csv` | PathDB: the same 8,192 small TIFF files on production and staging | about 0.5 GB |
-| `pathdb-large-svs-{prod,tst}.csv` | PathDB: the same three large SVS files on production and staging | 4.9997 GiB |
+| `idc-rider-lung-pet-ct-pt.csv` | IDC/S3 many-small: 509 PT series, 115,076 DICOM instances | 4.73 GiB |
+| `idc-cmb-aml-few-large-sm.csv` | IDC/S3 few-large: one slide-microscopy series containing five instances | 5.59 GiB |
+| `nbia-a091105-annotations.csv` | NBIA v4 many-small: 2,445 one-object annotation series | 264.91 MB |
+| `general-commons-lgg-1p19qdeletion.csv` | General Commons DRS mixed-many: 478 unique MR/SEG ZIP objects | 2.54 GiB |
+| `general-commons-ldct-single-large.csv` | General Commons DRS single-large: one CT ZIP object | 4.62 GiB |
+| `ctdc-cmb-pca.csv` | CTDC DRS normal mix: 73 CT/MR/PT ZIP objects | 2.96 GiB |
+| `pathdb-many-small-{prod,tst}.csv` | PathDB many-small: the same 8,192 TIFF files on production and staging | about 0.5 GB |
+| `pathdb-large-svs-{prod,tst}.csv` | PathDB few-large: the same three SVS files on production and staging | 5.00 GiB |
+| `pathdb-single-very-large-svs-{prod,tst}.csv` | PathDB single-large: the same one SVS file on production and staging | 5.00 GiB |
+| `pathdb-normal-mix-{prod,tst}.csv` | PathDB normal size mix: the same six SVS files from 59 MB to 3.13 GB | 4.69 GiB |
 
 The General Commons and CTDC manifests are controlled-access metadata. A
 manifest does not grant access. Testers need authorization and their own TCIA
@@ -26,24 +30,39 @@ path does not itself signify acceptance or authorization.
 
 ## Why these cohorts
 
-- IDC stresses high object counts and local filesystem creation while keeping
-  the transfer near 5 GiB. The selection is PET series from
+- The IDC many-small cohort stresses high object counts and local filesystem
+  creation while keeping the transfer near 5 GiB. The selection is PET series from
   `rider_lung_pet_ct`, IDC data version v24, licensed CC BY 3.0. Every series is
-  present in the Data Retriever's embedded IDC index.
+  present in the Data Retriever's embedded IDC index. The complementary
+  CMB-AML slide-microscopy series is about 6.0 GB across only five instances.
 - A091105 is a current public TCIA annotation manifest licensed CC BY 4.0. Its
   2,445 Series Instance UIDs are absent from both embedded IDC indexes, so the
   Data Retriever routes them through NBIA rather than silently turning this
   into a second IDC test.
-- The General Commons cohort contains 319 MR ZIPs and 159 SEG ZIPs, exercising
-  both file populations in the official TCIA manifests for `phs004225`. The
-  separate SEG-only source repeats the same 159 SEG DRS objects already present
-  in the combined source, so the benchmark includes each object only once.
+- The General Commons mixed-many cohort contains 319 MR ZIPs and 159 SEG ZIPs,
+  exercising both file populations in the official TCIA manifests for
+  `phs004225`. The separate SEG-only source repeats the same 159 SEG DRS objects
+  already present in the combined source, so the benchmark includes each object
+  only once. The single-large cohort is a 4.95-billion-byte CT ZIP from
+  `LDCT-and-Projection-data`.
 - The CTDC cohort uses the official CMB-PCA DRS manifest for `phs002192` and
   includes CT, MR, and PT series.
 - The paired PathDB manifests isolate host/protocol differences because each
   production/staging pair contains identical paths in identical order. The
-  small-file cohort measures multiplexing and request overhead; the SVS cohort
-  validates long-running streamed downloads.
+  small-file cohort measures multiplexing and request overhead; the few-large
+  and single-large cohorts validate long-running streamed downloads; and the
+  normal-mix cohort spans six observed file sizes from 59 MB to 3.13 GB.
+
+## Interpreting whole-file timeouts
+
+For a build that imposes a 30-minute deadline on each direct or DRS transfer,
+the theoretical minimum sustained payload rate is
+`file_size_bytes * 8 / 1,800,000,000` Mbps. The 5,365,088,843-byte PathDB object
+needs 23.84 Mbps and the 4,954,943,258-byte General Commons object needs
+22.02 Mbps when downloaded alone. These are optimistic lower bounds: protocol
+overhead, server variability, retries, and simultaneous files all consume part
+of the available connection. Record whether a failed trial retained or resumed
+partial bytes; restarting a large file from zero can dominate the user impact.
 
 ## Suggested benchmark procedure
 
@@ -97,7 +116,8 @@ TCIA_Data_Retriever --cli \
 
 ## Provenance snapshot
 
-The manifests were assembled on 2026-09-30.
+The base manifests were assembled on 2026-09-30. Additional size-shape cohorts
+were verified on 2026-10-01.
 
 - IDC: `idc-index` 0.12.5, IDC data version v24, DOI
   `10.7937/k9/tcia.2015.ofip7tvm`.
@@ -106,9 +126,13 @@ The manifests were assembled on 2026-09-30.
   one-column CSV contract without changing the UID set.
 - General Commons: `GC_manifest_LGG-1p19qDeletion_20260326.csv`, checked against
   `GC_manifest_LGG-1p19qDeletion_20260326_SEGonly.csv`; duplicate SEG objects
-  from the latter are intentionally omitted.
+  from the latter are intentionally omitted. The single-large object comes from
+  `GC_manifest_LDCT-and-Projection-data_20260326.csv`.
 - CTDC: `CMB-PCA_drs_metadata_manifest.csv`.
 - Controlled/public non-DICOM metadata: TCIA query-skill V2 release fingerprint
   `bc6d6c58ab0f5b522503f05089b6219cc58f911e7bdc7fa0916bdc898d6e6fea`.
-- PathDB large-SVS expected bytes: 5,368,392,639. The 8,192-file TIFF subset is
-  a deterministic prefix of the previously hash-ordered 81,211-file cohort.
+- PathDB byte counts were read from one-byte HTTP range responses on both hosts.
+  The few-large cohort is 5,368,392,639 bytes, the single-large cohort is
+  5,365,088,843 bytes, and the normal mix is 5,034,842,350 bytes. The
+  8,192-file TIFF subset is a deterministic prefix of the previously
+  hash-ordered 81,211-file cohort.
