@@ -15,8 +15,21 @@ scripts/bench_download.sh
 Drop any manifest file the CLI accepts into `benchmarkManifests/`
 (`.tcia`, `.s5cmd`, `.csv`, `.tsv`, `.xlsx`, `.json`, `.jsonld`) and it's
 picked up automatically. That directory is tracked in git as an empty
-placeholder (`.gitkeep`) — its contents are gitignored, so manifests you
-drop in stay local.
+placeholder (`.gitkeep`) — manifests you drop directly into it are gitignored,
+so they stay local.
+
+Curated, version-controlled examples covering the major TCIA download routes
+live in `benchmarkManifests/examples/`. Run one example at a time to keep disk
+requirements predictable:
+
+```bash
+scripts/bench_download.sh benchmarkManifests/examples/idc-rider-lung-pet-ct-pt.csv \
+  --output-dir /path/to/local-scratch/bench-results
+```
+
+The examples directory is deliberately not scanned by the no-argument command.
+Passing the whole directory explicitly runs every example and requires enough
+space for all payloads.
 
 ## Usage
 
