@@ -4,6 +4,11 @@ These manifests exercise each current Data Retriever route without requiring a
 single very large disk. Run one manifest at a time and use a fresh output
 directory for every trial.
 
+Croissant JSON-LD examples live in
+[`benchmarkManifests/examples/croissant/`](croissant/README.md). They are kept
+in a nested directory so a benchmark of this directory does not accidentally
+launch several full-dataset downloads. Pass one `.jsonld` file explicitly.
+
 | Manifest | Route and payload shape | Approximate transfer |
 | --- | --- | ---: |
 | `idc-rider-lung-pet-ct-pt.csv` | IDC/S3 many-small: 509 PT series, 115,076 DICOM instances | 4.73 GiB |
