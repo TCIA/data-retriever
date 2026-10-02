@@ -128,7 +128,9 @@ func decodeCroissant(ctx context.Context, filePath string, client *http.Client, 
 	} else {
 		callbacks.emitStdout(fmt.Sprintf("Saved metadata for %d files to %s\n", len(files), csvPath))
 	}
-	InitCompletionStatus(options.Output, files)
+	if err := InitCompletionStatus(options.Output, files); err != nil {
+		Logger.Errorf("Failed to init completion status: %v", err)
+	}
 
 	if skipped > 0 {
 		callbacks.emitStdout(fmt.Sprintf("Skipped %d unsupported or invalid Croissant rows\n", skipped))

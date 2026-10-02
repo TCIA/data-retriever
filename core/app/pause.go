@@ -140,8 +140,6 @@ func (p *PauseController) UnregisterCancel(seriesUID string, cancel context.Canc
 		return
 	}
 	p.mu.Lock()
-	if _, ok := p.cancels[seriesUID]; ok {
-		delete(p.cancels, seriesUID)
-	}
+	delete(p.cancels, seriesUID)
 	p.mu.Unlock()
 }

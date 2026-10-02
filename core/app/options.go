@@ -144,7 +144,7 @@ func ParseOptions(args []string, promptReader io.Reader) (*Options, error) {
 	opt.opt.StringVar(&opt.Input, "input", "", opt.opt.Alias("i"), opt.opt.Description("path to input manifest file (.tcia, .s5cmd, .csv/.tsv/.xlsx, .json/.jsonld Croissant)"))
 	opt.opt.StringVar(&opt.Output, "output", "./", opt.opt.Alias("o"), opt.opt.Description("Output directory for downloaded files"))
 	opt.opt.StringVar(&opt.Proxy, "proxy", "", opt.opt.Alias("x"), opt.opt.Description("the proxy to use [http, socks5://user:passwd@host:port]"))
-	opt.opt.IntVar(&opt.Concurrent, "processes", 2, opt.opt.Alias("p"), opt.opt.Description("start how many download at same time"))
+	opt.opt.IntVar(&opt.Concurrent, "processes", 8, opt.opt.Alias("p"), opt.opt.Description("start how many download at same time"))
 	opt.opt.BoolVar(&opt.Meta, "meta", false, opt.opt.Alias("m"), opt.opt.Description("get Meta info of all files"))
 	opt.opt.StringVar(&opt.Username, "user", "nbia_guest", opt.opt.Alias("u"), opt.opt.Description("username for control data"))
 	opt.opt.BoolVar(&opt.Prompt, "prompt", false, opt.opt.Alias("w"), opt.opt.Description("input password for control data"))

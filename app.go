@@ -234,10 +234,8 @@ func (b *App) HandleFileOpen(filePath string) {
 		return
 	}
 	go func() {
-		select {
-		case <-b.frontendReady:
-			wailsRuntime.EventsEmit(b.ctx, "file-opened", filePath)
-		}
+		<-b.frontendReady
+		wailsRuntime.EventsEmit(b.ctx, "file-opened", filePath)
 	}()
 
 }
@@ -400,8 +398,6 @@ func (b *App) RunCLIFetch(
 	}
 
 	// Create a new batch
-	//b.mu.Lock()
-	//b.runID++
 	id := runId
 
 	ctx, cancel := context.WithCancel(b.ctx)
@@ -833,7 +829,6 @@ func (a *App) GetLatestSupportLogPath() string {
 type App struct {
 	ctx             context.Context
 	mu              sync.Mutex
-	runID           uint64
 	batches         map[uint64]*DownloadBatch
 	pausedBatches   map[string]*DownloadBatch // keyed by manifest path for resume
 	parquetPaths    app.ParquetPaths

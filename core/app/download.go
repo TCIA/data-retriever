@@ -731,7 +731,9 @@ func streamFilesFromSeriesIDs(ctx context.Context, prefixFiles []*FileInfo, seri
 		} else {
 			callbacks.emitStdout(fmt.Sprintf("Saved metadata for %d files to %s\n", len(allFiles), csvPath))
 		}
-		InitCompletionStatus(options.Output, allFiles)
+		if err := InitCompletionStatus(options.Output, allFiles); err != nil {
+			logger.Errorf("Failed to init completion status: %v", err)
+		}
 	}()
 
 	return total, out
@@ -762,7 +764,9 @@ func decodeTCIA(ctx context.Context, path string, httpClient *http.Client, optio
 	} else {
 		callbacks.emitStdout(fmt.Sprintf("Saved metadata for %d files to %s\n", len(files), csvPath))
 	}
-	InitCompletionStatus(options.Output, files)
+	if err := InitCompletionStatus(options.Output, files); err != nil {
+		logger.Errorf("Failed to init completion status: %v", err)
+	}
 
 	return files
 }
@@ -1305,47 +1309,6 @@ func (info *FileInfo) doDownload(ctx context.Context, output string, httpClient 
 		return info.downloadDirect(ctx, output, httpClient, options, onProgress, gen3Auth)
 	}
 	return info.downloadFromTCIA(ctx, output, httpClient, options, onProgress, onDecompress)
-}
-
-func downloadS3Object(ctx context.Context, client *s3.Client, bucket, key, targetDir string, onProgress ProgressFunc) error {
-	input := &s3.GetObjectInput{
-		Bucket: &bucket,
-		Key:    &key,
-	}
-
-	output, err := client.GetObject(ctx, input)
-	if err != nil {
-		return fmt.Errorf("failed to get S3 object %s/%s: %w", bucket, key, err)
-	}
-	defer output.Body.Close()
-
-	localPath := filepath.Join(targetDir, filepath.Base(key))
-
-	f, err := os.Create(localPath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	downloader := manager.NewDownloader(client, func(d *manager.Downloader) {
-		d.PartSize = 10 * 1024 * 1024 // 10 MB parts
-		d.Concurrency = 16            // parallel part downloads
-	})
-
-	numBytes, err := downloader.Download(ctx, f, &s3.GetObjectInput{
-		Bucket: &bucket,
-		Key:    &key,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to download %s/%s: %w", bucket, key, err)
-	}
-
-	// call onProgress once with total bytes (optional)
-	if onProgress != nil {
-		onProgress(100.0, numBytes, numBytes)
-	}
-
-	return nil
 }
 
 func (info *FileInfo) downloadFromS3(

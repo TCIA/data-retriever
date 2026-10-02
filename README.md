@@ -156,7 +156,7 @@ Launch with `--cli` (or `-cli`) to skip the GUI entirely:
 |---|---|---|---|
 | `--input` | `-i` | *required* | Path to manifest file (`.tcia`, `.s5cmd`, `.csv`, `.tsv`, `.xlsx`, `.json`, `.jsonld`) |
 | `--output` | `-o` | `./` | Output directory |
-| `--processes` | `-p` | `2` | Parallel download workers |
+| `--processes` | `-p` | `8` | Parallel download workers |
 | `--max-connections` | | `8` | Max connections per host |
 | `--max-retries` | | `3` | Retry attempts per series |
 | `--skip-existing` | | off | Reuse already-downloaded series and count them as completed (resume-friendly) |

@@ -110,7 +110,7 @@ func TestParseOptions_Defaults(t *testing.T) {
 		t.Fatalf("ParseOptions returned error: %v", err)
 	}
 
-	if opt.Output != "./" || opt.Concurrent != 2 || opt.MaxRetries != 3 || opt.MaxConnsPerHost != 8 {
+	if opt.Output != "./" || opt.Concurrent != 8 || opt.MaxRetries != 3 || opt.MaxConnsPerHost != 8 {
 		t.Fatalf("unexpected defaults: %+v", opt)
 	}
 	if opt.RetryDelay != 10*time.Second || opt.RequestDelay != 500*time.Millisecond || opt.MetadataWorkers != 20 {

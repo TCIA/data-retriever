@@ -1,7 +1,6 @@
 package app
 
 import (
-	"bufio"
 	"context"
 	"encoding/csv"
 	"errors"
@@ -567,7 +566,9 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 		if err := copyFile(options.Input, destPath); err != nil {
 			Logger.Warnf("Failed to copy spreadsheet to metadata folder: %v", err)
 		}
-		InitCompletionStatus(options.Output, files)
+		if err := InitCompletionStatus(options.Output, files); err != nil {
+			Logger.Errorf("Failed to init completion status: %v", err)
+		}
 	}
 
 	stats := &DownloadStats{Total: int32(len(files)), StartTime: time.Now()}
@@ -982,9 +983,9 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 		wc.emitSeries(evt)
 	}
 
-	localAuth := *wc.Gen3Auth
+	localAuth := wc.Gen3Auth
 
-	err := fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.Options, onProgress, onDecompress, &localAuth)
+	err := fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.Options, onProgress, onDecompress, localAuth)
 
 	// Only Gen3/DRS downloads (downloadFromGen3) actually apply gen3Auth to
 	// the request — plain NBIA/TCIA, direct-URL, and S3 downloads ignore it
@@ -1013,8 +1014,8 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 		if savedPath := LoadSavedAuthFilePath(); savedPath != "" && savedPath != wc.Options.Auth {
 			if silentAuth, silentErr := NewGen3AuthManager(wc.HTTPClient, savedPath); silentErr == nil {
 				wc.Options.Auth = savedPath
-				localAuth = *silentAuth
-				err = fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.Options, onProgress, onDecompress, &localAuth)
+				localAuth = silentAuth
+				err = fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.Options, onProgress, onDecompress, localAuth)
 				if err == nil || !isAuthError(err) {
 					continue
 				}
@@ -1037,8 +1038,8 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 		}
 
 		wc.Options.Auth = resolvedPath
-		localAuth = *newAuth
-		err = fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.Options, onProgress, onDecompress, &localAuth)
+		localAuth = newAuth
+		err = fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.Options, onProgress, onDecompress, localAuth)
 		if err != nil && isAuthError(err) {
 			wc.Callbacks.emitEvent("auth-error", "Credentials file was rejected by the server (expired or insufficient permissions).")
 			wc.Options.AuthGate.PrepareRetry()
@@ -1134,32 +1135,6 @@ func (callbacks Callbacks) emitProgress(stats *DownloadStats, currentSeriesID st
 	updateProgress(stats, currentSeriesID, debugMode, callbacks)
 }
 
-func saveSeriesUIDsToFile(originalPath string, seriesUIDs []string) (string, error) {
-	dir := filepath.Dir(originalPath)
-	base := filepath.Base(originalPath)
-	outPath := filepath.Join(dir, base+".series_uids.txt")
-
-	f, err := os.Create(outPath)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-
-	writer := bufio.NewWriter(f)
-	defer writer.Flush()
-
-	for _, uid := range seriesUIDs {
-		if uid == "" {
-			continue
-		}
-		if _, err := writer.WriteString(uid + "\n"); err != nil {
-			return "", err
-		}
-	}
-
-	return outPath, nil
-}
-
 func decodeInputFile(ctx context.Context, filePath string, client *http.Client, options *Options, callbacks Callbacks, s5cmdMap map[string]string) ([]*FileInfo, int, error) {
 	return decodeInputFileInternal(ctx, filePath, client, options, callbacks, s5cmdMap, true)
 }
@@ -1240,7 +1215,9 @@ func combineWithTCIABatch(ctx context.Context, s5Files []*FileInfo, tciaUIDs []s
 		} else {
 			callbacks.emitStdout(fmt.Sprintf("Saved metadata for %d files to %s\n", len(files), csvPath))
 		}
-		InitCompletionStatus(options.Output, files)
+		if err := InitCompletionStatus(options.Output, files); err != nil {
+			Logger.Errorf("Failed to init completion status: %v", err)
+		}
 	}
 	return files
 }

@@ -549,7 +549,9 @@ func decodeS5cmd(filePath string, outputDir string, processedSeries map[string]s
 		} else {
 			callbacks.emitStdout(fmt.Sprintf("Saved metadata for %d files to %s\n", len(jobsToProcess), csvPath))
 		}
-		InitCompletionStatus(outputDir, jobsToProcess)
+		if err := InitCompletionStatus(outputDir, jobsToProcess); err != nil {
+			logger.Errorf("Failed to init completion status: %v", err)
+		}
 	}
 
 	logger.Infof("Found %d s5cmd jobs to process (%d new, %d existing); %d UIDs deferred to TCIA",
