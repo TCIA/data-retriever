@@ -276,6 +276,8 @@ func croissantTypeIncludesDataset(value interface{}) bool {
 
 func extractCroissantRows(doc map[string]interface{}) []croissantDownloadRow {
 	index := newCroissantRowIndex()
+	fileObjects := croissantFileObjects(doc)
+	referencedFileObjects := make(map[string]struct{})
 
 	for _, rawRecordSet := range croissantSlice(doc["recordSet"]) {
 		recordSet := croissantMap(rawRecordSet)
@@ -290,7 +292,25 @@ func extractCroissantRows(doc map[string]interface{}) []croissantDownloadRow {
 
 		dataRows := croissantSlice(recordSet["data"])
 		if len(dataRows) == 0 {
-			index.upsert(baseRow)
+			// Standard Croissant record sets commonly store their rows in an
+			// external CSV FileObject and describe the columns with Field.source.
+			// Treat that FileObject as a nested Data Retriever manifest instead of
+			// downloading the CSV itself as a payload.
+			for _, fileObjectID := range croissantRecordSetFileObjectIDs(recordSet) {
+				referencedFileObjects[fileObjectID] = struct{}{}
+				fileObject, ok := fileObjects[fileObjectID]
+				if !ok {
+					continue
+				}
+
+				row := baseRow
+				row.FileObjectID = fileObjectID
+				row.FileName = strings.TrimSpace(croissantString(fileObject["name"]))
+				row.DownloadURL = strings.TrimSpace(croissantString(fileObject["contentUrl"]))
+				row.DownloadArtifactRole = croissantRoleManifest
+				row.AccessMechanism = "TCIA Data Retriever"
+				index.upsert(row)
+			}
 			continue
 		}
 
@@ -321,7 +341,6 @@ func extractCroissantRows(doc map[string]interface{}) []croissantDownloadRow {
 			FileName:     strings.TrimSpace(croissantString(distribution["name"])),
 			DownloadURL:  strings.TrimSpace(croissantString(distribution["contentUrl"])),
 		}
-
 		for _, rawProperty := range croissantSlice(distribution["additionalProperty"]) {
 			property := croissantMap(rawProperty)
 			if property == nil {
@@ -356,11 +375,59 @@ func extractCroissantRows(doc map[string]interface{}) []croissantDownloadRow {
 				row.DownloadRequirements = propValue
 			}
 		}
+		if _, referenced := referencedFileObjects[row.FileObjectID]; referenced {
+			row.DownloadArtifactRole = croissantRoleManifest
+			row.AccessMechanism = "TCIA Data Retriever"
+		}
 
 		index.upsert(row)
 	}
 
 	return index.rowsInOrder()
+}
+
+func croissantFileObjects(doc map[string]interface{}) map[string]map[string]interface{} {
+	objects := make(map[string]map[string]interface{})
+	for _, rawDistribution := range croissantSlice(doc["distribution"]) {
+		distribution := croissantMap(rawDistribution)
+		if distribution == nil {
+			continue
+		}
+		id := strings.TrimSpace(croissantString(distribution["@id"]))
+		if id != "" {
+			objects[id] = distribution
+		}
+	}
+	return objects
+}
+
+func croissantRecordSetFileObjectIDs(recordSet map[string]interface{}) []string {
+	seen := make(map[string]struct{})
+	ids := make([]string, 0)
+	for _, rawField := range croissantSlice(recordSet["field"]) {
+		field := croissantMap(rawField)
+		if field == nil {
+			continue
+		}
+		source := croissantMap(field["source"])
+		if source == nil {
+			continue
+		}
+		fileObject := croissantMap(source["fileObject"])
+		if fileObject == nil {
+			continue
+		}
+		id := strings.TrimSpace(croissantString(fileObject["@id"]))
+		if id == "" {
+			continue
+		}
+		if _, duplicate := seen[id]; duplicate {
+			continue
+		}
+		seen[id] = struct{}{}
+		ids = append(ids, id)
+	}
+	return ids
 }
 
 func applyCroissantRecordData(row *croissantDownloadRow, data map[string]interface{}) {
