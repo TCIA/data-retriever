@@ -1,0 +1,3477 @@
+{
+  "@context": {
+    "@language": "en",
+    "@vocab": "https://schema.org/",
+    "arrayShape": "cr:arrayShape",
+    "citeAs": "cr:citeAs",
+    "column": "cr:column",
+    "conformsTo": "dct:conformsTo",
+    "containedIn": "cr:containedIn",
+    "cr": "http://mlcommons.org/croissant/",
+    "rai": "http://mlcommons.org/croissant/RAI/",
+    "data": {
+      "@id": "cr:data",
+      "@type": "@json"
+    },
+    "dataType": {
+      "@id": "cr:dataType",
+      "@type": "@vocab"
+    },
+    "dct": "http://purl.org/dc/terms/",
+    "description": {
+      "@container": "@language"
+    },
+    "equivalentProperty": "cr:equivalentProperty",
+    "examples": {
+      "@id": "cr:examples",
+      "@type": "@json"
+    },
+    "extract": "cr:extract",
+    "field": "cr:field",
+    "fileProperty": "cr:fileProperty",
+    "fileObject": "cr:fileObject",
+    "fileSet": "cr:fileSet",
+    "format": "cr:format",
+    "includes": "cr:includes",
+    "isArray": "cr:isArray",
+    "isLiveDataset": "cr:isLiveDataset",
+    "jsonPath": "cr:jsonPath",
+    "key": "cr:key",
+    "md5": "cr:md5",
+    "name": {
+      "@container": "@language"
+    },
+    "parentField": "cr:parentField",
+    "path": "cr:path",
+    "recordSet": "cr:recordSet",
+    "references": "cr:references",
+    "regex": "cr:regex",
+    "repeated": "cr:repeated",
+    "replace": "cr:replace",
+    "samplingRate": "cr:samplingRate",
+    "sc": "https://schema.org/",
+    "separator": "cr:separator",
+    "source": "cr:source",
+    "subField": "cr:subField",
+    "transform": "cr:transform",
+    "odrl": "http://www.w3.org/ns/odrl/2/",
+    "sdVersion": "cr:sdVersion"
+  },
+  "@type": "sc:Dataset",
+  "@id": "https://doi.org/10.7937/E4WT-CD02",
+  "conformsTo": "http://mlcommons.org/croissant/1.1",
+  "name": "Breast Cancer Screening - Digital Breast Tomosynthesis",
+  "alternateName": "Breast-Cancer-Screening-DBT",
+  "description": "Breast cancer is among the most common cancers and a common cause of death among women. Over 39 million breast cancer screening exams are performed every year and are among the most common radiological tests. This creates a high need for accurate image interpretation. Machine learning has shown promise in interpretation of medical images. However, limited data for training and validation remains an issue. Here, we share a curated dataset of digital breast tomosynthesis images that includes normal, actionable, biopsy-proven benign, and biopsy-proven cancer cases. The dataset contains four components: (1) DICOM images, (2) a spreadsheet indicating which group each case belongs to (3) annotation boxes, and (4) Image paths for patients/studies/views. A detailed description of this dataset can be found in the following paper; please reference this paper if you use this dataset: M. Buda, A. Saha, R. Walsh, S. Ghate, N. Li, A. \u015awi\u0119cicki, J. Y. Lo, M. A. Mazurowski, Detection of masses and architectural distortions in digital breast tomosynthesis: a publicly available dataset of 5,060 patients and a deep learning model. ( https://doi.org/10.1001/jamanetworkopen.2021.19100 ) . Additional information and resources related to this dataset can be found here: https://sites.duke.edu/mazurowski/resources/digital-breast-tomosynthesis-database/ A Version 1 of the dataset contains only a subset of all data described in the paper above. More data will be share in subsequent versions. Please visit this discussion forum for any questions related to the data: https://www.reddit.com/r/DukeDBTData/ Required Preprocessing of DBT Images For some of the images, the laterality stored in the DICOM header and/or image orientation are incorrect. The reference standard \"truth\" boxes are defined with respect to the corrected image orientation in these instances. Therefore, it is crucial to provide your results for images in the correct image orientation. Python functions for loading image data from a DICOM file into 3D array of pixel values in the correct orientation and for displaying \"truth\" boxes (if any) are on GitHub . Please see the readme file there for instructions. DBTex Lesion Detection Challenge Predictions The DBTex lesion detection challenge tasked participating teams with detecting lesions in the BCS-DBT test set. The challenge had two phases: DBTex1 and DBTex2 . Here we provide the BCS-DBT lesion predictions made by all participating teams for both phases, for both the BCS-DBT test and validation sets, as \u201cteam_predictions_bothphases.zip\u201d. Please see here under \u201c Output format for the DBTex2 Challenge test set results \u201d for a description of how these results are formatted. Finally, when comparing lesion bounding box predictions to the image data, be sure to load the images correctly according to the above \u201c Required Preprocessing of DBT Images \u201d. If you use these predictions, please reference the DBTex challenge paper: Konz N, Buda M, Gu H, et al. A Competition, Benchmark, Code, and Data for Using Artificial Intelligence to Detect Lesions in Digital Breast Tomosynthesis. JAMA Netw Open. 2023;6(2):e230524. doi:10.1001/jamanetworkopen.2023.0524",
+  "url": "https://www.cancerimagingarchive.net/collection/breast-cancer-screening-dbt/",
+  "creator": {
+    "@type": "Organization",
+    "name": "The Cancer Imaging Archive",
+    "url": "https://www.cancerimagingarchive.net/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "The Cancer Imaging Archive",
+    "url": "https://www.cancerimagingarchive.net/"
+  },
+  "includedInDataCatalog": {
+    "@type": "DataCatalog",
+    "@id": "https://www.cancerimagingarchive.net/#catalog",
+    "name": "The Cancer Imaging Archive",
+    "url": "https://www.cancerimagingarchive.net/",
+    "publisher": {
+      "@type": "Organization",
+      "name": "The Cancer Imaging Archive",
+      "url": "https://www.cancerimagingarchive.net/"
+    }
+  },
+  "license": [
+    "https://creativecommons.org/licenses/by-nc/4.0/"
+  ],
+  "citeAs": "Buda, M., Saha, A., Walsh, R., Ghate, S., Li, N., Swiecicki, A., Lo, J. Y., Yang, J., & Mazurowski, M. (2020). Breast Cancer Screening - Digital Breast Tomosynthesis (BCS-DBT) (Version 5) [dataset]. The Cancer Imaging Archive. https://doi.org/10.7937/E4WT-CD02",
+  "keywords": [
+    "Breast-Cancer-Screening-DBT",
+    "Collection",
+    "MG",
+    "Breast Cancer",
+    "Non-Cancer",
+    "Breast",
+    "Human"
+  ],
+  "sdPublisher": {
+    "@type": "Organization",
+    "name": "The Cancer Imaging Archive",
+    "url": "https://www.cancerimagingarchive.net/"
+  },
+  "sdVersion": "0.1.0",
+  "isLiveDataset": true,
+  "conditionsOfAccess": "Open-access TCIA data with a noncommercial-use license condition. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+  "usageInfo": [
+    {
+      "@type": "CreativeWork",
+      "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+      "name": "TCIA Data Usage Policies and Restrictions",
+      "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+    },
+    {
+      "@type": [
+        "CreativeWork",
+        "odrl:Offer"
+      ],
+      "name": "Noncommercial use condition",
+      "description": "This license includes a noncommercial-use condition.",
+      "odrl:permission": {
+        "@type": "odrl:Permission",
+        "odrl:action": {
+          "@id": "odrl:use",
+          "name": "Use"
+        },
+        "odrl:constraint": {
+          "@type": "odrl:Constraint",
+          "name": "Non-commercial use only",
+          "odrl:operator": {
+            "@id": "odrl:eq"
+          },
+          "odrl:rightOperand": "noncommercial"
+        }
+      }
+    }
+  ],
+  "distribution": [
+    {
+      "@type": "cr:FileObject",
+      "@id": "file-41541",
+      "name": "BSC-DBT-Train-manifest.tcia",
+      "contentUrl": "https://www.cancerimagingarchive.net/wp-content/uploads/BSC-DBT-Train-manifest.tcia",
+      "encodingFormat": [
+        "text/plain",
+        "application/vnd.tcia.manifest"
+      ],
+      "conditionsOfAccess": "Open-access TCIA data with a noncommercial-use license condition. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": [
+            "CreativeWork",
+            "odrl:Offer"
+          ],
+          "name": "Noncommercial use condition",
+          "description": "CC BY-NC 4.0 includes a noncommercial-use condition.",
+          "odrl:permission": {
+            "@type": "odrl:Permission",
+            "odrl:action": {
+              "@id": "odrl:use",
+              "name": "Use"
+            },
+            "odrl:constraint": {
+              "@type": "odrl:Constraint",
+              "name": "Non-commercial use only",
+              "odrl:operator": {
+                "@id": "odrl:eq"
+              },
+              "odrl:rightOperand": "noncommercial"
+            }
+          }
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "name": "CC BY-NC 4.0",
+          "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+        }
+      ],
+      "contentSize": "1.42 TB",
+      "license": "https://creativecommons.org/licenses/by-nc/4.0/",
+      "dateModified": "2023-11-20",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download id",
+          "value": "41541"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access level",
+          "value": "open_noncommercial"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download types",
+          "value": [
+            "Radiology Images"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA data types",
+          "value": [
+            "MG"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA file types",
+          "value": [
+            "DICOM"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download artifact role",
+          "value": "manifest"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access mechanism",
+          "value": "TCIA Data Retriever"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA downstream access system",
+          "value": "Imaging Data Commons (IDC)"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download metadata",
+          "value": "https://www.cancerimagingarchive.net/wp-content/uploads/BSC-DBT-Train-manifes-nbia-digest.xlsx"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download requirements",
+          "value": "Download requires the TCIA Data Retriever"
+        }
+      ]
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "file-41543",
+      "name": "BCS-DBT-file-paths-train-v2.csv",
+      "contentUrl": "https://www.cancerimagingarchive.net/wp-content/uploads/BCS-DBT-file-paths-train-v2.csv",
+      "encodingFormat": [
+        "text/csv"
+      ],
+      "conditionsOfAccess": "Open-access TCIA data with a noncommercial-use license condition. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": [
+            "CreativeWork",
+            "odrl:Offer"
+          ],
+          "name": "Noncommercial use condition",
+          "description": "CC BY-NC 4.0 includes a noncommercial-use condition.",
+          "odrl:permission": {
+            "@type": "odrl:Permission",
+            "odrl:action": {
+              "@id": "odrl:use",
+              "name": "Use"
+            },
+            "odrl:constraint": {
+              "@type": "odrl:Constraint",
+              "name": "Non-commercial use only",
+              "odrl:operator": {
+                "@id": "odrl:eq"
+              },
+              "odrl:rightOperand": "noncommercial"
+            }
+          }
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "name": "CC BY-NC 4.0",
+          "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+        }
+      ],
+      "contentSize": "6.08 MB",
+      "license": "https://creativecommons.org/licenses/by-nc/4.0/",
+      "dateModified": "2023-11-20",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download id",
+          "value": "41543"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access level",
+          "value": "open_noncommercial"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download types",
+          "value": [
+            "Other"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA data types",
+          "value": [
+            "Other"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA file types",
+          "value": [
+            "CSV"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download artifact role",
+          "value": "data file"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access mechanism",
+          "value": "direct download"
+        }
+      ]
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "file-41545",
+      "name": "BCS-DBT-labels-train-v2.csv",
+      "contentUrl": "https://www.cancerimagingarchive.net/wp-content/uploads/BCS-DBT-labels-train-v2.csv",
+      "encodingFormat": [
+        "text/csv"
+      ],
+      "conditionsOfAccess": "Open-access TCIA data with a noncommercial-use license condition. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": [
+            "CreativeWork",
+            "odrl:Offer"
+          ],
+          "name": "Noncommercial use condition",
+          "description": "CC BY-NC 4.0 includes a noncommercial-use condition.",
+          "odrl:permission": {
+            "@type": "odrl:Permission",
+            "odrl:action": {
+              "@id": "odrl:use",
+              "name": "Use"
+            },
+            "odrl:constraint": {
+              "@type": "odrl:Constraint",
+              "name": "Non-commercial use only",
+              "odrl:operator": {
+                "@id": "odrl:eq"
+              },
+              "odrl:rightOperand": "noncommercial"
+            }
+          }
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "name": "CC BY-NC 4.0",
+          "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+        }
+      ],
+      "contentSize": "663.89 KB",
+      "license": "https://creativecommons.org/licenses/by-nc/4.0/",
+      "dateModified": "2023-11-20",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download id",
+          "value": "41545"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access level",
+          "value": "open_noncommercial"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download types",
+          "value": [
+            "Other"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA data types",
+          "value": [
+            "Classification"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA file types",
+          "value": [
+            "CSV"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download artifact role",
+          "value": "data file"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access mechanism",
+          "value": "direct download"
+        }
+      ]
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "file-41547",
+      "name": "BCS-DBT-boxes-train-v2.csv",
+      "contentUrl": "https://www.cancerimagingarchive.net/wp-content/uploads/BCS-DBT-boxes-train-v2.csv",
+      "encodingFormat": [
+        "text/csv"
+      ],
+      "conditionsOfAccess": "Open-access TCIA data with a noncommercial-use license condition. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": [
+            "CreativeWork",
+            "odrl:Offer"
+          ],
+          "name": "Noncommercial use condition",
+          "description": "CC BY-NC 4.0 includes a noncommercial-use condition.",
+          "odrl:permission": {
+            "@type": "odrl:Permission",
+            "odrl:action": {
+              "@id": "odrl:use",
+              "name": "Use"
+            },
+            "odrl:constraint": {
+              "@type": "odrl:Constraint",
+              "name": "Non-commercial use only",
+              "odrl:operator": {
+                "@id": "odrl:eq"
+              },
+              "odrl:rightOperand": "noncommercial"
+            }
+          }
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "name": "CC BY-NC 4.0",
+          "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+        }
+      ],
+      "contentSize": "13.48 KB",
+      "license": "https://creativecommons.org/licenses/by-nc/4.0/",
+      "dateModified": "2023-11-20",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download id",
+          "value": "41547"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access level",
+          "value": "open_noncommercial"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download types",
+          "value": [
+            "Other"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA data types",
+          "value": [
+            "Measurement"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA file types",
+          "value": [
+            "CSV"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download artifact role",
+          "value": "data file"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access mechanism",
+          "value": "direct download"
+        }
+      ]
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "file-41549",
+      "name": "BSC-DBT-Validation-manifest.tcia",
+      "contentUrl": "https://www.cancerimagingarchive.net/wp-content/uploads/BSC-DBT-Validation-manifest.tcia",
+      "encodingFormat": [
+        "text/plain",
+        "application/vnd.tcia.manifest"
+      ],
+      "conditionsOfAccess": "Open-access TCIA data with a noncommercial-use license condition. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": [
+            "CreativeWork",
+            "odrl:Offer"
+          ],
+          "name": "Noncommercial use condition",
+          "description": "CC BY-NC 4.0 includes a noncommercial-use condition.",
+          "odrl:permission": {
+            "@type": "odrl:Permission",
+            "odrl:action": {
+              "@id": "odrl:use",
+              "name": "Use"
+            },
+            "odrl:constraint": {
+              "@type": "odrl:Constraint",
+              "name": "Non-commercial use only",
+              "odrl:operator": {
+                "@id": "odrl:eq"
+              },
+              "odrl:rightOperand": "noncommercial"
+            }
+          }
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "name": "CC BY-NC 4.0",
+          "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+        }
+      ],
+      "contentSize": "84.71 GB",
+      "license": "https://creativecommons.org/licenses/by-nc/4.0/",
+      "dateModified": "2023-11-20",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download id",
+          "value": "41549"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access level",
+          "value": "open_noncommercial"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download types",
+          "value": [
+            "Radiology Images"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA data types",
+          "value": [
+            "MG"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA file types",
+          "value": [
+            "DICOM"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download artifact role",
+          "value": "manifest"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access mechanism",
+          "value": "TCIA Data Retriever"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA downstream access system",
+          "value": "Imaging Data Commons (IDC)"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA search system",
+          "value": "NBIA Search"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA search/access URL",
+          "value": "https://nbia.cancerimagingarchive.net/nbia-search/?MinNumberOfStudiesCriteria=1&PatientCriteria=DBT-P00001,DBT-P00002,DBT-P00018,DBT-P00047,DBT-P00069,DBT-P00082,DBT-P00084,DBT-P00114,DBT-P00133,DBT-P00160,DBT-P00165,DBT-P00174,DBT-P00176,DBT-P00187,DBT-P00213,DBT-P00234,DBT-P00235,DBT-P00238,DBT-P00271,DBT-P00273,DBT-P00283,DBT-P00351,DBT-P00385,DBT-P00417,DBT-P00431,DBT-P00450,DBT-P00547,DBT-P00549,DBT-P00558,DBT-P00577,DBT-P00585,DBT-P00643,DBT-P00651,DBT-P00655,DBT-P00697,DBT-P00705,DBT-P00714,DBT-P00718,DBT-P00789,DBT-P00802,DBT-P00803,DBT-P00839,DBT-P00843,DBT-P00844,DBT-P00864,DBT-P00866,DBT-P00871,DBT-P00878,DBT-P00902,DBT-P00908,DBT-P00925,DBT-P00945,DBT-P01020,DBT-P01043,DBT-P01047,DBT-P01083,DBT-P01105,DBT-P01117,DBT-P01150,DBT-P01152,DBT-P01153,DBT-P01173,DBT-P01177,DBT-P01206,DBT-P01207,DBT-P01212,DBT-P01226,DBT-P01239,DBT-P01249,DBT-P01293,DBT-P01296,DBT-P01305,DBT-P01334,DBT-P01353,DBT-P01356,DBT-P01374,DBT-P01490,DBT-P01496,DBT-P01536,DBT-P01538,DBT-P01555,DBT-P01562,DBT-P01564,DBT-P01578,DBT-P01604,DBT-P01610,DBT-P01630,DBT-P01634,DBT-P01635,DBT-P01642,DBT-P01700,DBT-P01705,DBT-P01746,DBT-P01772,DBT-P01778,DBT-P01791,DBT-P01792,DBT-P01799,DBT-P01807,DBT-P01849,DBT-P01851,DBT-P01916,DBT-P01932,DBT-P01938,DBT-P01941,DBT-P01948,DBT-P01957,DBT-P01967,DBT-P02012,DBT-P02018,DBT-P02042,DBT-P02072,DBT-P02085,DBT-P02111,DBT-P02113,DBT-P02117,DBT-P02160,DBT-P02170,DBT-P02183,DBT-P02185,DBT-P02189,DBT-P02204,DBT-P02214,DBT-P02226,DBT-P02242,DBT-P02248,DBT-P02253,DBT-P02284,DBT-P02294,DBT-P02296,DBT-P02301,DBT-P02314,DBT-P02322,DBT-P02326,DBT-P02331,DBT-P02341,DBT-P02360,DBT-P02381,DBT-P02394,DBT-P02469,DBT-P02498,DBT-P02501,DBT-P02516,DBT-P02526,DBT-P02528,DBT-P02545,DBT-P02558,DBT-P02560,DBT-P02574,DBT-P02598,DBT-P02648,DBT-P02669,DBT-P02686,DBT-P02732,DBT-P02754,DBT-P02766,DBT-P02776,DBT-P02816,DBT-P02864,DBT-P02898,DBT-P02946,DBT-P02959,DBT-P02989,DBT-P03002,DBT-P03027,DBT-P03038,DBT-P03056,DBT-P03092,DBT-P03097,DBT-P03110,DBT-P03113,DBT-P03129,DBT-P03166,DBT-P03188,DBT-P03190,DBT-P03215,DBT-P03240,DBT-P03263,DBT-P03317,DBT-P03340,DBT-P03343,DBT-P03346,DBT-P03360,DBT-P03370,DBT-P03377,DBT-P03390,DBT-P03403,DBT-P03448,DBT-P03464,DBT-P03470,DBT-P03483,DBT-P03501,DBT-P03543,DBT-P03574,DBT-P03576,DBT-P03582,DBT-P03592,DBT-P03598,DBT-P03605,DBT-P03621,DBT-P03628,DBT-P03651,DBT-P03689,DBT-P03694,DBT-P03710,DBT-P03725,DBT-P03726,DBT-P03728,DBT-P03831,DBT-P03898,DBT-P03901,DBT-P03932,DBT-P03936,DBT-P03937,DBT-P03948,DBT-P03968,DBT-P03979,DBT-P04008,DBT-P04017,DBT-P04031,DBT-P04033,DBT-P04037,DBT-P04045,DBT-P04081,DBT-P04084,DBT-P04087,DBT-P04097,DBT-P04105,DBT-P04106,DBT-P04139,DBT-P04158,DBT-P04163,DBT-P04171,DBT-P04174,DBT-P04208,DBT-P04210,DBT-P04228,DBT-P04247,DBT-P04257,DBT-P04293,DBT-P04295,DBT-P04299,DBT-P04310,DBT-P04317,DBT-P04344,DBT-P04346,DBT-P04368,DBT-P04380,DBT-P04396,DBT-P04446,DBT-P04452,DBT-P04455,DBT-P04497,DBT-P04515,DBT-P04517,DBT-P04541,DBT-P04577,DBT-P04586,DBT-P04596,DBT-P04622,DBT-P04642,DBT-P04677,DBT-P04684,DBT-P04693,DBT-P04695,DBT-P04697,DBT-P04744,DBT-P04803,DBT-P04808,DBT-P04837,DBT-P04857,DBT-P04874,DBT-P04884,DBT-P04911,DBT-P04963,DBT-P05000,DBT-P05005,DBT-P05018,DBT-P05025,DBT-P05060&CollectionCriteria=Breast-Cancer-Screening-DBT"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download metadata",
+          "value": "https://www.cancerimagingarchive.net/wp-content/uploads/BSC-DBT-Validation-manifes-nbia-digest.xlsx"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download requirements",
+          "value": "Download requires the TCIA Data Retriever"
+        }
+      ]
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "file-41551",
+      "name": "BCS-DBT-file-paths-validation-v2.csv",
+      "contentUrl": "https://www.cancerimagingarchive.net/wp-content/uploads/BCS-DBT-file-paths-validation-v2.csv",
+      "encodingFormat": [
+        "text/csv"
+      ],
+      "conditionsOfAccess": "Open-access TCIA data with a noncommercial-use license condition. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": [
+            "CreativeWork",
+            "odrl:Offer"
+          ],
+          "name": "Noncommercial use condition",
+          "description": "CC BY-NC 4.0 includes a noncommercial-use condition.",
+          "odrl:permission": {
+            "@type": "odrl:Permission",
+            "odrl:action": {
+              "@id": "odrl:use",
+              "name": "Use"
+            },
+            "odrl:constraint": {
+              "@type": "odrl:Constraint",
+              "name": "Non-commercial use only",
+              "odrl:operator": {
+                "@id": "odrl:eq"
+              },
+              "odrl:rightOperand": "noncommercial"
+            }
+          }
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "name": "CC BY-NC 4.0",
+          "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+        }
+      ],
+      "contentSize": "378.3 KB",
+      "license": "https://creativecommons.org/licenses/by-nc/4.0/",
+      "dateModified": "2023-11-20",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download id",
+          "value": "41551"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access level",
+          "value": "open_noncommercial"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download types",
+          "value": [
+            "Other"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA data types",
+          "value": [
+            "Other"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA file types",
+          "value": [
+            "CSV"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download artifact role",
+          "value": "data file"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access mechanism",
+          "value": "direct download"
+        }
+      ]
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "file-47767",
+      "name": "BCS-DBT-labels-validation-PHASE-2-Jan-2024.csv",
+      "contentUrl": "https://www.cancerimagingarchive.net/wp-content/uploads/BCS-DBT-labels-validation-PHASE-2-Jan-2024.csv",
+      "encodingFormat": [
+        "text/csv"
+      ],
+      "conditionsOfAccess": "Open-access TCIA data with a noncommercial-use license condition. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": [
+            "CreativeWork",
+            "odrl:Offer"
+          ],
+          "name": "Noncommercial use condition",
+          "description": "CC BY-NC 4.0 includes a noncommercial-use condition.",
+          "odrl:permission": {
+            "@type": "odrl:Permission",
+            "odrl:action": {
+              "@id": "odrl:use",
+              "name": "Use"
+            },
+            "odrl:constraint": {
+              "@type": "odrl:Constraint",
+              "name": "Non-commercial use only",
+              "odrl:operator": {
+                "@id": "odrl:eq"
+              },
+              "odrl:rightOperand": "noncommercial"
+            }
+          }
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "name": "CC BY-NC 4.0",
+          "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+        }
+      ],
+      "contentSize": "40.38 KB",
+      "license": "https://creativecommons.org/licenses/by-nc/4.0/",
+      "dateModified": "2024-01-18",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download id",
+          "value": "47767"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access level",
+          "value": "open_noncommercial"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download types",
+          "value": [
+            "Other"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA data types",
+          "value": [
+            "Classification"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA file types",
+          "value": [
+            "CSV"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download artifact role",
+          "value": "data file"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access mechanism",
+          "value": "direct download"
+        }
+      ]
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "file-47787",
+      "name": "BCS-DBT-boxes-validation-v2-PHASE-2-Jan-2024.csv",
+      "contentUrl": "https://www.cancerimagingarchive.net/wp-content/uploads/BCS-DBT-boxes-validation-v2-PHASE-2-Jan-2024.csv",
+      "encodingFormat": [
+        "text/csv"
+      ],
+      "conditionsOfAccess": "Open-access TCIA data with a noncommercial-use license condition. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": [
+            "CreativeWork",
+            "odrl:Offer"
+          ],
+          "name": "Noncommercial use condition",
+          "description": "CC BY-NC 4.0 includes a noncommercial-use condition.",
+          "odrl:permission": {
+            "@type": "odrl:Permission",
+            "odrl:action": {
+              "@id": "odrl:use",
+              "name": "Use"
+            },
+            "odrl:constraint": {
+              "@type": "odrl:Constraint",
+              "name": "Non-commercial use only",
+              "odrl:operator": {
+                "@id": "odrl:eq"
+              },
+              "odrl:rightOperand": "noncommercial"
+            }
+          }
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "name": "CC BY-NC 4.0",
+          "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+        }
+      ],
+      "contentSize": "4.55 KB",
+      "license": "https://creativecommons.org/licenses/by-nc/4.0/",
+      "dateModified": "2024-01-18",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download id",
+          "value": "47787"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access level",
+          "value": "open_noncommercial"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download types",
+          "value": [
+            "Other"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA data types",
+          "value": [
+            "Radiomic Feature"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA file types",
+          "value": [
+            "CSV"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download artifact role",
+          "value": "data file"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access mechanism",
+          "value": "direct download"
+        }
+      ]
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "file-41553",
+      "name": "BSC-DBT-Test-manifest.tcia",
+      "contentUrl": "https://www.cancerimagingarchive.net/wp-content/uploads/BSC-DBT-Test-manifest.tcia",
+      "encodingFormat": [
+        "text/plain",
+        "application/vnd.tcia.manifest"
+      ],
+      "conditionsOfAccess": "Open-access TCIA data with a noncommercial-use license condition. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": [
+            "CreativeWork",
+            "odrl:Offer"
+          ],
+          "name": "Noncommercial use condition",
+          "description": "CC BY-NC 4.0 includes a noncommercial-use condition.",
+          "odrl:permission": {
+            "@type": "odrl:Permission",
+            "odrl:action": {
+              "@id": "odrl:use",
+              "name": "Use"
+            },
+            "odrl:constraint": {
+              "@type": "odrl:Constraint",
+              "name": "Non-commercial use only",
+              "odrl:operator": {
+                "@id": "odrl:eq"
+              },
+              "odrl:rightOperand": "noncommercial"
+            }
+          }
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "name": "CC BY-NC 4.0",
+          "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+        }
+      ],
+      "contentSize": "135.14 GB",
+      "license": "https://creativecommons.org/licenses/by-nc/4.0/",
+      "dateModified": "2023-11-20",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download id",
+          "value": "41553"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access level",
+          "value": "open_noncommercial"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download types",
+          "value": [
+            "Radiology Images"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA data types",
+          "value": [
+            "MG"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA file types",
+          "value": [
+            "DICOM"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download artifact role",
+          "value": "manifest"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access mechanism",
+          "value": "TCIA Data Retriever"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA downstream access system",
+          "value": "Imaging Data Commons (IDC)"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA search system",
+          "value": "NBIA Search"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA search/access URL",
+          "value": "https://nbia.cancerimagingarchive.net/nbia-search/?MinNumberOfStudiesCriteria=1&PatientCriteria=DBT-P00004,DBT-P00021,DBT-P00036,DBT-P00056,DBT-P00073,DBT-P00075,DBT-P00087,DBT-P00092,DBT-P00095,DBT-P00118,DBT-P00129,DBT-P00144,DBT-P00192,DBT-P00208,DBT-P00211,DBT-P00221,DBT-P00223,DBT-P00239,DBT-P00276,DBT-P00277,DBT-P00281,DBT-P00284,DBT-P00311,DBT-P00312,DBT-P00317,DBT-P00318,DBT-P00332,DBT-P00339,DBT-P00343,DBT-P00345,DBT-P00350,DBT-P00372,DBT-P00386,DBT-P00387,DBT-P00392,DBT-P00455,DBT-P00471,DBT-P00472,DBT-P00480,DBT-P00487,DBT-P00493,DBT-P00496,DBT-P00522,DBT-P00556,DBT-P00561,DBT-P00573,DBT-P00584,DBT-P00590,DBT-P00601,DBT-P00615,DBT-P00619,DBT-P00620,DBT-P00623,DBT-P00629,DBT-P00635,DBT-P00647,DBT-P00659,DBT-P00675,DBT-P00690,DBT-P00694,DBT-P00712,DBT-P00715,DBT-P00721,DBT-P00724,DBT-P00735,DBT-P00741,DBT-P00756,DBT-P00758,DBT-P00770,DBT-P00772,DBT-P00794,DBT-P00798,DBT-P00801,DBT-P00817,DBT-P00838,DBT-P00857,DBT-P00872,DBT-P00882,DBT-P00915,DBT-P00918,DBT-P00935,DBT-P00936,DBT-P00937,DBT-P00977,DBT-P00980,DBT-P00984,DBT-P00989,DBT-P01010,DBT-P01015,DBT-P01022,DBT-P01023,DBT-P01024,DBT-P01059,DBT-P01060,DBT-P01068,DBT-P01129,DBT-P01137,DBT-P01140,DBT-P01158,DBT-P01183,DBT-P01184,DBT-P01210,DBT-P01219,DBT-P01237,DBT-P01247,DBT-P01256,DBT-P01263,DBT-P01275,DBT-P01277,DBT-P01280,DBT-P01283,DBT-P01291,DBT-P01292,DBT-P01298,DBT-P01340,DBT-P01342,DBT-P01367,DBT-P01371,DBT-P01372,DBT-P01373,DBT-P01409,DBT-P01423,DBT-P01443,DBT-P01448,DBT-P01450,DBT-P01451,DBT-P01487,DBT-P01497,DBT-P01510,DBT-P01531,DBT-P01534,DBT-P01542,DBT-P01547,DBT-P01552,DBT-P01563,DBT-P01577,DBT-P01592,DBT-P01593,DBT-P01612,DBT-P01621,DBT-P01622,DBT-P01623,DBT-P01629,DBT-P01652,DBT-P01655,DBT-P01670,DBT-P01702,DBT-P01719,DBT-P01725,DBT-P01726,DBT-P01739,DBT-P01755,DBT-P01782,DBT-P01797,DBT-P01803,DBT-P01814,DBT-P01837,DBT-P01847,DBT-P01862,DBT-P01865,DBT-P01880,DBT-P01888,DBT-P01892,DBT-P01896,DBT-P01898,DBT-P01899,DBT-P01912,DBT-P01918,DBT-P01919,DBT-P01934,DBT-P01958,DBT-P01961,DBT-P01963,DBT-P01983,DBT-P01990,DBT-P01991,DBT-P02006,DBT-P02009,DBT-P02028,DBT-P02055,DBT-P02069,DBT-P02094,DBT-P02104,DBT-P02110,DBT-P02112,DBT-P02123,DBT-P02131,DBT-P02139,DBT-P02152,DBT-P02155,DBT-P02157,DBT-P02164,DBT-P02172,DBT-P02180,DBT-P02187,DBT-P02190,DBT-P02199,DBT-P02232,DBT-P02235,DBT-P02281,DBT-P02285,DBT-P02293,DBT-P02306,DBT-P02308,DBT-P02312,DBT-P02313,DBT-P02325,DBT-P02347,DBT-P02420,DBT-P02460,DBT-P02477,DBT-P02487,DBT-P02496,DBT-P02511,DBT-P02512,DBT-P02514,DBT-P02542,DBT-P02559,DBT-P02572,DBT-P02578,DBT-P02604,DBT-P02609,DBT-P02651,DBT-P02657,DBT-P02665,DBT-P02668,DBT-P02678,DBT-P02685,DBT-P02711,DBT-P02714,DBT-P02719,DBT-P02725,DBT-P02733,DBT-P02742,DBT-P02744,DBT-P02748,DBT-P02753,DBT-P02774,DBT-P02794,DBT-P02797,DBT-P02804,DBT-P02817,DBT-P02825,DBT-P02826,DBT-P02834,DBT-P02861,DBT-P02875,DBT-P02901,DBT-P02906,DBT-P02910,DBT-P02921,DBT-P02933,DBT-P02937,DBT-P02941,DBT-P02954,DBT-P02975,DBT-P02979,DBT-P02985,DBT-P02986,DBT-P02998,DBT-P03010,DBT-P03016,DBT-P03019,DBT-P03035,DBT-P03049,DBT-P03054,DBT-P03064,DBT-P03068,DBT-P03075,DBT-P03083,DBT-P03108,DBT-P03119,DBT-P03122,DBT-P03124,DBT-P03151,DBT-P03187,DBT-P03196,DBT-P03220,DBT-P03226,DBT-P03254,DBT-P03273,DBT-P03283,DBT-P03304,DBT-P03332,DBT-P03338,DBT-P03354,DBT-P03366,DBT-P03371,DBT-P03372,DBT-P03376,DBT-P03398,DBT-P03430,DBT-P03468,DBT-P03488,DBT-P03508,DBT-P03519,DBT-P03536,DBT-P03538,DBT-P03541,DBT-P03545,DBT-P03562,DBT-P03571,DBT-P03583,DBT-P03591,DBT-P03614,DBT-P03636,DBT-P03661,DBT-P03678,DBT-P03679,DBT-P03695,DBT-P03696,DBT-P03711,DBT-P03732,DBT-P03749,DBT-P03766,DBT-P03774,DBT-P03789,DBT-P03796,DBT-P03812,DBT-P03818,DBT-P03820,DBT-P03842,DBT-P03844,DBT-P03845,DBT-P03854,DBT-P03864,DBT-P03918,DBT-P03952,DBT-P03963,DBT-P03964,DBT-P03971,DBT-P03987,DBT-P04003,DBT-P04046,DBT-P04053,DBT-P04063,DBT-P04071,DBT-P04085,DBT-P04115,DBT-P04126,DBT-P04131,DBT-P04141,DBT-P04145,DBT-P04154,DBT-P04161,DBT-P04167,DBT-P04176,DBT-P04184,DBT-P04187,DBT-P04195,DBT-P04209,DBT-P04212,DBT-P04218,DBT-P04243,DBT-P04255,DBT-P04260,DBT-P04286,DBT-P04287,DBT-P04304,DBT-P04312,DBT-P04350,DBT-P04373,DBT-P04374,DBT-P04378,DBT-P04382,DBT-P04391,DBT-P04404,DBT-P04411,DBT-P04413,DBT-P04423,DBT-P04425,DBT-P04439,DBT-P04451,DBT-P04457,DBT-P04465,DBT-P04471,DBT-P04479,DBT-P04499,DBT-P04501,DBT-P04504,DBT-P04559,DBT-P04564,DBT-P04571,DBT-P04588,DBT-P04591,DBT-P04607,DBT-P04619,DBT-P04651,DBT-P04655,DBT-P04674,DBT-P04682,DBT-P04743,DBT-P04770,DBT-P04774,DBT-P04787,DBT-P04788,DBT-P04790,DBT-P04802,DBT-P04825,DBT-P04828,DBT-P04841,DBT-P04844,DBT-P04845,DBT-P04859,DBT-P04861,DBT-P04889,DBT-P04910,DBT-P04935,DBT-P04950,DBT-P04956,DBT-P04972,DBT-P04975,DBT-P04982,DBT-P05003,DBT-P05023,DBT-P05036,DBT-P05049,DBT-P05051&CollectionCriteria=Breast-Cancer-Screening-DBT"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download metadata",
+          "value": "https://www.cancerimagingarchive.net/wp-content/uploads/BSC-DBT-Test-manifes-nbia-digest.xlsx"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download requirements",
+          "value": "Download requires the TCIA Data Retriever"
+        }
+      ]
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "file-41555",
+      "name": "BCS-DBT-file-paths-test-v2.csv",
+      "contentUrl": "https://www.cancerimagingarchive.net/wp-content/uploads/BCS-DBT-file-paths-test-v2.csv",
+      "encodingFormat": [
+        "text/csv"
+      ],
+      "conditionsOfAccess": "Open-access TCIA data with a noncommercial-use license condition. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": [
+            "CreativeWork",
+            "odrl:Offer"
+          ],
+          "name": "Noncommercial use condition",
+          "description": "CC BY-NC 4.0 includes a noncommercial-use condition.",
+          "odrl:permission": {
+            "@type": "odrl:Permission",
+            "odrl:action": {
+              "@id": "odrl:use",
+              "name": "Use"
+            },
+            "odrl:constraint": {
+              "@type": "odrl:Constraint",
+              "name": "Non-commercial use only",
+              "odrl:operator": {
+                "@id": "odrl:eq"
+              },
+              "odrl:rightOperand": "noncommercial"
+            }
+          }
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "name": "CC BY-NC 4.0",
+          "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+        }
+      ],
+      "contentSize": "559.41 KB",
+      "license": "https://creativecommons.org/licenses/by-nc/4.0/",
+      "dateModified": "2023-11-20",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download id",
+          "value": "41555"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access level",
+          "value": "open_noncommercial"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download types",
+          "value": [
+            "Other"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA data types",
+          "value": [
+            "Other"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA file types",
+          "value": [
+            "CSV"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download artifact role",
+          "value": "data file"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access mechanism",
+          "value": "direct download"
+        }
+      ]
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "file-47825",
+      "name": "BCS-DBT-labels-test-PHASE-2.csv",
+      "contentUrl": "https://www.cancerimagingarchive.net/wp-content/uploads/BCS-DBT-labels-test-PHASE-2.csv",
+      "encodingFormat": [
+        "text/csv"
+      ],
+      "conditionsOfAccess": "Open-access TCIA data with a noncommercial-use license condition. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": [
+            "CreativeWork",
+            "odrl:Offer"
+          ],
+          "name": "Noncommercial use condition",
+          "description": "CC BY-NC 4.0 includes a noncommercial-use condition.",
+          "odrl:permission": {
+            "@type": "odrl:Permission",
+            "odrl:action": {
+              "@id": "odrl:use",
+              "name": "Use"
+            },
+            "odrl:constraint": {
+              "@type": "odrl:Constraint",
+              "name": "Non-commercial use only",
+              "odrl:operator": {
+                "@id": "odrl:eq"
+              },
+              "odrl:rightOperand": "noncommercial"
+            }
+          }
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "name": "CC BY-NC 4.0",
+          "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+        }
+      ],
+      "contentSize": "58.04 KB",
+      "license": "https://creativecommons.org/licenses/by-nc/4.0/",
+      "dateModified": "2024-01-18",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download id",
+          "value": "47825"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access level",
+          "value": "open_noncommercial"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download types",
+          "value": [
+            "Image Annotations",
+            "Clinical Data"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA data types",
+          "value": [
+            "Classification"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA file types",
+          "value": [
+            "CSV"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download artifact role",
+          "value": "data file"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access mechanism",
+          "value": "direct download"
+        }
+      ]
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "file-47835",
+      "name": "BCS-DBT-boxes-test-v2-PHASE-2-Jan-2024.csv",
+      "contentUrl": "https://www.cancerimagingarchive.net/wp-content/uploads/BCS-DBT-boxes-test-v2-PHASE-2-Jan-2024.csv",
+      "encodingFormat": [
+        "text/csv"
+      ],
+      "conditionsOfAccess": "Open-access TCIA data with a noncommercial-use license condition. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": [
+            "CreativeWork",
+            "odrl:Offer"
+          ],
+          "name": "Noncommercial use condition",
+          "description": "CC BY-NC 4.0 includes a noncommercial-use condition.",
+          "odrl:permission": {
+            "@type": "odrl:Permission",
+            "odrl:action": {
+              "@id": "odrl:use",
+              "name": "Use"
+            },
+            "odrl:constraint": {
+              "@type": "odrl:Constraint",
+              "name": "Non-commercial use only",
+              "odrl:operator": {
+                "@id": "odrl:eq"
+              },
+              "odrl:rightOperand": "noncommercial"
+            }
+          }
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "name": "CC BY-NC 4.0",
+          "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+        }
+      ],
+      "contentSize": "8.17 KB",
+      "license": "https://creativecommons.org/licenses/by-nc/4.0/",
+      "dateModified": "2024-01-18",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download id",
+          "value": "47835"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access level",
+          "value": "open_noncommercial"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download types",
+          "value": [
+            "Other"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA data types",
+          "value": [
+            "Radiomic Feature"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA file types",
+          "value": [
+            "CSV"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download artifact role",
+          "value": "data file"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access mechanism",
+          "value": "direct download"
+        }
+      ]
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "file-47655",
+      "name": "team_predictions_bothphases.zip",
+      "contentUrl": "https://www.cancerimagingarchive.net/wp-content/uploads/team_predictions_bothphases.zip",
+      "encodingFormat": [
+        "application/zip"
+      ],
+      "conditionsOfAccess": "Open-access TCIA data with a noncommercial-use license condition. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": [
+            "CreativeWork",
+            "odrl:Offer"
+          ],
+          "name": "Noncommercial use condition",
+          "description": "CC BY-NC 4.0 includes a noncommercial-use condition.",
+          "odrl:permission": {
+            "@type": "odrl:Permission",
+            "odrl:action": {
+              "@id": "odrl:use",
+              "name": "Use"
+            },
+            "odrl:constraint": {
+              "@type": "odrl:Constraint",
+              "name": "Non-commercial use only",
+              "odrl:operator": {
+                "@id": "odrl:eq"
+              },
+              "odrl:rightOperand": "noncommercial"
+            }
+          }
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "name": "CC BY-NC 4.0",
+          "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+        }
+      ],
+      "contentSize": "6.73 MB",
+      "license": "https://creativecommons.org/licenses/by-nc/4.0/",
+      "dateModified": "2022-03-31",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download id",
+          "value": "47655"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access level",
+          "value": "open_noncommercial"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download types",
+          "value": [
+            "Image Annotations"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA data types",
+          "value": [
+            "Measurement"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA file types",
+          "value": [
+            "ZIP",
+            "CSV"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA external resources",
+          "value": [
+            "Image Analyses"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download artifact role",
+          "value": "data file"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access mechanism",
+          "value": "direct download"
+        }
+      ]
+    }
+  ],
+  "recordSet": [
+    {
+      "@type": "cr:RecordSet",
+      "@id": "download-41541",
+      "name": "Radiology Images",
+      "description": "TCIA current download record 41541 for Breast-Cancer-Screening-DBT.",
+      "dataType": "sc:DataDownload",
+      "key": {
+        "@id": "download-41541/download_id"
+      },
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "download-41541/download_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41541/download_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41541/file_object_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41541/download_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41541/data_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41541/file_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41541/download_artifact_role",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41541/access_mechanism",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41541/downstream_access_system",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41541/access_level",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41541/license_label",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41541/license_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41541/subjects",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41541/studies",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41541/series",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41541/images",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41541/download_metadata",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41541/download_requirements",
+          "dataType": "sc:Text"
+        }
+      ],
+      "data": [
+        {
+          "download-41541/download_id": "41541",
+          "download-41541/download_url": "https://www.cancerimagingarchive.net/wp-content/uploads/BSC-DBT-Train-manifest.tcia",
+          "download-41541/file_object_id": "file-41541",
+          "download-41541/download_types": [
+            "Radiology Images"
+          ],
+          "download-41541/data_types": [
+            "MG"
+          ],
+          "download-41541/file_types": [
+            "DICOM"
+          ],
+          "download-41541/download_artifact_role": "manifest",
+          "download-41541/access_mechanism": "TCIA Data Retriever",
+          "download-41541/downstream_access_system": "Imaging Data Commons (IDC)",
+          "download-41541/access_level": "open_noncommercial",
+          "download-41541/license_label": "CC BY-NC 4.0",
+          "download-41541/license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "download-41541/subjects": 4362,
+          "download-41541/studies": 4838,
+          "download-41541/series": 19148,
+          "download-41541/images": 19148,
+          "download-41541/download_metadata": "https://www.cancerimagingarchive.net/wp-content/uploads/BSC-DBT-Train-manifes-nbia-digest.xlsx",
+          "download-41541/download_requirements": "Download requires the TCIA Data Retriever"
+        }
+      ],
+      "conditionsOfAccess": "Open-access TCIA data with a noncommercial-use license condition. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": [
+            "CreativeWork",
+            "odrl:Offer"
+          ],
+          "name": "Noncommercial use condition",
+          "description": "CC BY-NC 4.0 includes a noncommercial-use condition.",
+          "odrl:permission": {
+            "@type": "odrl:Permission",
+            "odrl:action": {
+              "@id": "odrl:use",
+              "name": "Use"
+            },
+            "odrl:constraint": {
+              "@type": "odrl:Constraint",
+              "name": "Non-commercial use only",
+              "odrl:operator": {
+                "@id": "odrl:eq"
+              },
+              "odrl:rightOperand": "noncommercial"
+            }
+          }
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "name": "CC BY-NC 4.0",
+          "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+        }
+      ]
+    },
+    {
+      "@type": "cr:RecordSet",
+      "@id": "download-41543",
+      "name": "Other",
+      "description": "TCIA current download record 41543 for Breast-Cancer-Screening-DBT.",
+      "dataType": "sc:DataDownload",
+      "key": {
+        "@id": "download-41543/download_id"
+      },
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "download-41543/download_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41543/download_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41543/file_object_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41543/download_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41543/data_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41543/file_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41543/download_artifact_role",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41543/access_mechanism",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41543/access_level",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41543/license_label",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41543/license_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41543/subjects",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41543/studies",
+          "dataType": "sc:Integer"
+        }
+      ],
+      "data": [
+        {
+          "download-41543/download_id": "41543",
+          "download-41543/download_url": "https://www.cancerimagingarchive.net/wp-content/uploads/BCS-DBT-file-paths-train-v2.csv",
+          "download-41543/file_object_id": "file-41543",
+          "download-41543/download_types": [
+            "Other"
+          ],
+          "download-41543/data_types": [
+            "Other"
+          ],
+          "download-41543/file_types": [
+            "CSV"
+          ],
+          "download-41543/download_artifact_role": "data file",
+          "download-41543/access_mechanism": "direct download",
+          "download-41543/access_level": "open_noncommercial",
+          "download-41543/license_label": "CC BY-NC 4.0",
+          "download-41543/license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "download-41543/subjects": 4362,
+          "download-41543/studies": 4838
+        }
+      ],
+      "conditionsOfAccess": "Open-access TCIA data with a noncommercial-use license condition. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": [
+            "CreativeWork",
+            "odrl:Offer"
+          ],
+          "name": "Noncommercial use condition",
+          "description": "CC BY-NC 4.0 includes a noncommercial-use condition.",
+          "odrl:permission": {
+            "@type": "odrl:Permission",
+            "odrl:action": {
+              "@id": "odrl:use",
+              "name": "Use"
+            },
+            "odrl:constraint": {
+              "@type": "odrl:Constraint",
+              "name": "Non-commercial use only",
+              "odrl:operator": {
+                "@id": "odrl:eq"
+              },
+              "odrl:rightOperand": "noncommercial"
+            }
+          }
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "name": "CC BY-NC 4.0",
+          "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+        }
+      ]
+    },
+    {
+      "@type": "cr:RecordSet",
+      "@id": "download-41545",
+      "name": "Other",
+      "description": "TCIA current download record 41545 for Breast-Cancer-Screening-DBT.",
+      "dataType": "sc:DataDownload",
+      "key": {
+        "@id": "download-41545/download_id"
+      },
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "download-41545/download_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41545/download_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41545/file_object_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41545/download_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41545/data_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41545/file_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41545/download_artifact_role",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41545/access_mechanism",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41545/access_level",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41545/license_label",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41545/license_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41545/subjects",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41545/studies",
+          "dataType": "sc:Integer"
+        }
+      ],
+      "data": [
+        {
+          "download-41545/download_id": "41545",
+          "download-41545/download_url": "https://www.cancerimagingarchive.net/wp-content/uploads/BCS-DBT-labels-train-v2.csv",
+          "download-41545/file_object_id": "file-41545",
+          "download-41545/download_types": [
+            "Other"
+          ],
+          "download-41545/data_types": [
+            "Classification"
+          ],
+          "download-41545/file_types": [
+            "CSV"
+          ],
+          "download-41545/download_artifact_role": "data file",
+          "download-41545/access_mechanism": "direct download",
+          "download-41545/access_level": "open_noncommercial",
+          "download-41545/license_label": "CC BY-NC 4.0",
+          "download-41545/license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "download-41545/subjects": 4362,
+          "download-41545/studies": 4838
+        }
+      ],
+      "conditionsOfAccess": "Open-access TCIA data with a noncommercial-use license condition. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": [
+            "CreativeWork",
+            "odrl:Offer"
+          ],
+          "name": "Noncommercial use condition",
+          "description": "CC BY-NC 4.0 includes a noncommercial-use condition.",
+          "odrl:permission": {
+            "@type": "odrl:Permission",
+            "odrl:action": {
+              "@id": "odrl:use",
+              "name": "Use"
+            },
+            "odrl:constraint": {
+              "@type": "odrl:Constraint",
+              "name": "Non-commercial use only",
+              "odrl:operator": {
+                "@id": "odrl:eq"
+              },
+              "odrl:rightOperand": "noncommercial"
+            }
+          }
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "name": "CC BY-NC 4.0",
+          "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+        }
+      ]
+    },
+    {
+      "@type": "cr:RecordSet",
+      "@id": "download-41547",
+      "name": "Other",
+      "description": "TCIA current download record 41547 for Breast-Cancer-Screening-DBT.",
+      "dataType": "sc:DataDownload",
+      "key": {
+        "@id": "download-41547/download_id"
+      },
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "download-41547/download_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41547/download_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41547/file_object_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41547/download_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41547/data_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41547/file_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41547/download_artifact_role",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41547/access_mechanism",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41547/access_level",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41547/license_label",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41547/license_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41547/subjects",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41547/studies",
+          "dataType": "sc:Integer"
+        }
+      ],
+      "data": [
+        {
+          "download-41547/download_id": "41547",
+          "download-41547/download_url": "https://www.cancerimagingarchive.net/wp-content/uploads/BCS-DBT-boxes-train-v2.csv",
+          "download-41547/file_object_id": "file-41547",
+          "download-41547/download_types": [
+            "Other"
+          ],
+          "download-41547/data_types": [
+            "Measurement"
+          ],
+          "download-41547/file_types": [
+            "CSV"
+          ],
+          "download-41547/download_artifact_role": "data file",
+          "download-41547/access_mechanism": "direct download",
+          "download-41547/access_level": "open_noncommercial",
+          "download-41547/license_label": "CC BY-NC 4.0",
+          "download-41547/license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "download-41547/subjects": 101,
+          "download-41547/studies": 101
+        }
+      ],
+      "conditionsOfAccess": "Open-access TCIA data with a noncommercial-use license condition. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": [
+            "CreativeWork",
+            "odrl:Offer"
+          ],
+          "name": "Noncommercial use condition",
+          "description": "CC BY-NC 4.0 includes a noncommercial-use condition.",
+          "odrl:permission": {
+            "@type": "odrl:Permission",
+            "odrl:action": {
+              "@id": "odrl:use",
+              "name": "Use"
+            },
+            "odrl:constraint": {
+              "@type": "odrl:Constraint",
+              "name": "Non-commercial use only",
+              "odrl:operator": {
+                "@id": "odrl:eq"
+              },
+              "odrl:rightOperand": "noncommercial"
+            }
+          }
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "name": "CC BY-NC 4.0",
+          "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+        }
+      ]
+    },
+    {
+      "@type": "cr:RecordSet",
+      "@id": "download-41549",
+      "name": "Radiology Images",
+      "description": "TCIA current download record 41549 for Breast-Cancer-Screening-DBT.",
+      "dataType": "sc:DataDownload",
+      "key": {
+        "@id": "download-41549/download_id"
+      },
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "download-41549/download_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41549/download_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41549/search_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41549/file_object_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41549/download_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41549/data_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41549/file_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41549/download_artifact_role",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41549/access_mechanism",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41549/downstream_access_system",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41549/search_system",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41549/access_level",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41549/license_label",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41549/license_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41549/subjects",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41549/studies",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41549/series",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41549/images",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41549/download_metadata",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41549/download_requirements",
+          "dataType": "sc:Text"
+        }
+      ],
+      "data": [
+        {
+          "download-41549/download_id": "41549",
+          "download-41549/download_url": "https://www.cancerimagingarchive.net/wp-content/uploads/BSC-DBT-Validation-manifest.tcia",
+          "download-41549/search_url": "https://nbia.cancerimagingarchive.net/nbia-search/?MinNumberOfStudiesCriteria=1&PatientCriteria=DBT-P00001,DBT-P00002,DBT-P00018,DBT-P00047,DBT-P00069,DBT-P00082,DBT-P00084,DBT-P00114,DBT-P00133,DBT-P00160,DBT-P00165,DBT-P00174,DBT-P00176,DBT-P00187,DBT-P00213,DBT-P00234,DBT-P00235,DBT-P00238,DBT-P00271,DBT-P00273,DBT-P00283,DBT-P00351,DBT-P00385,DBT-P00417,DBT-P00431,DBT-P00450,DBT-P00547,DBT-P00549,DBT-P00558,DBT-P00577,DBT-P00585,DBT-P00643,DBT-P00651,DBT-P00655,DBT-P00697,DBT-P00705,DBT-P00714,DBT-P00718,DBT-P00789,DBT-P00802,DBT-P00803,DBT-P00839,DBT-P00843,DBT-P00844,DBT-P00864,DBT-P00866,DBT-P00871,DBT-P00878,DBT-P00902,DBT-P00908,DBT-P00925,DBT-P00945,DBT-P01020,DBT-P01043,DBT-P01047,DBT-P01083,DBT-P01105,DBT-P01117,DBT-P01150,DBT-P01152,DBT-P01153,DBT-P01173,DBT-P01177,DBT-P01206,DBT-P01207,DBT-P01212,DBT-P01226,DBT-P01239,DBT-P01249,DBT-P01293,DBT-P01296,DBT-P01305,DBT-P01334,DBT-P01353,DBT-P01356,DBT-P01374,DBT-P01490,DBT-P01496,DBT-P01536,DBT-P01538,DBT-P01555,DBT-P01562,DBT-P01564,DBT-P01578,DBT-P01604,DBT-P01610,DBT-P01630,DBT-P01634,DBT-P01635,DBT-P01642,DBT-P01700,DBT-P01705,DBT-P01746,DBT-P01772,DBT-P01778,DBT-P01791,DBT-P01792,DBT-P01799,DBT-P01807,DBT-P01849,DBT-P01851,DBT-P01916,DBT-P01932,DBT-P01938,DBT-P01941,DBT-P01948,DBT-P01957,DBT-P01967,DBT-P02012,DBT-P02018,DBT-P02042,DBT-P02072,DBT-P02085,DBT-P02111,DBT-P02113,DBT-P02117,DBT-P02160,DBT-P02170,DBT-P02183,DBT-P02185,DBT-P02189,DBT-P02204,DBT-P02214,DBT-P02226,DBT-P02242,DBT-P02248,DBT-P02253,DBT-P02284,DBT-P02294,DBT-P02296,DBT-P02301,DBT-P02314,DBT-P02322,DBT-P02326,DBT-P02331,DBT-P02341,DBT-P02360,DBT-P02381,DBT-P02394,DBT-P02469,DBT-P02498,DBT-P02501,DBT-P02516,DBT-P02526,DBT-P02528,DBT-P02545,DBT-P02558,DBT-P02560,DBT-P02574,DBT-P02598,DBT-P02648,DBT-P02669,DBT-P02686,DBT-P02732,DBT-P02754,DBT-P02766,DBT-P02776,DBT-P02816,DBT-P02864,DBT-P02898,DBT-P02946,DBT-P02959,DBT-P02989,DBT-P03002,DBT-P03027,DBT-P03038,DBT-P03056,DBT-P03092,DBT-P03097,DBT-P03110,DBT-P03113,DBT-P03129,DBT-P03166,DBT-P03188,DBT-P03190,DBT-P03215,DBT-P03240,DBT-P03263,DBT-P03317,DBT-P03340,DBT-P03343,DBT-P03346,DBT-P03360,DBT-P03370,DBT-P03377,DBT-P03390,DBT-P03403,DBT-P03448,DBT-P03464,DBT-P03470,DBT-P03483,DBT-P03501,DBT-P03543,DBT-P03574,DBT-P03576,DBT-P03582,DBT-P03592,DBT-P03598,DBT-P03605,DBT-P03621,DBT-P03628,DBT-P03651,DBT-P03689,DBT-P03694,DBT-P03710,DBT-P03725,DBT-P03726,DBT-P03728,DBT-P03831,DBT-P03898,DBT-P03901,DBT-P03932,DBT-P03936,DBT-P03937,DBT-P03948,DBT-P03968,DBT-P03979,DBT-P04008,DBT-P04017,DBT-P04031,DBT-P04033,DBT-P04037,DBT-P04045,DBT-P04081,DBT-P04084,DBT-P04087,DBT-P04097,DBT-P04105,DBT-P04106,DBT-P04139,DBT-P04158,DBT-P04163,DBT-P04171,DBT-P04174,DBT-P04208,DBT-P04210,DBT-P04228,DBT-P04247,DBT-P04257,DBT-P04293,DBT-P04295,DBT-P04299,DBT-P04310,DBT-P04317,DBT-P04344,DBT-P04346,DBT-P04368,DBT-P04380,DBT-P04396,DBT-P04446,DBT-P04452,DBT-P04455,DBT-P04497,DBT-P04515,DBT-P04517,DBT-P04541,DBT-P04577,DBT-P04586,DBT-P04596,DBT-P04622,DBT-P04642,DBT-P04677,DBT-P04684,DBT-P04693,DBT-P04695,DBT-P04697,DBT-P04744,DBT-P04803,DBT-P04808,DBT-P04837,DBT-P04857,DBT-P04874,DBT-P04884,DBT-P04911,DBT-P04963,DBT-P05000,DBT-P05005,DBT-P05018,DBT-P05025,DBT-P05060&CollectionCriteria=Breast-Cancer-Screening-DBT",
+          "download-41549/file_object_id": "file-41549",
+          "download-41549/download_types": [
+            "Radiology Images"
+          ],
+          "download-41549/data_types": [
+            "MG"
+          ],
+          "download-41549/file_types": [
+            "DICOM"
+          ],
+          "download-41549/download_artifact_role": "manifest",
+          "download-41549/access_mechanism": "TCIA Data Retriever",
+          "download-41549/downstream_access_system": "Imaging Data Commons (IDC)",
+          "download-41549/search_system": "NBIA Search",
+          "download-41549/access_level": "open_noncommercial",
+          "download-41549/license_label": "CC BY-NC 4.0",
+          "download-41549/license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "download-41549/subjects": 280,
+          "download-41549/studies": 312,
+          "download-41549/series": 1163,
+          "download-41549/images": 1163,
+          "download-41549/download_metadata": "https://www.cancerimagingarchive.net/wp-content/uploads/BSC-DBT-Validation-manifes-nbia-digest.xlsx",
+          "download-41549/download_requirements": "Download requires the TCIA Data Retriever"
+        }
+      ],
+      "conditionsOfAccess": "Open-access TCIA data with a noncommercial-use license condition. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": [
+            "CreativeWork",
+            "odrl:Offer"
+          ],
+          "name": "Noncommercial use condition",
+          "description": "CC BY-NC 4.0 includes a noncommercial-use condition.",
+          "odrl:permission": {
+            "@type": "odrl:Permission",
+            "odrl:action": {
+              "@id": "odrl:use",
+              "name": "Use"
+            },
+            "odrl:constraint": {
+              "@type": "odrl:Constraint",
+              "name": "Non-commercial use only",
+              "odrl:operator": {
+                "@id": "odrl:eq"
+              },
+              "odrl:rightOperand": "noncommercial"
+            }
+          }
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "name": "CC BY-NC 4.0",
+          "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+        }
+      ]
+    },
+    {
+      "@type": "cr:RecordSet",
+      "@id": "download-41551",
+      "name": "Other",
+      "description": "TCIA current download record 41551 for Breast-Cancer-Screening-DBT.",
+      "dataType": "sc:DataDownload",
+      "key": {
+        "@id": "download-41551/download_id"
+      },
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "download-41551/download_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41551/download_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41551/file_object_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41551/download_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41551/data_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41551/file_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41551/download_artifact_role",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41551/access_mechanism",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41551/access_level",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41551/license_label",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41551/license_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41551/subjects",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41551/studies",
+          "dataType": "sc:Integer"
+        }
+      ],
+      "data": [
+        {
+          "download-41551/download_id": "41551",
+          "download-41551/download_url": "https://www.cancerimagingarchive.net/wp-content/uploads/BCS-DBT-file-paths-validation-v2.csv",
+          "download-41551/file_object_id": "file-41551",
+          "download-41551/download_types": [
+            "Other"
+          ],
+          "download-41551/data_types": [
+            "Other"
+          ],
+          "download-41551/file_types": [
+            "CSV"
+          ],
+          "download-41551/download_artifact_role": "data file",
+          "download-41551/access_mechanism": "direct download",
+          "download-41551/access_level": "open_noncommercial",
+          "download-41551/license_label": "CC BY-NC 4.0",
+          "download-41551/license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "download-41551/subjects": 280,
+          "download-41551/studies": 312
+        }
+      ],
+      "conditionsOfAccess": "Open-access TCIA data with a noncommercial-use license condition. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": [
+            "CreativeWork",
+            "odrl:Offer"
+          ],
+          "name": "Noncommercial use condition",
+          "description": "CC BY-NC 4.0 includes a noncommercial-use condition.",
+          "odrl:permission": {
+            "@type": "odrl:Permission",
+            "odrl:action": {
+              "@id": "odrl:use",
+              "name": "Use"
+            },
+            "odrl:constraint": {
+              "@type": "odrl:Constraint",
+              "name": "Non-commercial use only",
+              "odrl:operator": {
+                "@id": "odrl:eq"
+              },
+              "odrl:rightOperand": "noncommercial"
+            }
+          }
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "name": "CC BY-NC 4.0",
+          "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+        }
+      ]
+    },
+    {
+      "@type": "cr:RecordSet",
+      "@id": "download-47767",
+      "name": "Other",
+      "description": "TCIA current download record 47767 for Breast-Cancer-Screening-DBT.",
+      "dataType": "sc:DataDownload",
+      "key": {
+        "@id": "download-47767/download_id"
+      },
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "download-47767/download_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47767/download_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47767/file_object_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47767/download_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47767/data_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47767/file_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47767/download_artifact_role",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47767/access_mechanism",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47767/access_level",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47767/license_label",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47767/license_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47767/subjects",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47767/studies",
+          "dataType": "sc:Integer"
+        }
+      ],
+      "data": [
+        {
+          "download-47767/download_id": "47767",
+          "download-47767/download_url": "https://www.cancerimagingarchive.net/wp-content/uploads/BCS-DBT-labels-validation-PHASE-2-Jan-2024.csv",
+          "download-47767/file_object_id": "file-47767",
+          "download-47767/download_types": [
+            "Other"
+          ],
+          "download-47767/data_types": [
+            "Classification"
+          ],
+          "download-47767/file_types": [
+            "CSV"
+          ],
+          "download-47767/download_artifact_role": "data file",
+          "download-47767/access_mechanism": "direct download",
+          "download-47767/access_level": "open_noncommercial",
+          "download-47767/license_label": "CC BY-NC 4.0",
+          "download-47767/license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "download-47767/subjects": 280,
+          "download-47767/studies": 312
+        }
+      ],
+      "conditionsOfAccess": "Open-access TCIA data with a noncommercial-use license condition. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": [
+            "CreativeWork",
+            "odrl:Offer"
+          ],
+          "name": "Noncommercial use condition",
+          "description": "CC BY-NC 4.0 includes a noncommercial-use condition.",
+          "odrl:permission": {
+            "@type": "odrl:Permission",
+            "odrl:action": {
+              "@id": "odrl:use",
+              "name": "Use"
+            },
+            "odrl:constraint": {
+              "@type": "odrl:Constraint",
+              "name": "Non-commercial use only",
+              "odrl:operator": {
+                "@id": "odrl:eq"
+              },
+              "odrl:rightOperand": "noncommercial"
+            }
+          }
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "name": "CC BY-NC 4.0",
+          "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+        }
+      ]
+    },
+    {
+      "@type": "cr:RecordSet",
+      "@id": "download-47787",
+      "name": "Other",
+      "description": "TCIA current download record 47787 for Breast-Cancer-Screening-DBT.",
+      "dataType": "sc:DataDownload",
+      "key": {
+        "@id": "download-47787/download_id"
+      },
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "download-47787/download_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47787/download_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47787/file_object_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47787/download_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47787/data_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47787/file_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47787/download_artifact_role",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47787/access_mechanism",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47787/access_level",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47787/license_label",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47787/license_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47787/subjects",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47787/studies",
+          "dataType": "sc:Integer"
+        }
+      ],
+      "data": [
+        {
+          "download-47787/download_id": "47787",
+          "download-47787/download_url": "https://www.cancerimagingarchive.net/wp-content/uploads/BCS-DBT-boxes-validation-v2-PHASE-2-Jan-2024.csv",
+          "download-47787/file_object_id": "file-47787",
+          "download-47787/download_types": [
+            "Other"
+          ],
+          "download-47787/data_types": [
+            "Radiomic Feature"
+          ],
+          "download-47787/file_types": [
+            "CSV"
+          ],
+          "download-47787/download_artifact_role": "data file",
+          "download-47787/access_mechanism": "direct download",
+          "download-47787/access_level": "open_noncommercial",
+          "download-47787/license_label": "CC BY-NC 4.0",
+          "download-47787/license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "download-47787/subjects": 40,
+          "download-47787/studies": 40
+        }
+      ],
+      "conditionsOfAccess": "Open-access TCIA data with a noncommercial-use license condition. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": [
+            "CreativeWork",
+            "odrl:Offer"
+          ],
+          "name": "Noncommercial use condition",
+          "description": "CC BY-NC 4.0 includes a noncommercial-use condition.",
+          "odrl:permission": {
+            "@type": "odrl:Permission",
+            "odrl:action": {
+              "@id": "odrl:use",
+              "name": "Use"
+            },
+            "odrl:constraint": {
+              "@type": "odrl:Constraint",
+              "name": "Non-commercial use only",
+              "odrl:operator": {
+                "@id": "odrl:eq"
+              },
+              "odrl:rightOperand": "noncommercial"
+            }
+          }
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "name": "CC BY-NC 4.0",
+          "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+        }
+      ]
+    },
+    {
+      "@type": "cr:RecordSet",
+      "@id": "download-41553",
+      "name": "Radiology Images",
+      "description": "TCIA current download record 41553 for Breast-Cancer-Screening-DBT.",
+      "dataType": "sc:DataDownload",
+      "key": {
+        "@id": "download-41553/download_id"
+      },
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "download-41553/download_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41553/download_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41553/search_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41553/file_object_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41553/download_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41553/data_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41553/file_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41553/download_artifact_role",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41553/access_mechanism",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41553/downstream_access_system",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41553/search_system",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41553/access_level",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41553/license_label",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41553/license_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41553/subjects",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41553/studies",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41553/series",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41553/images",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41553/download_metadata",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41553/download_requirements",
+          "dataType": "sc:Text"
+        }
+      ],
+      "data": [
+        {
+          "download-41553/download_id": "41553",
+          "download-41553/download_url": "https://www.cancerimagingarchive.net/wp-content/uploads/BSC-DBT-Test-manifest.tcia",
+          "download-41553/search_url": "https://nbia.cancerimagingarchive.net/nbia-search/?MinNumberOfStudiesCriteria=1&PatientCriteria=DBT-P00004,DBT-P00021,DBT-P00036,DBT-P00056,DBT-P00073,DBT-P00075,DBT-P00087,DBT-P00092,DBT-P00095,DBT-P00118,DBT-P00129,DBT-P00144,DBT-P00192,DBT-P00208,DBT-P00211,DBT-P00221,DBT-P00223,DBT-P00239,DBT-P00276,DBT-P00277,DBT-P00281,DBT-P00284,DBT-P00311,DBT-P00312,DBT-P00317,DBT-P00318,DBT-P00332,DBT-P00339,DBT-P00343,DBT-P00345,DBT-P00350,DBT-P00372,DBT-P00386,DBT-P00387,DBT-P00392,DBT-P00455,DBT-P00471,DBT-P00472,DBT-P00480,DBT-P00487,DBT-P00493,DBT-P00496,DBT-P00522,DBT-P00556,DBT-P00561,DBT-P00573,DBT-P00584,DBT-P00590,DBT-P00601,DBT-P00615,DBT-P00619,DBT-P00620,DBT-P00623,DBT-P00629,DBT-P00635,DBT-P00647,DBT-P00659,DBT-P00675,DBT-P00690,DBT-P00694,DBT-P00712,DBT-P00715,DBT-P00721,DBT-P00724,DBT-P00735,DBT-P00741,DBT-P00756,DBT-P00758,DBT-P00770,DBT-P00772,DBT-P00794,DBT-P00798,DBT-P00801,DBT-P00817,DBT-P00838,DBT-P00857,DBT-P00872,DBT-P00882,DBT-P00915,DBT-P00918,DBT-P00935,DBT-P00936,DBT-P00937,DBT-P00977,DBT-P00980,DBT-P00984,DBT-P00989,DBT-P01010,DBT-P01015,DBT-P01022,DBT-P01023,DBT-P01024,DBT-P01059,DBT-P01060,DBT-P01068,DBT-P01129,DBT-P01137,DBT-P01140,DBT-P01158,DBT-P01183,DBT-P01184,DBT-P01210,DBT-P01219,DBT-P01237,DBT-P01247,DBT-P01256,DBT-P01263,DBT-P01275,DBT-P01277,DBT-P01280,DBT-P01283,DBT-P01291,DBT-P01292,DBT-P01298,DBT-P01340,DBT-P01342,DBT-P01367,DBT-P01371,DBT-P01372,DBT-P01373,DBT-P01409,DBT-P01423,DBT-P01443,DBT-P01448,DBT-P01450,DBT-P01451,DBT-P01487,DBT-P01497,DBT-P01510,DBT-P01531,DBT-P01534,DBT-P01542,DBT-P01547,DBT-P01552,DBT-P01563,DBT-P01577,DBT-P01592,DBT-P01593,DBT-P01612,DBT-P01621,DBT-P01622,DBT-P01623,DBT-P01629,DBT-P01652,DBT-P01655,DBT-P01670,DBT-P01702,DBT-P01719,DBT-P01725,DBT-P01726,DBT-P01739,DBT-P01755,DBT-P01782,DBT-P01797,DBT-P01803,DBT-P01814,DBT-P01837,DBT-P01847,DBT-P01862,DBT-P01865,DBT-P01880,DBT-P01888,DBT-P01892,DBT-P01896,DBT-P01898,DBT-P01899,DBT-P01912,DBT-P01918,DBT-P01919,DBT-P01934,DBT-P01958,DBT-P01961,DBT-P01963,DBT-P01983,DBT-P01990,DBT-P01991,DBT-P02006,DBT-P02009,DBT-P02028,DBT-P02055,DBT-P02069,DBT-P02094,DBT-P02104,DBT-P02110,DBT-P02112,DBT-P02123,DBT-P02131,DBT-P02139,DBT-P02152,DBT-P02155,DBT-P02157,DBT-P02164,DBT-P02172,DBT-P02180,DBT-P02187,DBT-P02190,DBT-P02199,DBT-P02232,DBT-P02235,DBT-P02281,DBT-P02285,DBT-P02293,DBT-P02306,DBT-P02308,DBT-P02312,DBT-P02313,DBT-P02325,DBT-P02347,DBT-P02420,DBT-P02460,DBT-P02477,DBT-P02487,DBT-P02496,DBT-P02511,DBT-P02512,DBT-P02514,DBT-P02542,DBT-P02559,DBT-P02572,DBT-P02578,DBT-P02604,DBT-P02609,DBT-P02651,DBT-P02657,DBT-P02665,DBT-P02668,DBT-P02678,DBT-P02685,DBT-P02711,DBT-P02714,DBT-P02719,DBT-P02725,DBT-P02733,DBT-P02742,DBT-P02744,DBT-P02748,DBT-P02753,DBT-P02774,DBT-P02794,DBT-P02797,DBT-P02804,DBT-P02817,DBT-P02825,DBT-P02826,DBT-P02834,DBT-P02861,DBT-P02875,DBT-P02901,DBT-P02906,DBT-P02910,DBT-P02921,DBT-P02933,DBT-P02937,DBT-P02941,DBT-P02954,DBT-P02975,DBT-P02979,DBT-P02985,DBT-P02986,DBT-P02998,DBT-P03010,DBT-P03016,DBT-P03019,DBT-P03035,DBT-P03049,DBT-P03054,DBT-P03064,DBT-P03068,DBT-P03075,DBT-P03083,DBT-P03108,DBT-P03119,DBT-P03122,DBT-P03124,DBT-P03151,DBT-P03187,DBT-P03196,DBT-P03220,DBT-P03226,DBT-P03254,DBT-P03273,DBT-P03283,DBT-P03304,DBT-P03332,DBT-P03338,DBT-P03354,DBT-P03366,DBT-P03371,DBT-P03372,DBT-P03376,DBT-P03398,DBT-P03430,DBT-P03468,DBT-P03488,DBT-P03508,DBT-P03519,DBT-P03536,DBT-P03538,DBT-P03541,DBT-P03545,DBT-P03562,DBT-P03571,DBT-P03583,DBT-P03591,DBT-P03614,DBT-P03636,DBT-P03661,DBT-P03678,DBT-P03679,DBT-P03695,DBT-P03696,DBT-P03711,DBT-P03732,DBT-P03749,DBT-P03766,DBT-P03774,DBT-P03789,DBT-P03796,DBT-P03812,DBT-P03818,DBT-P03820,DBT-P03842,DBT-P03844,DBT-P03845,DBT-P03854,DBT-P03864,DBT-P03918,DBT-P03952,DBT-P03963,DBT-P03964,DBT-P03971,DBT-P03987,DBT-P04003,DBT-P04046,DBT-P04053,DBT-P04063,DBT-P04071,DBT-P04085,DBT-P04115,DBT-P04126,DBT-P04131,DBT-P04141,DBT-P04145,DBT-P04154,DBT-P04161,DBT-P04167,DBT-P04176,DBT-P04184,DBT-P04187,DBT-P04195,DBT-P04209,DBT-P04212,DBT-P04218,DBT-P04243,DBT-P04255,DBT-P04260,DBT-P04286,DBT-P04287,DBT-P04304,DBT-P04312,DBT-P04350,DBT-P04373,DBT-P04374,DBT-P04378,DBT-P04382,DBT-P04391,DBT-P04404,DBT-P04411,DBT-P04413,DBT-P04423,DBT-P04425,DBT-P04439,DBT-P04451,DBT-P04457,DBT-P04465,DBT-P04471,DBT-P04479,DBT-P04499,DBT-P04501,DBT-P04504,DBT-P04559,DBT-P04564,DBT-P04571,DBT-P04588,DBT-P04591,DBT-P04607,DBT-P04619,DBT-P04651,DBT-P04655,DBT-P04674,DBT-P04682,DBT-P04743,DBT-P04770,DBT-P04774,DBT-P04787,DBT-P04788,DBT-P04790,DBT-P04802,DBT-P04825,DBT-P04828,DBT-P04841,DBT-P04844,DBT-P04845,DBT-P04859,DBT-P04861,DBT-P04889,DBT-P04910,DBT-P04935,DBT-P04950,DBT-P04956,DBT-P04972,DBT-P04975,DBT-P04982,DBT-P05003,DBT-P05023,DBT-P05036,DBT-P05049,DBT-P05051&CollectionCriteria=Breast-Cancer-Screening-DBT",
+          "download-41553/file_object_id": "file-41553",
+          "download-41553/download_types": [
+            "Radiology Images"
+          ],
+          "download-41553/data_types": [
+            "MG"
+          ],
+          "download-41553/file_types": [
+            "DICOM"
+          ],
+          "download-41553/download_artifact_role": "manifest",
+          "download-41553/access_mechanism": "TCIA Data Retriever",
+          "download-41553/downstream_access_system": "Imaging Data Commons (IDC)",
+          "download-41553/search_system": "NBIA Search",
+          "download-41553/access_level": "open_noncommercial",
+          "download-41553/license_label": "CC BY-NC 4.0",
+          "download-41553/license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "download-41553/subjects": 418,
+          "download-41553/studies": 460,
+          "download-41553/series": 1721,
+          "download-41553/images": 1721,
+          "download-41553/download_metadata": "https://www.cancerimagingarchive.net/wp-content/uploads/BSC-DBT-Test-manifes-nbia-digest.xlsx",
+          "download-41553/download_requirements": "Download requires the TCIA Data Retriever"
+        }
+      ],
+      "conditionsOfAccess": "Open-access TCIA data with a noncommercial-use license condition. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": [
+            "CreativeWork",
+            "odrl:Offer"
+          ],
+          "name": "Noncommercial use condition",
+          "description": "CC BY-NC 4.0 includes a noncommercial-use condition.",
+          "odrl:permission": {
+            "@type": "odrl:Permission",
+            "odrl:action": {
+              "@id": "odrl:use",
+              "name": "Use"
+            },
+            "odrl:constraint": {
+              "@type": "odrl:Constraint",
+              "name": "Non-commercial use only",
+              "odrl:operator": {
+                "@id": "odrl:eq"
+              },
+              "odrl:rightOperand": "noncommercial"
+            }
+          }
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "name": "CC BY-NC 4.0",
+          "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+        }
+      ]
+    },
+    {
+      "@type": "cr:RecordSet",
+      "@id": "download-41555",
+      "name": "Other",
+      "description": "TCIA current download record 41555 for Breast-Cancer-Screening-DBT.",
+      "dataType": "sc:DataDownload",
+      "key": {
+        "@id": "download-41555/download_id"
+      },
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "download-41555/download_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41555/download_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41555/file_object_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41555/download_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41555/data_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41555/file_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41555/download_artifact_role",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41555/access_mechanism",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41555/access_level",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41555/license_label",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41555/license_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41555/subjects",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41555/studies",
+          "dataType": "sc:Integer"
+        }
+      ],
+      "data": [
+        {
+          "download-41555/download_id": "41555",
+          "download-41555/download_url": "https://www.cancerimagingarchive.net/wp-content/uploads/BCS-DBT-file-paths-test-v2.csv",
+          "download-41555/file_object_id": "file-41555",
+          "download-41555/download_types": [
+            "Other"
+          ],
+          "download-41555/data_types": [
+            "Other"
+          ],
+          "download-41555/file_types": [
+            "CSV"
+          ],
+          "download-41555/download_artifact_role": "data file",
+          "download-41555/access_mechanism": "direct download",
+          "download-41555/access_level": "open_noncommercial",
+          "download-41555/license_label": "CC BY-NC 4.0",
+          "download-41555/license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "download-41555/subjects": 418,
+          "download-41555/studies": 460
+        }
+      ],
+      "conditionsOfAccess": "Open-access TCIA data with a noncommercial-use license condition. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": [
+            "CreativeWork",
+            "odrl:Offer"
+          ],
+          "name": "Noncommercial use condition",
+          "description": "CC BY-NC 4.0 includes a noncommercial-use condition.",
+          "odrl:permission": {
+            "@type": "odrl:Permission",
+            "odrl:action": {
+              "@id": "odrl:use",
+              "name": "Use"
+            },
+            "odrl:constraint": {
+              "@type": "odrl:Constraint",
+              "name": "Non-commercial use only",
+              "odrl:operator": {
+                "@id": "odrl:eq"
+              },
+              "odrl:rightOperand": "noncommercial"
+            }
+          }
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "name": "CC BY-NC 4.0",
+          "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+        }
+      ]
+    },
+    {
+      "@type": "cr:RecordSet",
+      "@id": "download-47825",
+      "name": "Image Annotations; Clinical Data",
+      "description": "TCIA current download record 47825 for Breast-Cancer-Screening-DBT.",
+      "dataType": "sc:DataDownload",
+      "key": {
+        "@id": "download-47825/download_id"
+      },
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "download-47825/download_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47825/download_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47825/file_object_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47825/download_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47825/data_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47825/file_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47825/download_artifact_role",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47825/access_mechanism",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47825/access_level",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47825/license_label",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47825/license_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47825/subjects",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47825/studies",
+          "dataType": "sc:Integer"
+        }
+      ],
+      "data": [
+        {
+          "download-47825/download_id": "47825",
+          "download-47825/download_url": "https://www.cancerimagingarchive.net/wp-content/uploads/BCS-DBT-labels-test-PHASE-2.csv",
+          "download-47825/file_object_id": "file-47825",
+          "download-47825/download_types": [
+            "Image Annotations",
+            "Clinical Data"
+          ],
+          "download-47825/data_types": [
+            "Classification"
+          ],
+          "download-47825/file_types": [
+            "CSV"
+          ],
+          "download-47825/download_artifact_role": "data file",
+          "download-47825/access_mechanism": "direct download",
+          "download-47825/access_level": "open_noncommercial",
+          "download-47825/license_label": "CC BY-NC 4.0",
+          "download-47825/license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "download-47825/subjects": 418,
+          "download-47825/studies": 460
+        }
+      ],
+      "conditionsOfAccess": "Open-access TCIA data with a noncommercial-use license condition. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": [
+            "CreativeWork",
+            "odrl:Offer"
+          ],
+          "name": "Noncommercial use condition",
+          "description": "CC BY-NC 4.0 includes a noncommercial-use condition.",
+          "odrl:permission": {
+            "@type": "odrl:Permission",
+            "odrl:action": {
+              "@id": "odrl:use",
+              "name": "Use"
+            },
+            "odrl:constraint": {
+              "@type": "odrl:Constraint",
+              "name": "Non-commercial use only",
+              "odrl:operator": {
+                "@id": "odrl:eq"
+              },
+              "odrl:rightOperand": "noncommercial"
+            }
+          }
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "name": "CC BY-NC 4.0",
+          "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+        }
+      ]
+    },
+    {
+      "@type": "cr:RecordSet",
+      "@id": "download-47835",
+      "name": "Other",
+      "description": "TCIA current download record 47835 for Breast-Cancer-Screening-DBT.",
+      "dataType": "sc:DataDownload",
+      "key": {
+        "@id": "download-47835/download_id"
+      },
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "download-47835/download_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47835/download_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47835/file_object_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47835/download_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47835/data_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47835/file_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47835/download_artifact_role",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47835/access_mechanism",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47835/access_level",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47835/license_label",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47835/license_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47835/subjects",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47835/studies",
+          "dataType": "sc:Integer"
+        }
+      ],
+      "data": [
+        {
+          "download-47835/download_id": "47835",
+          "download-47835/download_url": "https://www.cancerimagingarchive.net/wp-content/uploads/BCS-DBT-boxes-test-v2-PHASE-2-Jan-2024.csv",
+          "download-47835/file_object_id": "file-47835",
+          "download-47835/download_types": [
+            "Other"
+          ],
+          "download-47835/data_types": [
+            "Radiomic Feature"
+          ],
+          "download-47835/file_types": [
+            "CSV"
+          ],
+          "download-47835/download_artifact_role": "data file",
+          "download-47835/access_mechanism": "direct download",
+          "download-47835/access_level": "open_noncommercial",
+          "download-47835/license_label": "CC BY-NC 4.0",
+          "download-47835/license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "download-47835/subjects": 60,
+          "download-47835/studies": 60
+        }
+      ],
+      "conditionsOfAccess": "Open-access TCIA data with a noncommercial-use license condition. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": [
+            "CreativeWork",
+            "odrl:Offer"
+          ],
+          "name": "Noncommercial use condition",
+          "description": "CC BY-NC 4.0 includes a noncommercial-use condition.",
+          "odrl:permission": {
+            "@type": "odrl:Permission",
+            "odrl:action": {
+              "@id": "odrl:use",
+              "name": "Use"
+            },
+            "odrl:constraint": {
+              "@type": "odrl:Constraint",
+              "name": "Non-commercial use only",
+              "odrl:operator": {
+                "@id": "odrl:eq"
+              },
+              "odrl:rightOperand": "noncommercial"
+            }
+          }
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "name": "CC BY-NC 4.0",
+          "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+        }
+      ]
+    },
+    {
+      "@type": "cr:RecordSet",
+      "@id": "download-47655",
+      "name": "Image Annotations",
+      "description": "TCIA current download record 47655 for Breast-Cancer-Screening-DBT.",
+      "dataType": "sc:DataDownload",
+      "key": {
+        "@id": "download-47655/download_id"
+      },
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "download-47655/download_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47655/download_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47655/file_object_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47655/download_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47655/data_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47655/file_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47655/download_artifact_role",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47655/access_mechanism",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47655/access_level",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47655/license_label",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47655/license_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-47655/external_resources",
+          "dataType": "sc:Text",
+          "isArray": true
+        }
+      ],
+      "data": [
+        {
+          "download-47655/download_id": "47655",
+          "download-47655/download_url": "https://www.cancerimagingarchive.net/wp-content/uploads/team_predictions_bothphases.zip",
+          "download-47655/file_object_id": "file-47655",
+          "download-47655/download_types": [
+            "Image Annotations"
+          ],
+          "download-47655/data_types": [
+            "Measurement"
+          ],
+          "download-47655/file_types": [
+            "ZIP",
+            "CSV"
+          ],
+          "download-47655/download_artifact_role": "data file",
+          "download-47655/access_mechanism": "direct download",
+          "download-47655/access_level": "open_noncommercial",
+          "download-47655/license_label": "CC BY-NC 4.0",
+          "download-47655/license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "download-47655/external_resources": [
+            "Image Analyses"
+          ]
+        }
+      ],
+      "conditionsOfAccess": "Open-access TCIA data with a noncommercial-use license condition. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": [
+            "CreativeWork",
+            "odrl:Offer"
+          ],
+          "name": "Noncommercial use condition",
+          "description": "CC BY-NC 4.0 includes a noncommercial-use condition.",
+          "odrl:permission": {
+            "@type": "odrl:Permission",
+            "odrl:action": {
+              "@id": "odrl:use",
+              "name": "Use"
+            },
+            "odrl:constraint": {
+              "@type": "odrl:Constraint",
+              "name": "Non-commercial use only",
+              "odrl:operator": {
+                "@id": "odrl:eq"
+              },
+              "odrl:rightOperand": "noncommercial"
+            }
+          }
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by-nc/4.0/",
+          "name": "CC BY-NC 4.0",
+          "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+        }
+      ]
+    }
+  ],
+  "sameAs": [
+    "https://doi.org/10.7937/E4WT-CD02"
+  ],
+  "identifier": [
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA short title",
+      "value": "Breast-Cancer-Screening-DBT"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA dataset type",
+      "value": "Collection"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "DOI",
+      "value": "10.7937/E4WT-CD02"
+    }
+  ],
+  "dateModified": "2024-01-18",
+  "datePublished": "2020-12-09",
+  "version": "5",
+  "citation": [
+    {
+      "@type": "CreativeWork",
+      "name": "Buda, M., Saha, A., Walsh, R., Ghate, S., Li, N., Swiecicki, A., Lo, J. Y., & Mazurowski, M. A. (2021). A Data Set and Deep Learning Algorithm for the Detection of Masses and Architectural Distortions in Digital Breast Tomosynthesis Images. In JAMA Network Open (Vol. 4, Issue 8, p. e2119100). American Medical Association (AMA). https://doi.org/10.1001/jamanetworkopen.2021.19100 , PMC8369362",
+      "identifier": "10.1001/jamanetworkopen.2021.19100",
+      "url": "https://doi.org/10.1001/jamanetworkopen.2021.19100"
+    },
+    {
+      "@type": "CreativeWork",
+      "name": "Clark, K., Vendt, B., Smith, K., Freymann, J., Kirby, J., Koppel, P., Moore, S., Phillips, S., Maffitt, D., Pringle, M., Tarbox, L., & Prior, F. (2013). The Cancer Imaging Archive (TCIA): Maintaining and Operating a Public Information Repository . In Journal of Digital Imaging (Vol. 26, Issue 6, pp. 1045\u20131057). Springer Science and Business Media LLC. https://doi.org/10.1007/s10278-013-9622-7",
+      "identifier": "10.1007/s10278-013-9622-7",
+      "url": "https://doi.org/10.1007/s10278-013-9622-7"
+    }
+  ],
+  "additionalProperty": [
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA access level",
+      "value": "open_noncommercial"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA license status",
+      "value": "Open (Creative Commons NonCommercial)"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA subjects",
+      "value": "5060"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA program",
+      "value": "program_name: Community; related_collections: 4D-LUNG; AAPM-RT-MAC; ADRENAL-ACC-KI67-SEG; AML-CYTOMORPHOLOGY_LMU; AML-CYTOMORPHOLOGY_MLL_HELMHOLTZ; ANTI-PD-1_LUNG; ANTI-PD-1_MELANOMA; B-MODE-AND-CEUS-LIVER; BONE-MARROW-CYTOMORPHOLOGY_MLL_HELMHOLTZ_FRAUNHOFER; BRAIN-TR-GAMMAKNIFE; BRAIN-TUMOR-PROGRESSION; BREAST-CANCER-SCREENING-DBT; BREAST-DIAGNOSIS; BREAST-MRI-NACT-PILOT; BURDENKO-GBM-PROGRESSION; C4KC-KITS; CBIS-DDSM; CC-RADIOMICS-PHANTOM; CC-RADIOMICS-PHANTOM-2; CC-RADIOMICS-PHANTOM-3; CC-TUMOR-HETEROGENEITY; CMMD; C-NMC-2019; COLORECTAL-LIVER-METASTASES; CRC_FFPE-CODEX_CELLNEIGHS; CT-LYMPH-NODES; CT-ORG; CT-PHANTOM4RADIOMICS; CTPRED-SUNITINIB-PANNET; CT-VS-PET-VENTILATION-IMAGING; DRO-TOOLKIT; DUKE-BREAST-CANCER-MRI; EXACT; HCC-TACE-SEG; HEAD-NECK-PET-CT; HEAD-NECK-RADIOMICS-HN1; HNSCC; HNSCC-3DCT-RT; HNSCC-MIF-MIHC-COMPARISON; IVYGAP; LCTSC; LDCT-AND-PROJECTION-DATA; LGG-1P19QDELETION; LIDC-IDRI; LUNG-FUSED-CT-PATHOLOGY; LUNG-PET-CT-DX; LUNGCT-DIAGNOSIS; MIMM_SBILAB; MOUSE-ASTROCYTOMA; MOUSE-MAMMARY; MRI-DIR; NAF-PROSTATE; NSCLC-RADIOGENOMICS; NSCLC-RADIOMICS; NSCLC-RADIOMICS-GENOMICS; NSCLC-RADIOMICS-INTEROBSERVER1; OPC-RADIOMICS; OSTEOSARCOMA-TUMOR-ASSESSMENT; PANCREAS-CT; PANCREATIC-CT-CBCT-SEG; PEDIATRIC-CT-SEG; PELVIC-REFERENCE-DATA; POST-NAT-BRCA; PROSTATE-FUSED-MRI-PATHOLOGY; PROSTATE-3T; PROSTATE-ANATOMICAL-EDGE-CASES; PROSTATE-DIAGNOSIS; PROSTATE-MRI; PROSTATE-MRI-US-BIOPSY; PROSTATEX; REMBRANDT; SLN-BREAST; SN-AM; SOFT-TISSUE-SARCOMA; SPIE-AAPM-LUNG-CT-CHALLENGE; STAGEII-COLORECTAL-CT; UCSF-PDGM; UPENN-GBM; VESTIBULAR-SCHWANNOMA-SEG; RHUH-GBM; CATCH; CDD-CESM; DLBCL-MORPHOLOGY; FDG-PET-CT-LESIONS; GAMMAKNIFE-HIPPOCAMPAL; GLIS-RT; HEALTHY-TOTAL-BODY-CTS; HER2-TUMOR-ROIS; HUNGARIAN-COLORECTAL-SCREENING; MENINGIOMA-SEG-CLASS; NADT-PROSTATE; OVARIAN-BEVACIZUMAB-RESPONSE; PCA_BX_3DPATHOLOGY; RADCURE; REMIND; VESTIBULAR-SCHWANNOMA-MC-RC; HE-VS-MPM; BREAST-LESIONS-USG; ADVANCED-MRI-BREAST-LESIONS; PRETREAT-METSTOBRAIN-MASKS; PTRC-HGSOC; CODEX-IMAGING-OF-HCC; Spine-Mets-CT-SEG; DFCI-BCH-BWH-PEDs-HGG; HNC-IMRT-70-33; MEDIASTINAL-LYMPH-NODE-SEG; HISTOLOGYHSI-GB; BRATS-AFRICA; UCSD-PTGBM; RPA-Head-and-Neck-Lymph-Nodes; BCBM-RadioGenomics; MU-Glioma-Post; Brain-Mets-Lung-MRI-Path-Segs; Yale-Brain-Mets-Longitudinal; CT4Harmonization-Multicentric; PSMA-PET-CT-Lesions; Capsule-Endoscopy-SB-NET; HistologyHSI-BC-Recurrence; AURORA-Metastatic-Breast-Multiomics; VESTIBULAR-SCHWANNOMA-MC-RC2; HANCOCK; BraTS-PEDs; TP53-Precursor-Lesions; QIBA-CT-1C; QIBA-CT-LIVER-PHANTOM; UTSW-Glioma; Spinal-Multiple-Myeloma-SEG; UCSD-VS-Longitudinal; related_analysis_results: BRATS-TCGA-GBM; BRATS-TCGA-LGG; HEAD-NECK-CT-ATLAS; Oropharyngeal-Radiomics-Outcomes; MRQY-QUALITY-MEASURES; RSNA-ASNR-MICCAI-BRATS-2021; ISPY1-TUMOR-SEG-RADIOMICS; PROSTATEX-SEG-ZONES; IVYGAP-RADIOMICS; PLETHORA; PAN-CANCER-NUCLEI-SEG; TCGA-OV-PROTEOGENOMICS; RADIOMICS-TUMOR-PHENOTYPES; ISBI-MR-PROSTATE-2013; LUMINALB-BREAST-MR-ENHANCEMENT; SAROS; PROSTATEX-SEG-HIRES; DI-CUBED-REPORTS; CROWDS-CURE-2018; DICOM-SR-BREAST-CLINICAL; RIDER-LUNGCT-SEG; DICOM-LIDC-IDRI-NODULES; DICOM-GLIOMA-SEG; CROWDS-CURE-2017; TIL-WSI-TCGA; NSCLC-RADIOGENOMICS-STANFORD; LUAD-CT-SURVIVAL; TCGA-LGG-MASK; GLIOBLASTOMA-GENOMIC-MAPPING; PULMONARY-NODULES-SEGMENTATION; TCGA-GBM-QI-RADIOGENOMICS; TOMPEI-CMMD; NLST-New-lesion-LongCT; QIBA-VOLCT-1B"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA downstream access systems",
+      "value": [
+        "Imaging Data Commons (IDC)"
+      ]
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA search systems",
+      "value": [
+        "NBIA Search"
+      ]
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "Croissant generator",
+      "value": "tcia-croissant-prototype/0.1.0"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA snapshot schema version",
+      "value": "5"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA external resources",
+      "value": [
+        "Clinical",
+        "Software/Source Code"
+      ]
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA has external clinical resource",
+      "value": true
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA has TCIA clinical download",
+      "value": true
+    }
+  ]
+}
