@@ -39,6 +39,13 @@ const (
 	// unresponsive TCIA API fails that batch instead of blocking the whole
 	// streaming download indefinitely.
 	tciaBatchTimeout = 3 * time.Minute
+
+	// downloadIdleTimeout cancels a download when no bytes have been
+	// received for this long, so a stalled connection (socket open, server
+	// gone quiet) eventually fails and frees the worker for a retry instead
+	// of hanging forever. It resets on every byte received, so a slow but
+	// healthy transfer of any size is never cut off by a wall-clock cap.
+	downloadIdleTimeout = 10 * time.Minute
 )
 
 // ProgressFunc is a callback for reporting download progress.
@@ -105,6 +112,44 @@ func (pr *progressReader) Read(p []byte) (int, error) {
 		}
 	}
 	return n, err
+}
+
+// idleTimeoutReader wraps an io.Reader and cancels cancel if no byte is
+// read within timeout. The timer resets on every read that returns data, so
+// a slow-but-active transfer runs indefinitely while a stalled one (no bytes
+// at all for timeout) is eventually aborted.
+type idleTimeoutReader struct {
+	r        io.Reader
+	timeout  time.Duration
+	timer    *time.Timer
+	cancel   context.CancelFunc
+	timedOut atomic.Bool
+}
+
+func newIdleTimeoutReader(r io.Reader, timeout time.Duration, cancel context.CancelFunc) *idleTimeoutReader {
+	it := &idleTimeoutReader{r: r, timeout: timeout, cancel: cancel}
+	it.timer = time.AfterFunc(timeout, func() {
+		it.timedOut.Store(true)
+		cancel()
+	})
+	return it
+}
+
+func (it *idleTimeoutReader) Read(p []byte) (int, error) {
+	n, err := it.r.Read(p)
+	if n > 0 {
+		it.timer.Reset(it.timeout)
+	}
+	if err != nil && it.timedOut.Load() {
+		return n, fmt.Errorf("connection stalled: no data received for %s", it.timeout)
+	}
+	return n, err
+}
+
+// Stop releases the idle timer. Call once the read loop is done, successful
+// or not, so the timer doesn't fire a no-op cancel after the fact.
+func (it *idleTimeoutReader) Stop() {
+	it.timer.Stop()
 }
 
 // MetadataStats tracks metadata fetching progress
@@ -1173,9 +1218,6 @@ func parseMD5HashesCSV(zipPath string) (map[string]string, error) {
 }
 
 func (info *FileInfo) GetMeta(ctx context.Context, output string) error {
-	if ctx == nil {
-		ctx = context.Background()
-	}
 	logger.Debugf("getting meta information and save to %s", output)
 	f, err := os.OpenFile(info.MetaFile(output), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
 	if err != nil {
@@ -1212,6 +1254,12 @@ func (info *FileInfo) DownloadWithRetry(ctx context.Context, output string, http
 	var lastErr error
 	delay := options.RetryDelay
 
+	recordStatus := func(dlErr error) {
+		if statusErr := AppendCompletionStatus(output, info.SeriesInstanceUID, dlErr, false); statusErr != nil {
+			logger.Warnf("Failed to record completion status for %s: %v", info.SeriesInstanceUID, statusErr)
+		}
+	}
+
 	for attempt := 0; attempt <= options.MaxRetries; attempt++ {
 		if attempt > 0 {
 			logger.Infof("Retrying download %s (attempt %d/%d) after %v delay", info.SeriesInstanceUID, attempt, options.MaxRetries, delay)
@@ -1220,13 +1268,13 @@ func (info *FileInfo) DownloadWithRetry(ctx context.Context, output string, http
 		}
 
 		if ctx.Err() != nil {
-			AppendCompletionStatus(output, info.SeriesInstanceUID, ctx.Err(), false)
+			recordStatus(ctx.Err())
 			return ctx.Err()
 		}
 
 		err := info.doDownload(ctx, output, httpClient, options, onProgress, onDecompress, gen3Auth)
 		if err == nil {
-			AppendCompletionStatus(output, info.SeriesInstanceUID, nil, false)
+			recordStatus(nil)
 			return nil
 		}
 
@@ -1236,13 +1284,13 @@ func (info *FileInfo) DownloadWithRetry(ctx context.Context, output string, http
 		// Check if error is retryable
 		if !isRetryableError(err) {
 			logger.Errorf("Non-retryable error for %s: %v", info.SeriesInstanceUID, err)
-			AppendCompletionStatus(output, info.SeriesInstanceUID, err, false)
+			recordStatus(err)
 			return err
 		}
 	}
 
 	finalErr := fmt.Errorf("download failed after %d attempts: %v", options.MaxRetries+1, lastErr)
-	AppendCompletionStatus(output, info.SeriesInstanceUID, finalErr, false)
+	recordStatus(finalErr)
 	return finalErr
 }
 
@@ -1770,8 +1818,11 @@ func (info *FileInfo) downloadDirect(ctx context.Context, output string, httpCli
 		return fmt.Errorf("failed to create request: %v", err)
 	}
 
-	// Use a reasonable timeout for direct downloads
-	reqCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
+	// No wall-clock deadline: large/slow direct downloads must be allowed to
+	// run as long as they need. reqCtx is instead cancelled by the idle
+	// timer below if the connection stalls, and still respects ctx
+	// cancellation (e.g. the user cancelling the batch).
+	reqCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	req = req.WithContext(reqCtx)
 
@@ -1796,10 +1847,13 @@ func (info *FileInfo) downloadDirect(ctx context.Context, output string, httpCli
 		}
 	}()
 
+	idleBody := newIdleTimeoutReader(resp.Body, downloadIdleTimeout, cancel)
+	defer idleBody.Stop()
+
 	// Wrap with progress reader if callback provided and content length known
-	var reader io.Reader = resp.Body
+	var reader io.Reader = idleBody
 	if onProgress != nil && resp.ContentLength > 0 {
-		reader = newProgressReader(resp.Body, resp.ContentLength, onProgress)
+		reader = newProgressReader(idleBody, resp.ContentLength, onProgress)
 	}
 
 	written, err := io.Copy(f, reader)
@@ -1869,22 +1923,11 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 		return fmt.Errorf("failed to create request: %v", err)
 	}
 
-	// Set timeout based on file size (if known)
-	var timeout time.Duration
-	if info.FileSize != "" {
-		fileSize, _ := strconv.ParseInt(info.FileSize, 10, 64)
-		// Calculate timeout: base 5 minutes + 1 minute per 100MB
-		timeout = 5*time.Minute + time.Duration(fileSize/(100*1024*1024))*time.Minute
-		// Cap at 60 minutes for very large files
-		if timeout > 60*time.Minute {
-			timeout = 60 * time.Minute
-		}
-	} else {
-		// Default timeout for unknown size
-		timeout = 30 * time.Minute
-	}
-	logger.Debugf("Setting download timeout to %v for %s", timeout, info.SeriesInstanceUID)
-	reqCtx, cancel := context.WithTimeout(ctx, timeout)
+	// No wall-clock deadline: large/slow downloads must be allowed to run as
+	// long as they need. reqCtx is instead cancelled by the idle timer below
+	// if the connection stalls, and still respects ctx cancellation (e.g.
+	// the user cancelling the batch).
+	reqCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	req = req.WithContext(reqCtx)
 
@@ -1927,8 +1970,11 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 		logger.Debugf("Downloading %s (size: unknown)", info.SeriesInstanceUID)
 	}
 
+	idleBody := newIdleTimeoutReader(resp.Body, downloadIdleTimeout, cancel)
+	defer idleBody.Stop()
+
 	// Buffer the response body for better handling of chunked transfers
-	bufferedReader := bufio.NewReaderSize(resp.Body, 64*1024) // 64KB buffer
+	bufferedReader := bufio.NewReaderSize(idleBody, 64*1024) // 64KB buffer
 
 	// Determine total size for progress tracking
 	// Prefer Content-Length from response, fall back to estimated compressed size from metadata
