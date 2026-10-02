@@ -176,7 +176,7 @@ func downloadCroissantArtifact(ctx context.Context, artifactURL string, nameHint
 	if err != nil {
 		return "", func() {}, fmt.Errorf("failed to fetch %s: %w", artifactURL, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return "", func() {}, fmt.Errorf("%s returned HTTP %d", artifactURL, resp.StatusCode)
@@ -193,12 +193,12 @@ func downloadCroissantArtifact(ctx context.Context, artifactURL string, nameHint
 	}
 
 	if _, err := io.Copy(tmpFile, resp.Body); err != nil {
-		tmpFile.Close()
-		os.Remove(tmpFile.Name())
+		_ = tmpFile.Close()
+		_ = os.Remove(tmpFile.Name())
 		return "", func() {}, fmt.Errorf("failed to save nested manifest: %w", err)
 	}
 	if err := tmpFile.Close(); err != nil {
-		os.Remove(tmpFile.Name())
+		_ = os.Remove(tmpFile.Name())
 		return "", func() {}, fmt.Errorf("failed to close temp file: %w", err)
 	}
 

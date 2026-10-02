@@ -137,7 +137,7 @@ func loadSeriesMetadataFromParquet(
 		}
 		stat, err := osf.Stat()
 		if err != nil {
-			osf.Close()
+			_ = osf.Close()
 			return fmt.Errorf("stat parquet file: %w", err)
 		}
 		f = osf
@@ -149,19 +149,19 @@ func loadSeriesMetadataFromParquet(
 		}
 		stat, err := ef.Stat()
 		if err != nil {
-			ef.Close()
+			_ = ef.Close()
 			return fmt.Errorf("stat embedded parquet: %w", err)
 		}
 		// embed.File implements ReaderAt and Seeker on its concrete type.
 		rsc, ok := ef.(io.ReadSeekCloser)
 		if !ok {
-			ef.Close()
+			_ = ef.Close()
 			return fmt.Errorf("embedded file does not implement ReadSeekCloser")
 		}
 		f = rsc
 		size = stat.Size()
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	readerAt, ok := f.(io.ReaderAt)
 	if !ok {
@@ -173,7 +173,7 @@ func loadSeriesMetadataFromParquet(
 	if err != nil {
 		return fmt.Errorf("failed to create parquet reader: %w", err)
 	}
-	defer pqReader.Close()
+	defer func() { _ = pqReader.Close() }()
 	for i := 0; i < pqReader.NumRowGroups(); i++ {
 		rg := pqReader.RowGroup(i)
 		logger.Debugf("row group %d: num rows = %d, num columns = %d", i, rg.NumRows(), rg.NumColumns())
@@ -334,7 +334,7 @@ func loadS5cmdSeriesMapFromCSVs(outputDir string) (map[string]string, error) {
 			logger.Warnf("Could not open metadata CSV %s: %v", filePath, err)
 			continue
 		}
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 
 		reader := csv.NewReader(f)
 		header, err := reader.Read()
@@ -345,9 +345,10 @@ func loadS5cmdSeriesMapFromCSVs(outputDir string) (map[string]string, error) {
 
 		uriIndex, uidIndex := -1, -1
 		for i, colName := range header {
-			if colName == "OriginalS5cmdURI" {
+			switch colName {
+			case "OriginalS5cmdURI":
 				uriIndex = i
-			} else if colName == "SeriesInstanceUID" {
+			case "SeriesInstanceUID":
 				uidIndex = i
 			}
 		}
@@ -494,7 +495,7 @@ func decodeS5cmd(filePath string, outputDir string, processedSeries map[string]s
 	if err != nil {
 		logger.Fatalf("could not open s5cmd manifest: %v", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	seriesMeta, nbiaLookup := loadParquetMetadata(options)
 

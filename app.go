@@ -189,7 +189,7 @@ func (a *App) CheckForUpdate() (UpdateInfo, error) {
 	if err != nil {
 		return UpdateInfo{}, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return UpdateInfo{}, nil
@@ -257,7 +257,7 @@ func linuxDownloadsDir(home string) string {
 	if err != nil {
 		return ""
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {

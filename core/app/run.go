@@ -46,7 +46,7 @@ func (cb Callbacks) emitStdout(msg string) {
 		cb.Stdout(msg)
 		return
 	}
-	fmt.Fprint(os.Stdout, msg)
+	_, _ = fmt.Fprint(os.Stdout, msg)
 }
 
 func (cb Callbacks) emitStderr(msg string) {
@@ -54,7 +54,7 @@ func (cb Callbacks) emitStderr(msg string) {
 		cb.Stderr(msg)
 		return
 	}
-	fmt.Fprint(os.Stderr, msg)
+	_, _ = fmt.Fprint(os.Stderr, msg)
 }
 
 func (cb Callbacks) emitSeries(evt SeriesEvent) {
@@ -468,7 +468,7 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 	// Load the s5cmd series map
 	s5cmdMap, err := loadS5cmdSeriesMapFromCSVs(options.Output)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to load s5cmd series map from CSVs: %v", err)
+		return nil, fmt.Errorf("failed to load s5cmd series map from CSVs: %v", err)
 	}
 
 	ext := strings.ToLower(filepath.Ext(options.Input))
@@ -641,7 +641,9 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 	close(inputChan)
 	wg.Wait()
 
-	MergeCompletionStatus(options.Output)
+	if err := MergeCompletionStatus(options.Output); err != nil {
+		Logger.Errorf("Failed to merge completion status: %v", err)
+	}
 
 	callbacks.emitProgress(stats, "Complete", options.Debug)
 	if !options.Debug {
@@ -767,7 +769,9 @@ feedLoop:
 	wg.Wait()
 
 	emitManifestMetadata(callbacks, options.Input, allFiles)
-	MergeCompletionStatus(options.Output)
+	if err := MergeCompletionStatus(options.Output); err != nil {
+		Logger.Errorf("Failed to merge completion status: %v", err)
+	}
 	callbacks.emitProgress(stats, "Complete", options.Debug)
 	if !options.Debug {
 		callbacks.emitStderr("\n")
@@ -861,7 +865,9 @@ func (wc *WorkerContext) applyExistingSeriesDisposition(fileInfo *FileInfo, disp
 
 	updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
 	wc.emitSeriesEvent(fileInfo, disposition.status, message, 100)
-	AppendCompletionStatus(wc.Options.Output, fileInfo.SeriesInstanceUID, nil, disposition.completionSkipped)
+	if err := AppendCompletionStatus(wc.Options.Output, fileInfo.SeriesInstanceUID, nil, disposition.completionSkipped); err != nil {
+		Logger.Warnf("Failed to record completion status for %s: %v", fileInfo.SeriesInstanceUID, err)
+	}
 }
 
 func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
@@ -1244,7 +1250,7 @@ func MergeCompletionStatus(outDir string) error {
 		return fmt.Errorf("could not open completion status CSV: %w", err)
 	}
 	statusRecords, err := csv.NewReader(sf).ReadAll()
-	sf.Close()
+	_ = sf.Close()
 	if err != nil {
 		return fmt.Errorf("could not read completion status CSV: %w", err)
 	}
@@ -1262,7 +1268,7 @@ func MergeCompletionStatus(outDir string) error {
 		return fmt.Errorf("could not open metadata CSV: %w", err)
 	}
 	records, err := csv.NewReader(mf).ReadAll()
-	mf.Close()
+	_ = mf.Close()
 	if err != nil {
 		return fmt.Errorf("could not read metadata CSV: %w", err)
 	}
@@ -1301,12 +1307,12 @@ func MergeCompletionStatus(outDir string) error {
 	}
 	w := csv.NewWriter(out)
 	if err := w.WriteAll(records); err != nil {
-		out.Close()
-		os.Remove(tmpPath)
+		_ = out.Close()
+		_ = os.Remove(tmpPath)
 		return fmt.Errorf("could not write merged metadata CSV: %w", err)
 	}
 	w.Flush()
-	out.Close()
+	_ = out.Close()
 
 	if err := os.Rename(tmpPath, metadataPath); err != nil {
 		return fmt.Errorf("could not replace metadata CSV: %w", err)

@@ -487,7 +487,7 @@ func fetchTCIABatch(ctx context.Context, ids []string, httpClient *http.Client) 
 		logger.Errorf("Metadata request failed: %v", err)
 		return nil
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	content, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -605,7 +605,7 @@ func readTCIAXMLSeriesIDs(content []byte, httpClient *http.Client) ([]string, er
 		}
 
 		body, readErr := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if readErr != nil {
 			return nil, fmt.Errorf("failed to read XML manifest URL %q: %w", manifestURL, readErr)
 		}
@@ -1030,7 +1030,7 @@ func extractAndVerifyZip(zipPath string, destDir string, expectedSize int64, md5
 	if err != nil {
 		return fmt.Errorf("failed to open zip: %v", err)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	// Create destination directory
 	if err := os.MkdirAll(destDir, 0755); err != nil {
@@ -1076,7 +1076,7 @@ func extractAndVerifyZip(zipPath string, destDir string, expectedSize int64, md5
 
 		targetFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
 		if err != nil {
-			fileReader.Close()
+			_ = fileReader.Close()
 			return fmt.Errorf("failed to create file: %v", err)
 		}
 
@@ -1097,8 +1097,8 @@ func extractAndVerifyZip(zipPath string, destDir string, expectedSize int64, md5
 		}
 
 		written, err := io.Copy(writer, fileReader)
-		fileReader.Close()
-		targetFile.Close()
+		_ = fileReader.Close()
+		_ = targetFile.Close()
 
 		if err != nil {
 			return fmt.Errorf("failed to extract file %s: %v", file.Name, err)
@@ -1181,7 +1181,7 @@ func parseMD5HashesCSV(zipPath string) (map[string]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open zip: %v", err)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	// Find md5hashes.csv in the ZIP
 	for _, file := range reader.File {
@@ -1190,7 +1190,7 @@ func parseMD5HashesCSV(zipPath string) (map[string]string, error) {
 			if err != nil {
 				return nil, fmt.Errorf("failed to open md5hashes.csv: %v", err)
 			}
-			defer rc.Close()
+			defer func() { _ = rc.Close() }()
 
 			// Parse CSV
 			csvReader := csv.NewReader(rc)
@@ -1483,9 +1483,9 @@ func (info *FileInfo) downloadFromS3(
 						Bucket: &bucket,
 						Key:    aws.String(obj.key),
 					})
-					f.Close()
+					_ = f.Close()
 					if err != nil {
-						os.Remove(tmpPath)
+						_ = os.Remove(tmpPath)
 						select {
 						case errCh <- fmt.Errorf("failed to download s3://%s/%s: %w", bucket, obj.key, err):
 						default:
@@ -1494,7 +1494,7 @@ func (info *FileInfo) downloadFromS3(
 					}
 
 					if err := os.Rename(tmpPath, localPath); err != nil {
-						os.Remove(tmpPath)
+						_ = os.Remove(tmpPath)
 						select {
 						case errCh <- fmt.Errorf("could not move %s into place: %w", filepath.Base(obj.key), err):
 						default:
@@ -1557,14 +1557,14 @@ func (info *FileInfo) downloadFromS3(
 		Bucket: &bucket,
 		Key:    &key,
 	})
-	f.Close()
+	_ = f.Close()
 	if err != nil {
-		os.Remove(tmpPath)
+		_ = os.Remove(tmpPath)
 		return fmt.Errorf("failed to download s3://%s/%s: %w", bucket, key, err)
 	}
 
 	if err := os.Rename(tmpPath, localPath); err != nil {
-		os.Remove(tmpPath)
+		_ = os.Remove(tmpPath)
 		return fmt.Errorf("could not move downloaded file into place: %w", err)
 	}
 
@@ -1723,7 +1723,7 @@ func getGen3AccessToken(client *http.Client, commonsURL, apiKey string) (string,
 	if err != nil {
 		return "", fmt.Errorf("failed to make request for access token: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("Gen3 access token endpoint returned status %s", resp.Status)
@@ -1773,7 +1773,7 @@ func getGen3DownloadURL(client *http.Client, commonsURL, objectID string, gen3Au
 	if err != nil {
 		return "", fmt.Errorf("failed to make request to Gen3 API: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("Gen3 API returned status %s", resp.Status)
@@ -1810,7 +1810,7 @@ func (info *FileInfo) downloadDirect(ctx context.Context, output string, httpCli
 	// Clean up any previous temporary files
 	if _, err := os.Stat(tempPath); err == nil {
 		logger.Debugf("Removing incomplete download: %s", tempPath)
-		os.Remove(tempPath)
+		_ = os.Remove(tempPath)
 	}
 
 	req, err := http.NewRequest("GET", info.DownloadURL, nil)
@@ -1830,7 +1830,7 @@ func (info *FileInfo) downloadDirect(ctx context.Context, output string, httpCli
 	if err != nil {
 		return fmt.Errorf("failed to do request: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("HTTP error %d: %s", resp.StatusCode, resp.Status)
@@ -1841,9 +1841,9 @@ func (info *FileInfo) downloadDirect(ctx context.Context, output string, httpCli
 		return fmt.Errorf("failed to open file: %v", err)
 	}
 	defer func() {
-		f.Close()
+		_ = f.Close()
 		if err != nil {
-			os.Remove(tempPath)
+			_ = os.Remove(tempPath)
 		}
 	}()
 
@@ -1906,7 +1906,7 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 	// Clean up any previous temporary files
 	if _, err := os.Stat(tempZipPath); err == nil {
 		logger.Debugf("Removing incomplete download: %s", tempZipPath)
-		os.Remove(tempZipPath)
+		_ = os.Remove(tempZipPath)
 	}
 
 	// For extraction mode, also clean up temporary extraction directory
@@ -1914,7 +1914,7 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 		tempExtractDir := finalPath + ".uncompressed.tmp"
 		if _, err := os.Stat(tempExtractDir); err == nil {
 			logger.Debugf("Removing incomplete extraction: %s", tempExtractDir)
-			os.RemoveAll(tempExtractDir)
+			_ = os.RemoveAll(tempExtractDir)
 		}
 	}
 
@@ -1935,7 +1935,7 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 	if err != nil {
 		return fmt.Errorf("failed to do request: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Log response headers for debugging
 	logger.Debugf("Response headers for %s: Status=%s, Content-Length=%d, Transfer-Encoding=%s",
@@ -1952,13 +1952,13 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 		return fmt.Errorf("failed to open file: %v", err)
 	}
 	defer func() {
-		f.Close()
+		_ = f.Close()
 		// Clean up temp files on error
 		if err != nil {
-			os.Remove(tempZipPath)
+			_ = os.Remove(tempZipPath)
 			if !options.NoDecompress {
 				tempExtractDir := finalPath + ".uncompressed.tmp"
-				os.RemoveAll(tempExtractDir)
+				_ = os.RemoveAll(tempExtractDir)
 			}
 		}
 	}()
@@ -2117,7 +2117,7 @@ func SeriesUpToDate(seriesDir string) bool {
 		// md5hashes.csv doesn't exist → need to download
 		return false
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	reader := csv.NewReader(f)
 	records, err := reader.ReadAll()
@@ -2140,7 +2140,7 @@ func SeriesUpToDate(seriesDir string) bool {
 
 		h := md5.New()
 		_, err = io.Copy(h, file)
-		file.Close()
+		_ = file.Close()
 		if err != nil {
 			return false
 		}

@@ -44,7 +44,7 @@ func UnTar(dst string, r io.Reader) error {
 			}
 
 			if _, err := io.Copy(f, tr); err != nil {
-				f.Close()
+				_ = f.Close()
 				return err
 			}
 
@@ -69,13 +69,13 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 
 	out, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
 	if _, err = io.Copy(out, in); err != nil {
 		return err
@@ -99,7 +99,7 @@ func WriteAllMetadataToCSV(files []*FileInfo, outPath string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	writer := csv.NewWriter(f)
 	defer writer.Flush()
@@ -174,7 +174,7 @@ func InitCompletionStatus(outDir string, files []*FileInfo) error {
     if err != nil {
         return fmt.Errorf("could not create completion status file: %w", err)
     }
-    defer f.Close()
+    defer func() { _ = f.Close() }()
 
     w := csv.NewWriter(f)
     defer w.Flush()
@@ -213,7 +213,7 @@ func AppendCompletionStatus(outDir string, seriesUID string, dlErr error, skippe
         return fmt.Errorf("could not open completion status file: %w", err)
     }
     records, err := csv.NewReader(f).ReadAll()
-    f.Close()
+    _ = f.Close()
     if err != nil {
         return fmt.Errorf("could not read completion status file: %w", err)
     }
@@ -234,12 +234,12 @@ func AppendCompletionStatus(outDir string, seriesUID string, dlErr error, skippe
     }
     w := csv.NewWriter(out)
     if err := w.WriteAll(records); err != nil {
-        out.Close()
-        os.Remove(tmpPath)
+        _ = out.Close()
+        _ = os.Remove(tmpPath)
         return fmt.Errorf("could not write completion status file: %w", err)
     }
     w.Flush()
-    out.Close()
+    _ = out.Close()
 
     return os.Rename(tmpPath, filePath)
 }
