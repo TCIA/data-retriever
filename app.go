@@ -175,6 +175,15 @@ func (a *App) CheckForUpdate() (UpdateInfo, error) {
 	}
 
 	storeName := storeDisplayName(distChannel)
+	if storeName != "" {
+		// Store builds (Mac App Store, Microsoft Store) are updated through
+		// their own storefront, which already notifies users of new
+		// versions. Comparing against GitHub's latest tag here is wrong for
+		// these builds: Apple's review can lag a GitHub release by days,
+		// which would falsely claim an update is available before the
+		// store build has caught up.
+		return UpdateInfo{}, nil
+	}
 
 	const apiURL = "https://api.github.com/repos/TCIA/data-retriever/releases/latest"
 	client := &http.Client{Timeout: 10 * time.Second}
@@ -209,12 +218,7 @@ func (a *App) CheckForUpdate() (UpdateInfo, error) {
 	info := UpdateInfo{
 		Available:     latest != "" && latest != current,
 		LatestVersion: release.TagName,
-		StoreName:     storeName,
-	}
-	// Store builds (Mac App Store, Microsoft Store) update through their
-	// respective storefronts, so don't point users at the GitHub release.
-	if storeName == "" {
-		info.URL = release.HTMLURL
+		URL:           release.HTMLURL,
 	}
 	return info, nil
 }

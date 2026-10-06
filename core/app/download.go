@@ -1850,9 +1850,13 @@ func (info *FileInfo) downloadDirect(ctx context.Context, output string, httpCli
 	idleBody := newIdleTimeoutReader(resp.Body, downloadIdleTimeout, cancel)
 	defer idleBody.Stop()
 
-	// Wrap with progress reader if callback provided and content length known
+	// Wrap with progress reader whenever a callback is provided, even when
+	// Content-Length is unknown (e.g. chunked responses report -1): the
+	// reader still emits running byte counts with total=0 in that case, so
+	// the caller can compute a live speed instead of waiting on a total that
+	// never arrives.
 	var reader io.Reader = idleBody
-	if onProgress != nil && resp.ContentLength > 0 {
+	if onProgress != nil {
 		reader = newProgressReader(idleBody, resp.ContentLength, onProgress)
 	}
 
@@ -1988,9 +1992,11 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 		}
 	}
 
-	// Wrap with progress reader if callback provided and we have a size estimate
+	// Wrap with progress reader whenever a callback is provided, even
+	// without a size estimate, so byte counts (and therefore speed) are
+	// still reported; see downloadDirect for the same reasoning.
 	var reader io.Reader = bufferedReader
-	if onProgress != nil && totalSize > 0 {
+	if onProgress != nil {
 		reader = newProgressReader(bufferedReader, totalSize, onProgress)
 	}
 
