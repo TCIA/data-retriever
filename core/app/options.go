@@ -24,6 +24,7 @@ var (
 
 const (
 	DefaultInterimUpdateInterval = 5 * time.Second
+	DefaultRequestDelay          = time.Duration(0)
 )
 
 var ErrShowHelp = errors.New("show help")
@@ -68,11 +69,11 @@ type Options struct {
 	// "2" lets the transport negotiate HTTP/2 via ALPN where the server
 	// offers it. Intended for running the same manifest twice to compare
 	// protocol performance; see HTTPVersion1_1/HTTPVersion2.
-	HTTPVersion string
-	AuthGate              *AuthGate
-	CLI                   bool
-	AcceptDataPolicy      bool
-	LogSink               io.Writer
+	HTTPVersion      string
+	AuthGate         *AuthGate
+	CLI              bool
+	AcceptDataPolicy bool
+	LogSink          io.Writer
 	// Semaphore, when set, bounds how many files may be actively processed
 	// (pre-check through decompress) at once across ALL Run() calls sharing
 	// it — not just this one. The GUI shares a single instance across
@@ -129,7 +130,7 @@ func ParseOptions(args []string, promptReader io.Reader) (*Options, error) {
 		RetryDelay:            10 * time.Second,
 		InterimUpdateInterval: DefaultInterimUpdateInterval,
 		MaxConnsPerHost:       8,
-		RequestDelay:          0,
+		RequestDelay:          DefaultRequestDelay,
 		MetadataWorkers:       20,
 		HTTPVersion:           HTTPVersion1_1,
 	}

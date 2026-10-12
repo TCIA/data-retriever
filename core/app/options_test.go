@@ -113,7 +113,7 @@ func TestParseOptions_Defaults(t *testing.T) {
 	if opt.Output != "./" || opt.Concurrent != 8 || opt.MaxRetries != 3 || opt.MaxConnsPerHost != 8 {
 		t.Fatalf("unexpected defaults: %+v", opt)
 	}
-	if opt.RetryDelay != 10*time.Second || opt.RequestDelay != 0 || opt.MetadataWorkers != 20 {
+	if opt.RetryDelay != 10*time.Second || opt.RequestDelay != DefaultRequestDelay || opt.MetadataWorkers != 20 {
 		t.Fatalf("unexpected duration/worker defaults: %+v", opt)
 	}
 	if opt.Username != "nbia_guest" || opt.DirectoryMode != "descriptive" || opt.Auth != "" {

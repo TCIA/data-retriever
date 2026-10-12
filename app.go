@@ -501,7 +501,7 @@ func (b *App) runBatch(batch *DownloadBatch) {
 		InterimUpdateInterval: 500 * time.Millisecond,
 		MaxConnsPerHost:       batch.MaxConn,
 		ServerFriendly:        false,
-		RequestDelay:          500 * time.Millisecond,
+		RequestDelay:          app.DefaultRequestDelay,
 		NoMD5:                 false,
 		NoDecompress:          false,
 		RefreshMetadata:       false,
