@@ -221,6 +221,10 @@ Pass `--server-friendly` (CLI) or lower the worker/connection counts in Advanced
 - 2s inter-request delay
 - 5 metadata workers
 
+Standard mode has no fixed delay between files; its 8-worker and 8-connection
+limits bound concurrency. When a download server returns HTTP 429 or 503 with
+`Retry-After`, retries wait for at least the interval requested by the server.
+
 
 ### Directory Modes
 

@@ -129,7 +129,7 @@ func ParseOptions(args []string, promptReader io.Reader) (*Options, error) {
 		RetryDelay:            10 * time.Second,
 		InterimUpdateInterval: DefaultInterimUpdateInterval,
 		MaxConnsPerHost:       8,
-		RequestDelay:          500 * time.Millisecond,
+		RequestDelay:          0,
 		MetadataWorkers:       20,
 		HTTPVersion:           HTTPVersion1_1,
 	}

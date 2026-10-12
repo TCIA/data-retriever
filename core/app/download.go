@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -1239,9 +1240,10 @@ func (info *FileInfo) Download(ctx context.Context, output string, httpClient *h
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	// Add rate limiting delay between requests
-	if options.RequestDelay > 0 {
-		time.Sleep(options.RequestDelay)
+	// Ordinary downloads rely on the worker and per-host connection limits.
+	// Server-friendly mode sets RequestDelay to add an extra conservative pause.
+	if err := waitWithContext(ctx, options.RequestDelay); err != nil {
+		return err
 	}
 	return info.DownloadWithRetry(ctx, output, httpClient, options, onProgress, onDecompress, gen3Auth)
 }
@@ -1253,6 +1255,7 @@ func (info *FileInfo) DownloadWithRetry(ctx context.Context, output string, http
 	}
 	var lastErr error
 	delay := options.RetryDelay
+	var retryAfter time.Duration
 
 	recordStatus := func(dlErr error) {
 		if statusErr := AppendCompletionStatus(output, info.SeriesInstanceUID, dlErr, false); statusErr != nil {
@@ -1262,8 +1265,15 @@ func (info *FileInfo) DownloadWithRetry(ctx context.Context, output string, http
 
 	for attempt := 0; attempt <= options.MaxRetries; attempt++ {
 		if attempt > 0 {
-			logger.Infof("Retrying download %s (attempt %d/%d) after %v delay", info.SeriesInstanceUID, attempt, options.MaxRetries, delay)
-			time.Sleep(delay)
+			wait := delay
+			if retryAfter > wait {
+				wait = retryAfter
+			}
+			logger.Infof("Retrying download %s (attempt %d/%d) after %v delay", info.SeriesInstanceUID, attempt, options.MaxRetries, wait)
+			if err := waitWithContext(ctx, wait); err != nil {
+				recordStatus(err)
+				return err
+			}
 			delay *= 2 // Exponential backoff
 		}
 
@@ -1279,6 +1289,7 @@ func (info *FileInfo) DownloadWithRetry(ctx context.Context, output string, http
 		}
 
 		lastErr = err
+		retryAfter = retryAfterFromError(err)
 		logger.Warnf("Download %s failed (attempt %d/%d): %v", info.SeriesInstanceUID, attempt+1, options.MaxRetries+1, err)
 
 		// Check if error is retryable
@@ -1294,8 +1305,80 @@ func (info *FileInfo) DownloadWithRetry(ctx context.Context, output string, http
 	return finalErr
 }
 
+func waitWithContext(ctx context.Context, delay time.Duration) error {
+	if delay <= 0 {
+		return nil
+	}
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+type httpStatusError struct {
+	statusCode int
+	status     string
+	retryAfter time.Duration
+}
+
+func (e *httpStatusError) Error() string {
+	return fmt.Sprintf("HTTP error %d: %s", e.statusCode, e.status)
+}
+
+func newHTTPStatusError(resp *http.Response, now time.Time) error {
+	return &httpStatusError{
+		statusCode: resp.StatusCode,
+		status:     resp.Status,
+		retryAfter: parseRetryAfter(resp.Header.Get("Retry-After"), now),
+	}
+}
+
+func parseRetryAfter(value string, now time.Time) time.Duration {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return 0
+	}
+	if seconds, err := strconv.ParseInt(value, 10, 64); err == nil {
+		if seconds <= 0 {
+			return 0
+		}
+		return time.Duration(seconds) * time.Second
+	}
+	when, err := http.ParseTime(value)
+	if err != nil || !when.After(now) {
+		return 0
+	}
+	return when.Sub(now)
+}
+
+func retryAfterFromError(err error) time.Duration {
+	var statusErr *httpStatusError
+	if errors.As(err, &statusErr) {
+		return statusErr.retryAfter
+	}
+	return 0
+}
+
 // isRetryableError checks if an error is retryable
 func isRetryableError(err error) bool {
+	var statusErr *httpStatusError
+	if errors.As(err, &statusErr) {
+		switch statusErr.statusCode {
+		case http.StatusTooManyRequests,
+			http.StatusInternalServerError,
+			http.StatusBadGateway,
+			http.StatusServiceUnavailable,
+			http.StatusGatewayTimeout:
+			return true
+		default:
+			return false
+		}
+	}
+
 	// Check for network errors, timeouts, and certain HTTP status codes
 	errStr := err.Error()
 
@@ -1623,7 +1706,7 @@ func (info *FileInfo) downloadFromGen3(ctx context.Context, output string, httpC
 	objectID = url.PathEscape(objectID)
 	downloadURL, err := getGen3DownloadURL(httpClient, commonsURL, objectID, gen3Auth)
 	if err != nil {
-		return fmt.Errorf("failed to get download URL from Gen3: %v", err)
+		return fmt.Errorf("failed to get download URL from Gen3: %w", err)
 	}
 
 	// Download the file
@@ -1726,7 +1809,7 @@ func getGen3AccessToken(client *http.Client, commonsURL, apiKey string) (string,
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("Gen3 access token endpoint returned status %s", resp.Status)
+		return "", newHTTPStatusError(resp, time.Now())
 	}
 
 	var result map[string]string
@@ -1756,7 +1839,7 @@ func getGen3DownloadURL(client *http.Client, commonsURL, objectID string, gen3Au
 	if gen3Auth != nil && gen3Auth.apiKey != "" {
 		accessToken, err := gen3Auth.GetAccessToken(commonsURL)
 		if err != nil {
-			return "", fmt.Errorf("failed to get access token for %s: %v", commonsURL, err)
+			return "", fmt.Errorf("failed to get access token for %s: %w", commonsURL, err)
 		}
 		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 	}
@@ -1776,7 +1859,7 @@ func getGen3DownloadURL(client *http.Client, commonsURL, objectID string, gen3Au
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("Gen3 API returned status %s", resp.Status)
+		return "", newHTTPStatusError(resp, time.Now())
 	}
 
 	var result map[string]interface{}
@@ -1833,7 +1916,7 @@ func (info *FileInfo) downloadDirect(ctx context.Context, output string, httpCli
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("HTTP error %d: %s", resp.StatusCode, resp.Status)
+		return newHTTPStatusError(resp, time.Now())
 	}
 
 	f, err := os.OpenFile(tempPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
@@ -1947,7 +2030,7 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 
 	// Check HTTP status
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("HTTP error %d: %s", resp.StatusCode, resp.Status)
+		return newHTTPStatusError(resp, time.Now())
 	}
 
 	// Create new temp ZIP file
