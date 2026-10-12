@@ -79,9 +79,9 @@ func main() {
 		// every theme toggle via WindowSetBackgroundColour.
 		BackgroundColour: &options.RGBA{R: 26, G: 26, B: 26, A: 1},
 		Assets:           assets,
-		LogLevel:          logger.DEBUG,
-		OnStartup:         app.startup,
-		OnShutdown:        app.shutdown,
+		LogLevel:         logger.DEBUG,
+		OnStartup:        app.startup,
+		OnShutdown:       app.shutdown,
 		Bind: []interface{}{
 			app,
 		},
@@ -109,6 +109,35 @@ func runCLI() {
 
 	options := app.InitOptions()
 	appLogger := app.Logger
+
+	if options.CroissantList {
+		plan, err := app.InspectCroissantManifest(options.Input)
+		if err != nil {
+			appLogger.Fatalf("Could not inspect Croissant manifest: %v", err)
+		}
+		fmt.Printf("Croissant download components: %s\n", plan.DatasetName)
+		for _, item := range plan.Items {
+			selection := "optional"
+			if item.SelectedByDefault {
+				selection = "default"
+			}
+			if !item.Supported {
+				selection = "unsupported"
+			}
+			fmt.Printf("- [%s] %s | group=%s | id=%s", selection, item.FileName, item.Group, item.ID)
+			if item.ContentSize != "" {
+				fmt.Printf(" | size=%s", item.ContentSize)
+			}
+			if item.AccessLevel != "" {
+				fmt.Printf(" | access=%s", item.AccessLevel)
+			}
+			if item.DownstreamSystem != "" {
+				fmt.Printf(" | route=%s", item.DownstreamSystem)
+			}
+			fmt.Println()
+		}
+		return
+	}
 
 	if !options.AcceptDataPolicy {
 		if !promptDataPolicy() {

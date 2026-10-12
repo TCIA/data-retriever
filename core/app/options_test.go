@@ -46,6 +46,10 @@ func TestParseOptions_AllFlags(t *testing.T) {
 		"--save-log",
 		"--debug",
 		"--version",
+		"--croissant-list",
+		"--croissant-include-group", "isBasedOn",
+		"--croissant-include", "source-a",
+		"--croissant-exclude", "derived-b",
 	}
 
 	opt, err := ParseOptions(args, strings.NewReader(""))
@@ -70,6 +74,12 @@ func TestParseOptions_AllFlags(t *testing.T) {
 	}
 	if !opt.SaveLog || !opt.Debug || !opt.Version {
 		t.Fatalf("unexpected debug/version flags: %+v", opt)
+	}
+	if !opt.CroissantList || len(opt.CroissantIncludeGroups) != 1 || opt.CroissantIncludeGroups[0] != "isBasedOn" {
+		t.Fatalf("unexpected Croissant group options: %+v", opt)
+	}
+	if len(opt.CroissantIncludeIDs) != 1 || opt.CroissantIncludeIDs[0] != "source-a" || len(opt.CroissantExcludeIDs) != 1 || opt.CroissantExcludeIDs[0] != "derived-b" {
+		t.Fatalf("unexpected Croissant item options: %+v", opt)
 	}
 
 	if TokenUrl != "https://token.example.test" {

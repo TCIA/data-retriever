@@ -279,3 +279,79 @@ func TestDecodeCroissantExampleExpandsPathDBRecordSet(t *testing.T) {
 		t.Fatalf("unexpected second PathDB URL: %s", files[1].DownloadURL)
 	}
 }
+
+func TestInspectCroissantManifestGroupsSourceImagesAsOptional(t *testing.T) {
+	manifestPath := filepath.Join("..", "..", "benchmarkManifests", "examples", "croissant", "saros.analysis-result-nifti-derived.croissant.jsonld")
+	plan, err := InspectCroissantManifest(manifestPath)
+	if err != nil {
+		t.Fatalf("InspectCroissantManifest returned error: %v", err)
+	}
+
+	basedOn := make([]CroissantDownloadOption, 0)
+	for _, item := range plan.Items {
+		if item.Group == CroissantGroupIsBasedOn {
+			basedOn = append(basedOn, item)
+			if item.SelectedByDefault {
+				t.Fatalf("source-image component %q must be opt-in", item.ID)
+			}
+			if !item.Supported {
+				t.Fatalf("expected source-image component %q to be supported", item.ID)
+			}
+		}
+	}
+	if len(basedOn) != 4 {
+		t.Fatalf("expected 4 source-image components, got %d", len(basedOn))
+	}
+	if basedOn[0].ID != "source-image-access-46293" || basedOn[0].ContentSize != "29.75 GB" || basedOn[0].DownstreamSystem != "General Commons" {
+		t.Fatalf("unexpected first source-image component: %+v", basedOn[0])
+	}
+}
+
+func TestCroissantSourceImageSelection(t *testing.T) {
+	outputDir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(outputDir, "metadata"), 0755); err != nil {
+		t.Fatalf("failed to create metadata dir: %v", err)
+	}
+	manifestPath := filepath.Join(outputDir, "source-selection.jsonld")
+	manifest := `{
+		"@type": "sc:Dataset",
+		"name": "Selection Dataset",
+		"distribution": [{
+			"@id": "derived-file",
+			"name": "derived.csv",
+			"contentUrl": "https://example.org/derived.csv",
+			"additionalProperty": [{"name":"TCIA download artifact role","value":"data file"}]
+		}],
+		"isBasedOn": [{
+			"@type": "DataDownload",
+			"@id": "source-file",
+			"name": "source.zip",
+			"contentUrl": "https://example.org/source.zip",
+			"contentSize": "5 GB",
+			"additionalProperty": [{"name":"TCIA download artifact role","value":"data file"}]
+		}]
+	}`
+	if err := os.WriteFile(manifestPath, []byte(manifest), 0644); err != nil {
+		t.Fatalf("failed to write manifest: %v", err)
+	}
+
+	defaultFiles, err := decodeCroissant(context.Background(), manifestPath, http.DefaultClient, &Options{Output: outputDir}, Callbacks{}, map[string]string{})
+	if err != nil {
+		t.Fatalf("default decode returned error: %v", err)
+	}
+	if len(defaultFiles) != 1 || defaultFiles[0].FileName != "derived.csv" {
+		t.Fatalf("default selection should include only derived file: %+v", defaultFiles)
+	}
+
+	includedFiles, err := decodeCroissant(context.Background(), manifestPath, http.DefaultClient, &Options{
+		Output:                 outputDir,
+		CroissantIncludeGroups: []string{CroissantGroupIsBasedOn},
+		CroissantExcludeIDs:    []string{"derived-file"},
+	}, Callbacks{}, map[string]string{})
+	if err != nil {
+		t.Fatalf("selected decode returned error: %v", err)
+	}
+	if len(includedFiles) != 1 || includedFiles[0].FileName != "source.zip" {
+		t.Fatalf("explicit selection should include only source file: %+v", includedFiles)
+	}
+}
