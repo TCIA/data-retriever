@@ -169,6 +169,7 @@ Launch with `--cli` (or `-cli`) to skip the GUI entirely:
 | `--refresh-metadata` | | off | Force re-fetch all metadata |
 | `--metadata-workers` | | `20` | Parallel metadata fetch workers |
 | `--server-friendly` | | off | Conservative settings to avoid rate-limiting |
+| `--http-version` | | `1.1` | Download transport for A/B testing: `1.1` forces HTTP/1.1; `2` negotiates HTTP/2 and may fall back to HTTP/1.1. |
 | `--proxy` | `-x` | — | HTTP or SOCKS5 proxy URL |
 | `--prompt` | `-w` | off | Prompt for password interactively |
 | `--save-log` | | off | Write progress log to file |

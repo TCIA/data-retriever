@@ -1,8 +1,12 @@
 package main
 
 import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -75,5 +79,32 @@ func TestCLIInvalidFlagExitsNonZero(t *testing.T) {
 	}
 	if !strings.Contains(strings.ToLower(output), "unknown") {
 		t.Fatalf("expected unknown option output, got: %s", output)
+	}
+}
+
+func TestCLIDownloadFailuresExitNonZero(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "test failure", http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	tempDir := t.TempDir()
+	manifestPath := filepath.Join(tempDir, "manifest.csv")
+	manifest := fmt.Sprintf("imageUrl,filename\n%s/file.bin,file.bin\n", srv.URL)
+	if err := os.WriteFile(manifestPath, []byte(manifest), 0644); err != nil {
+		t.Fatalf("failed to write manifest: %v", err)
+	}
+
+	output, err := runCLIHelper(t,
+		"--input", manifestPath,
+		"--output", filepath.Join(tempDir, "output"),
+		"--processes", "1",
+		"--max-retries", "0",
+	)
+	if err == nil {
+		t.Fatalf("expected non-zero exit after failed download, output=%s", output)
+	}
+	if !strings.Contains(output, "Failed: 1") {
+		t.Fatalf("expected failed-download summary, got: %s", output)
 	}
 }

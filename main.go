@@ -79,9 +79,9 @@ func main() {
 		// every theme toggle via WindowSetBackgroundColour.
 		BackgroundColour: &options.RGBA{R: 26, G: 26, B: 26, A: 1},
 		Assets:           assets,
-		LogLevel:          logger.DEBUG,
-		OnStartup:         app.startup,
-		OnShutdown:        app.shutdown,
+		LogLevel:         logger.DEBUG,
+		OnStartup:        app.startup,
+		OnShutdown:       app.shutdown,
 		Bind: []interface{}{
 			app,
 		},
@@ -190,8 +190,9 @@ func runCLI() {
 		}
 	} else if !manifestReceived {
 		appLogger.Fatalf("No metadata can be found for this manifest: %s", options.Input)
+	} else if summary != nil && summary.Failed > 0 {
+		appLogger.Fatalf("Download completed with %d failed item(s)", summary.Failed)
 	}
-	_ = summary
 }
 
 const duaText = `

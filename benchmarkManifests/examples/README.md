@@ -58,16 +58,16 @@ path does not itself signify acceptance or authorization.
   and single-large cohorts validate long-running streamed downloads; and the
   normal-mix cohort spans six observed file sizes from 59 MB to 3.13 GB.
 
-## Interpreting whole-file timeouts
+## Interpreting download timeouts
 
-For a build that imposes a 30-minute deadline on each direct or DRS transfer,
-the theoretical minimum sustained payload rate is
-`file_size_bytes * 8 / 1,800,000,000` Mbps. The 5,365,088,843-byte PathDB object
-needs 23.84 Mbps and the 4,954,943,258-byte General Commons object needs
-22.02 Mbps when downloaded alone. These are optimistic lower bounds: protocol
-overhead, server variability, retries, and simultaneous files all consume part
-of the available connection. Record whether a failed trial retained or resumed
-partial bytes; restarting a large file from zero can dominate the user impact.
+Current builds do not impose a whole-file deadline on direct, NBIA, or DRS
+payloads. A transfer may run for any length of time while bytes continue to
+arrive. The retriever cancels and retries only after a connection delivers no
+data for 10 minutes. Consequently, there is no minimum sustained Mbps required
+for the large-file examples. Record the last byte-progress time and whether a
+failed trial retained or resumed partial bytes; the current direct-download
+path removes its temporary file before retrying, so repeated stalls on a large
+object can still be expensive for slow or unstable connections.
 
 ## Suggested benchmark procedure
 

@@ -566,8 +566,12 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 		if err := copyFile(options.Input, destPath); err != nil {
 			Logger.Warnf("Failed to copy spreadsheet to metadata folder: %v", err)
 		}
+		metadataPath := filepath.Join(metaDir, "metadata.csv")
+		if err := WriteAllMetadataToCSV(files, metadataPath); err != nil {
+			return nil, fmt.Errorf("failed to write spreadsheet metadata: %w", err)
+		}
 		if err := InitCompletionStatus(options.Output, files); err != nil {
-			Logger.Errorf("Failed to init completion status: %v", err)
+			return nil, fmt.Errorf("failed to initialize completion status: %w", err)
 		}
 	}
 

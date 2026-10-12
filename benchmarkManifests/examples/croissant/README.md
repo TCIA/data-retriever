@@ -35,10 +35,14 @@ ordinary data files.
 The source repository also contains a newer
 [`recordset-manifests`](https://github.com/kirbyju/tcia-croissant-odrl/tree/698f1638816489194fec9373df7bec44eb29d81a/examples/recordset-manifests)
 pilot. Those files are intentionally not copied here yet. Their Croissant
-`RecordSet` fields refer to external inventory CSV `FileObject`s; the current
-Data Retriever parser does not expand those CSV rows and would instead treat
-the inventory CSV itself as a downloadable payload. Add them after that
-recordset-selection and row-dispatch contract is implemented.
+`RecordSet` fields refer to external inventory CSV `FileObject`s. Data
+Retriever now expands supported route CSVs (`SeriesInstanceUID`, `imageUrl`,
+or `drs_uri`), with exact JSON-LD fixtures and mocked CSV responses under
+`core/app/testdata/croissant-examples/`. The pilot files are not benchmark
+inputs yet because their example publication URLs are design-review locations,
+not verified live download contracts. Add runnable copies here after TCIA
+publishes stable Croissant and recordset URLs, or supply a locally hosted
+end-to-end fixture explicitly.
 
 ## Provenance
 

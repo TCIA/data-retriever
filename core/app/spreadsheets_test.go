@@ -1,11 +1,15 @@
 package app
 
 import (
+	"context"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func writeTempCSV(t *testing.T, content string) string {
@@ -117,5 +121,49 @@ func TestDecodeSpreadsheetMissingRequiredColumns(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "no 'drs_uri', 'imageUrl', 'SeriesInstanceUID', or 'Series UID' column found") {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestRunDirectSpreadsheetWritesMergedMetadata(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("payload"))
+	}))
+	defer srv.Close()
+
+	manifestPath := writeTempCSV(t, fmt.Sprintf(
+		"imageUrl,collection,patient_id,filename\n%s/file.bin,TEST,P-1,file.bin\n",
+		srv.URL,
+	))
+	outputDir := t.TempDir()
+	options := &Options{
+		Input:                 manifestPath,
+		Output:                outputDir,
+		Concurrent:            1,
+		MaxConnsPerHost:       1,
+		MaxRetries:            0,
+		RequestDelay:          0,
+		RetryDelay:            time.Millisecond,
+		InterimUpdateInterval: time.Millisecond,
+		HTTPVersion:           HTTPVersion1_1,
+	}
+
+	summary, err := Run(context.Background(), options, Callbacks{})
+	if err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+	if summary.Downloaded != 1 || summary.Failed != 0 {
+		t.Fatalf("unexpected summary: %+v", summary)
+	}
+
+	metadataPath := filepath.Join(outputDir, "metadata", "metadata.csv")
+	content, err := os.ReadFile(metadataPath)
+	if err != nil {
+		t.Fatalf("expected merged metadata CSV: %v", err)
+	}
+	if !strings.Contains(string(content), "completion_status") || !strings.Contains(string(content), StatusSuccess) {
+		t.Fatalf("metadata CSV does not contain successful completion status:\n%s", content)
+	}
+	if _, err := os.Stat(filepath.Join(outputDir, "metadata", "completion_status.csv")); !os.IsNotExist(err) {
+		t.Fatalf("completion status sidecar should be removed after merge, err=%v", err)
 	}
 }
