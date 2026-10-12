@@ -69,11 +69,11 @@ type Options struct {
 	// "2" lets the transport negotiate HTTP/2 via ALPN where the server
 	// offers it. Intended for running the same manifest twice to compare
 	// protocol performance; see HTTPVersion1_1/HTTPVersion2.
-	HTTPVersion      string
-	AuthGate         *AuthGate
-	CLI              bool
-	AcceptDataPolicy bool
-	LogSink          io.Writer
+	HTTPVersion string
+	AuthGate              *AuthGate
+	CLI                   bool
+	AcceptDataPolicy      bool
+	LogSink               io.Writer
 	// Semaphore, when set, bounds how many files may be actively processed
 	// (pre-check through decompress) at once across ALL Run() calls sharing
 	// it — not just this one. The GUI shares a single instance across
