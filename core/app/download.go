@@ -1822,7 +1822,7 @@ func getGen3AccessToken(client *http.Client, commonsURL, apiKey string) (string,
 		return "", fmt.Errorf("no 'access_token' found in Gen3 response")
 	}
 
-	logger.Infof("Successfully retrieved Gen3 access token: %s", accessToken)
+	logger.Info("Successfully retrieved Gen3 access token")
 	return accessToken, nil
 }
 
