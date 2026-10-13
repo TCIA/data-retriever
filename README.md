@@ -2,7 +2,7 @@
 
 > A cross-platform desktop GUI (and CLI) for downloading medical imaging data from the Cancer Imaging Archive
 
-Please note that this is a beta release version.  Full feature implementation is not complete.  If you encounter any bugs please create an issue on the project.
+If you encounter any issues using the software, please email the [TCIA Helpdesk](mailto:help@cancerimagingarchive.net).
 
 [![Go Version](https://img.shields.io/badge/Go-1.24.4-blue.svg)](https://golang.org)
 ![Windows downloads](https://img.shields.io/github/downloads/TCIA/data-retriever/TCIA_Data_Retriever_windows_amd64.zip?label=Windows%20downloads&cacheSeconds=21600)
