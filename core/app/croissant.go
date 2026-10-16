@@ -19,7 +19,33 @@ const (
 	croissantRoleDataFile        = "data file"
 	croissantRoleManifest        = "manifest"
 	croissantRoleTransferPackage = "transfer package"
+	CroissantGroupPrimary        = "primary"
+	CroissantGroupIsBasedOn      = "isBasedOn"
 )
+
+// CroissantDownloadOption describes one logical download component in a
+// Croissant document. Manifest components may expand into many payload files
+// after the user confirms the plan.
+type CroissantDownloadOption struct {
+	ID                string `json:"id"`
+	Group             string `json:"group"`
+	Name              string `json:"name"`
+	FileName          string `json:"fileName"`
+	DownloadURL       string `json:"downloadUrl"`
+	Role              string `json:"role"`
+	AccessMechanism   string `json:"accessMechanism"`
+	AccessLevel       string `json:"accessLevel"`
+	DownstreamSystem  string `json:"downstreamSystem"`
+	ContentSize       string `json:"contentSize"`
+	License           string `json:"license"`
+	SelectedByDefault bool   `json:"selectedByDefault"`
+	Supported         bool   `json:"supported"`
+}
+
+type CroissantDownloadPlan struct {
+	DatasetName string                    `json:"datasetName"`
+	Items       []CroissantDownloadOption `json:"items"`
+}
 
 type croissantDatasetInfo struct {
 	DatasetID   string
@@ -41,6 +67,59 @@ type croissantDownloadRow struct {
 	SearchSystem         string
 	DownstreamSystem     string
 	DownloadRequirements string
+	Group                string
+	ContentSize          string
+	License              string
+}
+
+// InspectCroissantManifest parses a local Croissant document without fetching
+// nested manifests or starting downloads.
+func InspectCroissantManifest(filePath string) (CroissantDownloadPlan, error) {
+	doc, err := readCroissantDocument(filePath)
+	if err != nil {
+		return CroissantDownloadPlan{}, err
+	}
+	dataset := croissantDatasetFromDoc(doc)
+	rows := extractCroissantRows(doc)
+	items := make([]CroissantDownloadOption, 0, len(rows))
+	for _, row := range rows {
+		role := resolveCroissantArtifactRole(row)
+		supported := role != croissantRoleTransferPackage && strings.TrimSpace(row.DownloadURL) != ""
+		if role == croissantRoleManifest && !isCroissantDataRetrieverRow(row) {
+			supported = false
+		}
+		items = append(items, CroissantDownloadOption{
+			ID:                croissantRowSelectionID(row),
+			Group:             croissantRowGroup(row),
+			Name:              strings.TrimSpace(row.Name),
+			FileName:          strings.TrimSpace(row.FileName),
+			DownloadURL:       strings.TrimSpace(row.DownloadURL),
+			Role:              role,
+			AccessMechanism:   strings.TrimSpace(row.AccessMechanism),
+			AccessLevel:       strings.TrimSpace(row.AccessLevel),
+			DownstreamSystem:  strings.TrimSpace(row.DownstreamSystem),
+			ContentSize:       strings.TrimSpace(row.ContentSize),
+			License:           strings.TrimSpace(row.License),
+			SelectedByDefault: supported && croissantRowGroup(row) != CroissantGroupIsBasedOn,
+			Supported:         supported,
+		})
+	}
+	return CroissantDownloadPlan{DatasetName: dataset.DatasetName, Items: items}, nil
+}
+
+func readCroissantDocument(filePath string) (map[string]interface{}, error) {
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read Croissant manifest %s: %w", filePath, err)
+	}
+	var doc map[string]interface{}
+	if err := json.Unmarshal(content, &doc); err != nil {
+		return nil, fmt.Errorf("invalid Croissant JSON: %w", err)
+	}
+	if !looksLikeCroissantDocument(doc) {
+		return nil, fmt.Errorf("invalid Croissant manifest: expected dataset with recordSet, distribution, and/or isBasedOn downloads")
+	}
+	return doc, nil
 }
 
 func decodeCroissant(ctx context.Context, filePath string, client *http.Client, options *Options, callbacks Callbacks, s5cmdMap map[string]string) ([]*FileInfo, error) {
@@ -51,18 +130,9 @@ func decodeCroissant(ctx context.Context, filePath string, client *http.Client, 
 		return nil, fmt.Errorf("options cannot be nil")
 	}
 
-	content, err := os.ReadFile(filePath)
+	doc, err := readCroissantDocument(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read Croissant manifest %s: %w", filePath, err)
-	}
-
-	var doc map[string]interface{}
-	if err := json.Unmarshal(content, &doc); err != nil {
-		return nil, fmt.Errorf("invalid Croissant JSON: %w", err)
-	}
-
-	if !looksLikeCroissantDocument(doc) {
-		return nil, fmt.Errorf("invalid Croissant manifest: expected dataset with recordSet and/or distribution")
+		return nil, err
 	}
 
 	dataset := croissantDatasetFromDoc(doc)
@@ -75,6 +145,9 @@ func decodeCroissant(ctx context.Context, filePath string, client *http.Client, 
 	skipped := 0
 
 	for _, row := range rows {
+		if !croissantRowSelected(row, options) {
+			continue
+		}
 		row.DownloadURL = strings.TrimSpace(row.DownloadURL)
 		if row.DownloadURL == "" {
 			warnCroissant(callbacks, "skipping row %q: missing download URL", croissantRowLabel(row))
@@ -259,7 +332,30 @@ func looksLikeCroissantDocument(doc map[string]interface{}) bool {
 		return false
 	}
 
-	return len(croissantSlice(doc["recordSet"])) > 0 || len(croissantSlice(doc["distribution"])) > 0
+	return len(croissantSlice(doc["recordSet"])) > 0 || len(croissantSlice(doc["distribution"])) > 0 || hasCroissantBasedOnDownloads(doc)
+}
+
+func hasCroissantBasedOnDownloads(doc map[string]interface{}) bool {
+	for _, raw := range croissantSlice(doc["isBasedOn"]) {
+		if croissantTypeIncludesDataDownload(croissantMap(raw)["@type"]) {
+			return true
+		}
+	}
+	return false
+}
+
+func croissantTypeIncludesDataDownload(value interface{}) bool {
+	switch typed := value.(type) {
+	case string:
+		return strings.Contains(strings.ToLower(typed), "datadownload")
+	case []interface{}:
+		for _, entry := range typed {
+			if croissantTypeIncludesDataDownload(entry) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func croissantTypeIncludesDataset(value interface{}) bool {
@@ -337,46 +433,7 @@ func extractCroissantRows(doc map[string]interface{}) []croissantDownloadRow {
 			continue
 		}
 
-		row := croissantDownloadRow{
-			FileObjectID: strings.TrimSpace(croissantString(distribution["@id"])),
-			Name:         strings.TrimSpace(croissantString(distribution["name"])),
-			FileName:     strings.TrimSpace(croissantString(distribution["name"])),
-			DownloadURL:  strings.TrimSpace(croissantString(distribution["contentUrl"])),
-		}
-		for _, rawProperty := range croissantSlice(distribution["additionalProperty"]) {
-			property := croissantMap(rawProperty)
-			if property == nil {
-				continue
-			}
-
-			propName := compactCroissantKey(croissantString(property["name"]))
-			propValue := strings.TrimSpace(croissantString(property["value"]))
-			if propValue == "" {
-				continue
-			}
-
-			switch propName {
-			case "tciadownloadid", "downloadid":
-				row.DownloadID = propValue
-				if row.RowID == "" {
-					row.RowID = "download-" + propValue
-				}
-			case "tciadownloadartifactrole", "downloadartifactrole":
-				row.DownloadArtifactRole = propValue
-			case "tciaaccessmechanism", "accessmechanism":
-				row.AccessMechanism = propValue
-			case "tciaaccesslevel", "accesslevel":
-				row.AccessLevel = propValue
-			case "tciasearchaccessurl", "searchurl":
-				row.SearchURL = propValue
-			case "tciasearchsystem", "searchsystem":
-				row.SearchSystem = propValue
-			case "tciadownstreamaccesssystem", "downstreamaccesssystem":
-				row.DownstreamSystem = propValue
-			case "tciadownloadrequirements", "downloadrequirements":
-				row.DownloadRequirements = propValue
-			}
-		}
+		row := croissantDownloadRowFromObject(distribution, CroissantGroupPrimary)
 		if _, referenced := referencedFileObjects[row.FileObjectID]; referenced {
 			row.DownloadArtifactRole = croissantRoleManifest
 			row.AccessMechanism = "TCIA Data Retriever"
@@ -385,7 +442,100 @@ func extractCroissantRows(doc map[string]interface{}) []croissantDownloadRow {
 		index.upsert(row)
 	}
 
+	for _, rawBasedOn := range croissantSlice(doc["isBasedOn"]) {
+		basedOn := croissantMap(rawBasedOn)
+		if basedOn == nil || !croissantTypeIncludesDataDownload(basedOn["@type"]) {
+			continue
+		}
+		index.upsert(croissantDownloadRowFromObject(basedOn, CroissantGroupIsBasedOn))
+	}
+
 	return index.rowsInOrder()
+}
+
+func croissantDownloadRowFromObject(object map[string]interface{}, group string) croissantDownloadRow {
+	row := croissantDownloadRow{
+		FileObjectID: strings.TrimSpace(croissantString(object["@id"])),
+		Name:         strings.TrimSpace(croissantString(object["name"])),
+		FileName:     strings.TrimSpace(croissantString(object["name"])),
+		DownloadURL:  strings.TrimSpace(croissantString(object["contentUrl"])),
+		ContentSize:  strings.TrimSpace(croissantString(object["contentSize"])),
+		License:      strings.TrimSpace(croissantString(object["license"])),
+		Group:        group,
+	}
+	if group == CroissantGroupIsBasedOn {
+		row.RowID = row.FileObjectID
+	}
+	for _, rawProperty := range croissantSlice(object["additionalProperty"]) {
+		property := croissantMap(rawProperty)
+		if property == nil {
+			continue
+		}
+		propName := compactCroissantKey(croissantString(property["name"]))
+		propValue := strings.TrimSpace(croissantString(property["value"]))
+		if propValue == "" {
+			continue
+		}
+		switch propName {
+		case "tciadownloadid", "downloadid":
+			row.DownloadID = propValue
+			if row.RowID == "" {
+				row.RowID = "download-" + propValue
+			}
+		case "tciadownloadartifactrole", "downloadartifactrole":
+			row.DownloadArtifactRole = propValue
+		case "tciaaccessmechanism", "accessmechanism":
+			row.AccessMechanism = propValue
+		case "tciaaccesslevel", "accesslevel":
+			row.AccessLevel = propValue
+		case "tciasearchaccessurl", "searchurl":
+			row.SearchURL = propValue
+		case "tciasearchsystem", "searchsystem":
+			row.SearchSystem = propValue
+		case "tciadownstreamaccesssystem", "downstreamaccesssystem":
+			row.DownstreamSystem = propValue
+		case "tciadownloadrequirements", "downloadrequirements":
+			row.DownloadRequirements = propValue
+		}
+	}
+	return row
+}
+
+func croissantRowGroup(row croissantDownloadRow) string {
+	if row.Group == CroissantGroupIsBasedOn {
+		return CroissantGroupIsBasedOn
+	}
+	return CroissantGroupPrimary
+}
+
+func croissantRowSelectionID(row croissantDownloadRow) string {
+	for _, candidate := range []string{row.RowID, row.FileObjectID, row.DownloadID} {
+		if value := strings.TrimSpace(candidate); value != "" {
+			return value
+		}
+	}
+	return stableCroissantHashID(row.DownloadURL, row.Name)
+}
+
+func croissantRowSelected(row croissantDownloadRow, options *Options) bool {
+	selected := croissantRowGroup(row) != CroissantGroupIsBasedOn
+	for _, group := range options.CroissantIncludeGroups {
+		if strings.EqualFold(strings.TrimSpace(group), croissantRowGroup(row)) {
+			selected = true
+		}
+	}
+	id := croissantRowSelectionID(row)
+	for _, included := range options.CroissantIncludeIDs {
+		if strings.TrimSpace(included) == id {
+			selected = true
+		}
+	}
+	for _, excluded := range options.CroissantExcludeIDs {
+		if strings.TrimSpace(excluded) == id {
+			selected = false
+		}
+	}
+	return selected
 }
 
 func croissantFileObjects(doc map[string]interface{}) map[string]map[string]interface{} {
@@ -810,6 +960,9 @@ func mergeCroissantRow(dst *croissantDownloadRow, src croissantDownloadRow) {
 	setCroissantStringIfEmpty(&dst.SearchSystem, src.SearchSystem)
 	setCroissantStringIfEmpty(&dst.DownstreamSystem, src.DownstreamSystem)
 	setCroissantStringIfEmpty(&dst.DownloadRequirements, src.DownloadRequirements)
+	setCroissantStringIfEmpty(&dst.Group, src.Group)
+	setCroissantStringIfEmpty(&dst.ContentSize, src.ContentSize)
+	setCroissantStringIfEmpty(&dst.License, src.License)
 }
 
 func setCroissantStringIfEmpty(dst *string, src string) {

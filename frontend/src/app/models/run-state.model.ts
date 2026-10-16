@@ -14,6 +14,8 @@ export interface RunOptions {
   authFilePath: string;
   directoryMode: string;
   verbose: boolean;
+  croissantIncludeIDs?: string[];
+  croissantExcludeIDs?: string[];
 }
 
 export interface RunState {

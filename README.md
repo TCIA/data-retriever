@@ -174,6 +174,10 @@ Launch with `--cli` (or `-cli`) to skip the GUI entirely:
 | `--prompt` | `-w` | off | Prompt for password interactively |
 | `--save-log` | | off | Write progress log to file |
 | `--accept-data-policy` | | off | Accept the TCIA data usage policy without interactive prompt |
+| `--croissant-list` | | off | List selectable Croissant components and exit without downloading |
+| `--croissant-include-group` | | — | Include an optional group such as `isBasedOn`; may be repeated |
+| `--croissant-include` | | — | Include one Croissant component by the ID shown by `--croissant-list`; may be repeated |
+| `--croissant-exclude` | | — | Exclude one Croissant component by ID; may be repeated |
 | `--verbose` | `-V` | off | Info-level logging |
 | `--debug` | | off | Verbose debug output |
 | `--version` | `-v` | | Print version info |
@@ -187,6 +191,14 @@ Launch with `--cli` (or `-cli`) to skip the GUI entirely:
   are expanded automatically. The CSV must use a supported Data Retriever
   route column: `SeriesInstanceUID`, `imageUrl`, or `drs_uri`.
 - Unsupported transfer-package rows (for example Aspera handoffs) are skipped with warnings.
+- GUI users review a grouped checklist before downloading. Primary/derived
+  components are selected by default; source-image components declared through
+  `isBasedOn` are visible but opt-in.
+- CLI runs keep the same safe default. Use `--croissant-list` to inspect the
+  plan, `--croissant-include-group isBasedOn` to add all source-image
+  components, or `--croissant-include ID` / `--croissant-exclude ID` for
+  individual choices. These flags are non-interactive so scripts remain
+  reproducible.
 
 ### Examples
 
@@ -205,6 +217,17 @@ Launch with `--cli` (or `-cli`) to skip the GUI entirely:
 
 # Keep ZIP archives instead of extracting
 ./TCIA_Data_Retriever --cli -i manifest.tcia -o /data/zips --no-md5 --no-decompress
+
+# Review a Croissant plan without downloading
+./TCIA_Data_Retriever --cli -i dataset.croissant.jsonld --croissant-list
+
+# Download the defaults plus every source-image component
+./TCIA_Data_Retriever --cli -i dataset.croissant.jsonld -o /data/dataset \
+  --croissant-include-group isBasedOn
+
+# Add only one optional component by its stable ID
+./TCIA_Data_Retriever --cli -i dataset.croissant.jsonld -o /data/dataset \
+  --croissant-include source-image-access-46295
 ```
 
 ---

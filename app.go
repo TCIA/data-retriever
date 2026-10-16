@@ -382,6 +382,12 @@ func (b *App) OpenOutputDirectoryDialog(inputFile string) (string, error) {
 	return result, nil
 }
 
+// InspectCroissantManifest returns the local document's logical download
+// components without fetching nested manifests or starting a transfer.
+func (b *App) InspectCroissantManifest(manifestPath string) (app.CroissantDownloadPlan, error) {
+	return app.InspectCroissantManifest(manifestPath)
+}
+
 // RunCLIFetch runs the CLI tool asynchronously with the given manifest and output directory and advanced options.
 func (b *App) RunCLIFetch(
 	manifestPath string,
@@ -394,6 +400,8 @@ func (b *App) RunCLIFetch(
 	authPath string,
 	directoryMode string,
 	verbose bool,
+	croissantIncludeIDs []string,
+	croissantExcludeIDs []string,
 	runId uint64,
 ) (string, error) {
 
@@ -407,18 +415,20 @@ func (b *App) RunCLIFetch(
 	ctx, cancel := context.WithCancel(b.ctx)
 
 	batch := &DownloadBatch{
-		ID:            id,
-		Ctx:           ctx,
-		Cancel:        cancel,
-		Manifest:      manifestPath,
-		OutputDir:     outputDir,
-		MaxConn:       maxConnections,
-		MaxRetries:    maxRetries,
-		Parallel:      simultaneousDownloads,
-		SkipExist:     skipExisting,
-		AuthPath:      authPath,
-		DirectoryMode: directoryMode,
-		Verbose:       verbose,
+		ID:                  id,
+		Ctx:                 ctx,
+		Cancel:              cancel,
+		Manifest:            manifestPath,
+		OutputDir:           outputDir,
+		MaxConn:             maxConnections,
+		MaxRetries:          maxRetries,
+		Parallel:            simultaneousDownloads,
+		SkipExist:           skipExisting,
+		AuthPath:            authPath,
+		DirectoryMode:       directoryMode,
+		Verbose:             verbose,
+		CroissantIncludeIDs: append([]string(nil), croissantIncludeIDs...),
+		CroissantExcludeIDs: append([]string(nil), croissantExcludeIDs...),
 		// Assigned once, here, so it reflects when this manifest actually
 		// entered the queue (a fresh Fetch, a Retry, or a Resume all get a
 		// new value at this point) rather than being tied to the random
@@ -512,14 +522,16 @@ func (b *App) runBatch(batch *DownloadBatch) {
 			}
 			return app.LoadSavedAuthFilePath()
 		}(),
-		DirectoryMode:    batch.DirectoryMode,
-		IDCParquetPath:   b.parquetPaths.IDCIndex,
-		PriorParquetPath: b.parquetPaths.PriorVersions,
-		AuthGate:         gate,
-		LogSink:          newGuiLogSink(b.ctx, batch.ID),
-		Semaphore:        b.downloadSemaphore,
-		SharedHTTPClient: b.httpClient,
-		Priority:         batch.Priority,
+		DirectoryMode:       batch.DirectoryMode,
+		IDCParquetPath:      b.parquetPaths.IDCIndex,
+		PriorParquetPath:    b.parquetPaths.PriorVersions,
+		AuthGate:            gate,
+		LogSink:             newGuiLogSink(b.ctx, batch.ID),
+		Semaphore:           b.downloadSemaphore,
+		SharedHTTPClient:    b.httpClient,
+		Priority:            batch.Priority,
+		CroissantIncludeIDs: append([]string(nil), batch.CroissantIncludeIDs...),
+		CroissantExcludeIDs: append([]string(nil), batch.CroissantExcludeIDs...),
 	}
 
 	logTimestamp := time.Now().Format("20060102-150405")
@@ -918,6 +930,8 @@ func (b *App) ResumeManifest(manifestPath string) error {
 		pausedBatch.AuthPath,
 		pausedBatch.DirectoryMode,
 		pausedBatch.Verbose,
+		pausedBatch.CroissantIncludeIDs,
+		pausedBatch.CroissantExcludeIDs,
 		pausedBatch.ID,
 	)
 	if err != nil {
@@ -963,13 +977,15 @@ type DownloadBatch struct {
 	Manifest  string
 	OutputDir string
 
-	MaxConn       int
-	MaxRetries    int
-	Parallel      int
-	SkipExist     bool
-	AuthPath      string
-	DirectoryMode string
-	Verbose       bool
+	MaxConn             int
+	MaxRetries          int
+	Parallel            int
+	SkipExist           bool
+	AuthPath            string
+	DirectoryMode       string
+	Verbose             bool
+	CroissantIncludeIDs []string
+	CroissantExcludeIDs []string
 	// Priority is this batch's downloadSemaphore priority — see
 	// App.nextBatchPriority and Options.Priority.
 	Priority int64

@@ -69,11 +69,15 @@ type Options struct {
 	// "2" lets the transport negotiate HTTP/2 via ALPN where the server
 	// offers it. Intended for running the same manifest twice to compare
 	// protocol performance; see HTTPVersion1_1/HTTPVersion2.
-	HTTPVersion string
-	AuthGate              *AuthGate
-	CLI                   bool
-	AcceptDataPolicy      bool
-	LogSink               io.Writer
+	HTTPVersion            string
+	AuthGate               *AuthGate
+	CLI                    bool
+	AcceptDataPolicy       bool
+	CroissantList          bool
+	CroissantIncludeGroups []string
+	CroissantIncludeIDs    []string
+	CroissantExcludeIDs    []string
+	LogSink                io.Writer
 	// Semaphore, when set, bounds how many files may be actively processed
 	// (pre-check through decompress) at once across ALL Run() calls sharing
 	// it — not just this one. The GUI shares a single instance across
@@ -169,6 +173,10 @@ func ParseOptions(args []string, promptReader io.Reader) (*Options, error) {
 	opt.opt.BoolVar(&opt.CLI, "cli", false, opt.opt.Description("Run in CLI mode"))
 	opt.opt.StringVar(&opt.HTTPVersion, "http-version", HTTPVersion1_1, opt.opt.Description("HTTP protocol to use for downloads: 1.1 or 2 (for A/B performance testing)"))
 	opt.opt.BoolVar(&opt.AcceptDataPolicy, "accept-data-policy", false, opt.opt.Description("accept the TCIA data usage policy without interactive prompt"))
+	opt.opt.BoolVar(&opt.CroissantList, "croissant-list", false, opt.opt.Description("list selectable Croissant download components without downloading"))
+	opt.opt.StringSliceVar(&opt.CroissantIncludeGroups, "croissant-include-group", 1, 99, opt.opt.Description("include a Croissant component group (for example isBasedOn); may be repeated"))
+	opt.opt.StringSliceVar(&opt.CroissantIncludeIDs, "croissant-include", 1, 99, opt.opt.Description("include a Croissant component by ID; may be repeated"))
+	opt.opt.StringSliceVar(&opt.CroissantExcludeIDs, "croissant-exclude", 1, 99, opt.opt.Description("exclude a Croissant component by ID; may be repeated"))
 
 	if _, err := opt.opt.Parse(args); err != nil {
 		return opt, err
