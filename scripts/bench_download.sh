@@ -159,6 +159,18 @@ summary_value() {
   tr '\r' '\n' < "$log_file" | awk -F': ' -v key="$label" '$1 == key {value=$2} END {print value}'
 }
 
+# Parses a Go time.Duration.String() value (e.g. "17m39s", "1h2m3s", "45s",
+# "0s") as printed by the CLI's own "Total time:" summary line, which is
+# measured from after manifest parsing/index/metadata setup to completion —
+# the same download-only window the GUI shows, excluding process startup.
+parse_go_duration() {
+  local dur="$1" h=0 m=0 s=0
+  [[ "$dur" =~ ([0-9]+)h ]] && h="${BASH_REMATCH[1]}"
+  [[ "$dur" =~ ([0-9]+)m ]] && m="${BASH_REMATCH[1]}"
+  [[ "$dur" =~ ([0-9]+)s ]] && s="${BASH_REMATCH[1]}"
+  echo $((h * 3600 + m * 60 + s))
+}
+
 if [[ -n "$BINARY" ]]; then
   if [[ ! -x "$BINARY" ]]; then
     echo "Benchmark binary is not executable: $BINARY" >&2
@@ -184,7 +196,7 @@ BINARY_SHA256="$(hash_file "$BIN")"
 GIT_COMMIT="$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)"
 CSV="$OUTPUT_BASE/bench_results_v2.csv"
 LOG_BASE="$OUTPUT_BASE/logs"
-EXPECTED_HEADER='timestamp_utc,run_label,manifest,manifest_sha256,binary_sha256,git_commit,http_version_requested,http_protocol_actual,run_index,elapsed_seconds,disk_mb,disk_mb_per_second,files,total_items,downloaded,synced,skipped,failed,exit_code,benchmark_status,log_path'
+EXPECTED_HEADER='timestamp_utc,run_label,manifest,manifest_sha256,binary_sha256,git_commit,http_version_requested,http_protocol_actual,run_index,elapsed_seconds,disk_mb,disk_mb_per_second,download_elapsed_seconds,download_mb_per_second,files,total_items,downloaded,synced,skipped,failed,exit_code,benchmark_status,log_path'
 
 mkdir -p "$OUTPUT_BASE" "$LOG_BASE"
 if [[ -f "$CSV" ]]; then
@@ -239,6 +251,16 @@ for manifest in "${MANIFESTS[@]}"; do
       actual_protocol=$(grep -o 'HTTP-PROTOCOL-STATS: .*' "$run_log" 2>/dev/null | tail -1 | sed 's/^HTTP-PROTOCOL-STATS: //' || true)
       [[ -z "$actual_protocol" ]] && actual_protocol="unknown"
 
+      total_time_str="$(summary_value "Total time" "$run_log")"
+      if [[ -n "$total_time_str" ]]; then
+        download_elapsed="$(parse_go_duration "$total_time_str")"
+        [[ "$download_elapsed" -lt 1 ]] && download_elapsed=1
+        download_rate=$(awk -v mb="$disk_mb" -v s="$download_elapsed" 'BEGIN { printf "%.2f", mb / s }')
+      else
+        download_elapsed="unknown"
+        download_rate="unknown"
+      fi
+
       total_items="$(summary_value "Total items" "$run_log")"
       downloaded="$(summary_value "Downloaded" "$run_log")"
       synced="$(summary_value "Synced" "$run_log")"
@@ -281,6 +303,8 @@ for manifest in "${MANIFESTS[@]}"; do
         csv_field "$elapsed"; printf ','
         csv_field "$disk_mb"; printf ','
         csv_field "$disk_rate"; printf ','
+        csv_field "$download_elapsed"; printf ','
+        csv_field "$download_rate"; printf ','
         csv_field "$file_count"; printf ','
         csv_field "$total_items"; printf ','
         csv_field "$downloaded"; printf ','
@@ -292,8 +316,8 @@ for manifest in "${MANIFESTS[@]}"; do
         csv_field "$run_log"; printf '\n'
       } >> "$CSV"
 
-      printf 'Result: status=%s elapsed=%ss disk=%sMB disk-rate=%sMB/s files=%s protocol=%s\n' \
-        "$status" "$elapsed" "$disk_mb" "$disk_rate" "$file_count" "$actual_protocol"
+      printf 'Result: status=%s download=%ss download-rate=%sMB/s (process=%ss) disk=%sMB files=%s protocol=%s\n' \
+        "$status" "$download_elapsed" "$download_rate" "$elapsed" "$disk_mb" "$file_count" "$actual_protocol"
     done
   done
 done
