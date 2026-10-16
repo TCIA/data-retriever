@@ -1,5 +1,5 @@
 export namespace app {
-
+	
 	export class CroissantDownloadOption {
 	    id: string;
 	    group: string;
@@ -14,11 +14,11 @@ export namespace app {
 	    license: string;
 	    selectedByDefault: boolean;
 	    supported: boolean;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new CroissantDownloadOption(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
@@ -39,17 +39,17 @@ export namespace app {
 	export class CroissantDownloadPlan {
 	    datasetName: string;
 	    items: CroissantDownloadOption[];
-
+	
 	    static createFrom(source: any = {}) {
 	        return new CroissantDownloadPlan(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.datasetName = source["datasetName"];
 	        this.items = this.convertValues(source["items"], CroissantDownloadOption);
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -72,16 +72,16 @@ export namespace app {
 }
 
 export namespace main {
-
+	
 	export class SupportInfo {
 	    appVersion: string;
 	    osPlatform: string;
 	    osVersion: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new SupportInfo(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.appVersion = source["appVersion"];
@@ -94,11 +94,11 @@ export namespace main {
 	    latestVersion: string;
 	    url: string;
 	    storeName: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new UpdateInfo(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.available = source["available"];

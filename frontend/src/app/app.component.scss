@@ -1240,6 +1240,39 @@
   .license-text {
     color: #b0b0b0;
   }
+
+  .croissant-review {
+    background: #1a1a1a;
+    border-color: #404040;
+    scrollbar-color: #444 transparent;
+
+    &::-webkit-scrollbar-thumb { background: #444; }
+  }
+
+  .croissant-review-heading {
+    color: #e0e0e0;
+  }
+
+  .croissant-review-help,
+  .croissant-review-status {
+    color: #b0b0b0;
+  }
+
+  .croissant-review-error {
+    color: #ff6b6b;
+  }
+
+  .croissant-group-label {
+    color: #e0e0e0;
+  }
+
+  .croissant-item-copy strong {
+    color: #e0e0e0;
+  }
+
+  .croissant-item-copy small {
+    color: #999;
+  }
 }
 
 @media (max-width: 720px) {
