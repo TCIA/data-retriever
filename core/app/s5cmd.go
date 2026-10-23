@@ -456,19 +456,17 @@ func buildS5cmdFileInfo(originalURI string, seriesMeta map[string]*SeriesMetadat
 
 	var finalDirPath string
 	if options.DirectoryMode == "descriptive" {
-		cleanStudyDesc := strings.ReplaceAll(fi.StudyDesc, "/", "")
-		cleanSeriesDesc := strings.ReplaceAll(fi.SeriesDescription, "/", "")
-		studyUID := fi.StudyInstanceUID
-		if len(studyUID) > 5 {
-			studyUID = studyUID[len(studyUID)-5:]
-		}
-		seriesUID := fi.SeriesInstanceUID
-		if len(seriesUID) > 5 {
-			seriesUID = seriesUID[len(seriesUID)-5:]
-		}
-		finalDirPath = filepath.Join(outputDir, fi.Collection, fi.PatientID,
-			joinParts(fi.StudyDate, cleanStudyDesc[:min(54, len(cleanStudyDesc))], studyUID),
-			joinParts(fi.SeriesNumber, cleanSeriesDesc[:min(54, len(cleanSeriesDesc))], seriesUID))
+		collection, patientID, studySegment, seriesSegment := descriptiveOutputSegments(
+			fi.Collection,
+			fi.PatientID,
+			fi.StudyDate,
+			fi.StudyDesc,
+			fi.StudyInstanceUID,
+			fi.SeriesNumber,
+			fi.SeriesDescription,
+			fi.SeriesInstanceUID,
+		)
+		finalDirPath = filepath.Join(outputDir, collection, patientID, studySegment, seriesSegment)
 	} else {
 		finalDirPath = filepath.Join(outputDir, fi.Collection, fi.PatientID, fi.StudyInstanceUID, fi.SeriesInstanceUID)
 	}

@@ -221,7 +221,7 @@ Pass `--server-friendly` (CLI) or lower the worker/connection counts in Advanced
 ### Directory Modes
 
 - **classic** —  The Classic Directory Name organizes the files in a child folder under the destination folder as follows: Collection Name > Patient ID > Study Instance UID > Series Instance UID
-- **descriptive** —  The Descriptive Directory Name organizes the files in a child folder under the destination folder as follows: Collection Name > Patient ID > Study Date + Study ID + Study Description (54 char max) + last 5 digits of Study Instance UID > Series Number + Series Description (54 char max) + last 5 digits of Series Instance UID
+- **descriptive** —  The Descriptive Directory Name organizes the files in a child folder under the destination folder as follows: Collection Name > Patient ID > Study Date + Study ID + Study Description (54 char max) + last 5 digits of Study Instance UID > Series Number + Series Description (54 char max) + last 5 digits of Series Instance UID. Filesystem-invalid path characters in descriptive segments are sanitized to `_`.
 
 ---
 

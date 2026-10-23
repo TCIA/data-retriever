@@ -832,20 +832,17 @@ func (info *FileInfo) getOutput(output string, options *Options) string {
 
 	var outputDir string
 	if options.DirectoryMode == "descriptive" {
-		cleanStudyDesc := strings.ReplaceAll(info.StudyDesc, "/", "")
-		cleanSeriesDesc := strings.ReplaceAll(info.SeriesDescription, "/", "")
-		studyUID := info.StudyInstanceUID
-		if len(studyUID) > 5 {
-			studyUID = studyUID[len(studyUID)-5:]
-		}
-		seriesUID := info.SeriesInstanceUID
-		if len(seriesUID) > 5 {
-			seriesUID = seriesUID[len(seriesUID)-5:]
-		}
-
-		outputDir = filepath.Join(output, info.Collection, info.PatientID,
-			joinParts(info.StudyDate, cleanStudyDesc[:min(54, len(cleanStudyDesc))], studyUID),
-			joinParts(info.SeriesNumber, cleanSeriesDesc[:min(54, len(cleanSeriesDesc))], seriesUID))
+		collection, patientID, studySegment, seriesSegment := descriptiveOutputSegments(
+			info.Collection,
+			info.PatientID,
+			info.StudyDate,
+			info.StudyDesc,
+			info.StudyInstanceUID,
+			info.SeriesNumber,
+			info.SeriesDescription,
+			info.SeriesInstanceUID,
+		)
+		outputDir = filepath.Join(output, collection, patientID, studySegment, seriesSegment)
 	} else {
 		outputDir = filepath.Join(output, info.Collection, info.PatientID, info.StudyInstanceUID, info.SeriesInstanceUID)
 	}
@@ -2162,4 +2159,48 @@ func joinParts(parts ...string) string {
 		return ""
 	}
 	return strings.Join(nonEmpty, "-")
+}
+
+func descriptiveOutputSegments(collection string, patientID string, studyDate string, studyDesc string, studyUID string, seriesNumber string, seriesDesc string, seriesUID string) (string, string, string, string) {
+	cleanStudyDesc := sanitizePathSegment(studyDesc)
+	cleanSeriesDesc := sanitizePathSegment(seriesDesc)
+	studyUID = tailUIDSegment(studyUID)
+	seriesUID = tailUIDSegment(seriesUID)
+
+	return sanitizePathSegment(collection),
+		sanitizePathSegment(patientID),
+		joinParts(sanitizePathSegment(studyDate), cleanStudyDesc[:min(54, len(cleanStudyDesc))], studyUID),
+		joinParts(sanitizePathSegment(seriesNumber), cleanSeriesDesc[:min(54, len(cleanSeriesDesc))], seriesUID)
+}
+
+func tailUIDSegment(uid string) string {
+	if len(uid) > 5 {
+		return uid[len(uid)-5:]
+	}
+	return uid
+}
+
+func sanitizePathSegment(raw string) string {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return ""
+	}
+
+	var b strings.Builder
+	b.Grow(len(trimmed))
+
+	for _, r := range trimmed {
+		switch {
+		case r < 32:
+			b.WriteRune('_')
+		case strings.ContainsRune(`<>:"/\|?*`, r):
+			b.WriteRune('_')
+		default:
+			b.WriteRune(r)
+		}
+	}
+
+	clean := strings.TrimSpace(b.String())
+	clean = strings.TrimRight(clean, ". ")
+	return clean
 }
