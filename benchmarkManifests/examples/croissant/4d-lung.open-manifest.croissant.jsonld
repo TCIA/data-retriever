@@ -1,0 +1,486 @@
+{
+  "@context": {
+    "@language": "en",
+    "@vocab": "https://schema.org/",
+    "arrayShape": "cr:arrayShape",
+    "citeAs": "cr:citeAs",
+    "column": "cr:column",
+    "conformsTo": "dct:conformsTo",
+    "containedIn": "cr:containedIn",
+    "cr": "http://mlcommons.org/croissant/",
+    "rai": "http://mlcommons.org/croissant/RAI/",
+    "data": {
+      "@id": "cr:data",
+      "@type": "@json"
+    },
+    "dataType": {
+      "@id": "cr:dataType",
+      "@type": "@vocab"
+    },
+    "dct": "http://purl.org/dc/terms/",
+    "description": {
+      "@container": "@language"
+    },
+    "equivalentProperty": "cr:equivalentProperty",
+    "examples": {
+      "@id": "cr:examples",
+      "@type": "@json"
+    },
+    "extract": "cr:extract",
+    "field": "cr:field",
+    "fileProperty": "cr:fileProperty",
+    "fileObject": "cr:fileObject",
+    "fileSet": "cr:fileSet",
+    "format": "cr:format",
+    "includes": "cr:includes",
+    "isArray": "cr:isArray",
+    "isLiveDataset": "cr:isLiveDataset",
+    "jsonPath": "cr:jsonPath",
+    "key": "cr:key",
+    "md5": "cr:md5",
+    "name": {
+      "@container": "@language"
+    },
+    "parentField": "cr:parentField",
+    "path": "cr:path",
+    "recordSet": "cr:recordSet",
+    "references": "cr:references",
+    "regex": "cr:regex",
+    "repeated": "cr:repeated",
+    "replace": "cr:replace",
+    "samplingRate": "cr:samplingRate",
+    "sc": "https://schema.org/",
+    "separator": "cr:separator",
+    "source": "cr:source",
+    "subField": "cr:subField",
+    "transform": "cr:transform",
+    "odrl": "http://www.w3.org/ns/odrl/2/",
+    "sdVersion": "cr:sdVersion"
+  },
+  "@type": "sc:Dataset",
+  "@id": "https://doi.org/10.7937/K9/TCIA.2016.ELN8YGLE",
+  "conformsTo": "http://mlcommons.org/croissant/1.1",
+  "name": "Data from 4D Lung Imaging of NSCLC Patients",
+  "alternateName": "4D-Lung",
+  "description": "This data collection consists of images acquired during chemoradiotherapy of 20 locally-advanced, non-small cell lung cancer patients. The images include four-dimensional (4D) fan beam (4D-FBCT) and 4D cone beam CT (4D-CBCT). All patients underwent concurrent radiochemotherapy to a total dose of 64.8-70 Gy using daily 1.8 or 2 Gy fractions. 4D-FBCT images were acquired on a 16-slice helical CT scanner (Brilliance Big Bore, Philips Medical Systems, Andover, MA) as respiration-correlated CTs with 10 breathing phases (0 to 90%, phase-based binning) and 3 mm slice thickness. 4D-FBCT images were acquired during simulation, prior to therapy, and used for therapy planning. In 14 of the 20 subjects, 4D-FBCTs were also acquired on the same scanner weekly during therapy. 4D-CBCT images were acquired on a commercial CBCT scanner (On-Board Imager\u2122, Varian Medical Systems, Inc.). An external surrogate (Real-time Position Management, Varian Medical Systems, Inc.) was integrated into the CBCT acquisition system to stamp each CBCT projection with the surrogate respiratory signal through in-house software and hardware tools. Approximately 2500 projections were acquired over a period of 8-10 minutes in half-fan mode with half bow-tie filter. The technique was 125 kVp, 20 mA, and 20 ms in a single 360\u00b0 slow gantry arc. Using the external surrogate, the CBCT projections were sorted into 10 breathing phases (0 to 90%, phase-based binning) and reconstructed with an in-house FDK reconstruction algorithm. Audio-visual biofeedback was performed for all 4D-FBCT and 4D-CBCT acquisitions in all subjects. A single Radiation Oncologist delineated targets and organs at risk in all 4D-FBCT and a limited number of 4D-CBCT images, on all 10 phases per scan. Seven of the subjects had gold coils implanted as fiducial markers in or near the tumor. The dataset is most fully described in detail in Balik et al. 1 Seven of the subjects had gold coils implanted as fiducial markers in or near the tumor. The implantation procedure and details of marker location are described in detail in Roman et al. 2 References 1 S. Balik et al., \u201cEvaluation of 4-Dimensional Computed Tomography to 4-Dimensional Cone-Beam Computed Tomography Deformable Image Registration for Lung Cancer Adaptive Radiation Therapy.\u201d Int. J. Radiat. Oncol. Biol. Phys. 86 , 372\u20139 (2013) PMCID: PMC3647023. 2 N.O. Roman, W. Shepherd, N. Mukhopadhyay, G.D. Hugo, and E. Weiss, \u201cInterfractional Positional Variability of Fiducial Markers and Primary Tumors in Locally Advanced Non-Small-Cell Lung Cancer during Audiovisual Biofeedback Radiotherapy.\u201d Int. J. Radiat. Oncol. Biol. Phys. 83 , 1566\u201372 (2012).",
+  "url": "https://www.cancerimagingarchive.net/collection/4d-lung/",
+  "creator": {
+    "@type": "Organization",
+    "name": "The Cancer Imaging Archive",
+    "url": "https://www.cancerimagingarchive.net/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "The Cancer Imaging Archive",
+    "url": "https://www.cancerimagingarchive.net/"
+  },
+  "includedInDataCatalog": {
+    "@type": "DataCatalog",
+    "@id": "https://www.cancerimagingarchive.net/#catalog",
+    "name": "The Cancer Imaging Archive",
+    "url": "https://www.cancerimagingarchive.net/",
+    "publisher": {
+      "@type": "Organization",
+      "name": "The Cancer Imaging Archive",
+      "url": "https://www.cancerimagingarchive.net/"
+    }
+  },
+  "license": [
+    "https://creativecommons.org/licenses/by/3.0/"
+  ],
+  "citeAs": "Hugo, G. D., Weiss, E., Sleeman, W. C., Balik, S., Keall, P. J., Lu, J., & Williamson, J. F. (2016). Data from 4D Lung Imaging of NSCLC Patients (Version 2) [Data set] . The Cancer Imaging Archive. https://doi.org/10.7937/K9/TCIA.2016.ELN8YGLE",
+  "keywords": [
+    "4D-Lung",
+    "Collection",
+    "CT",
+    "RTSTRUCT",
+    "Non-small Cell Lung Cancer",
+    "Lung",
+    "Human"
+  ],
+  "sdPublisher": {
+    "@type": "Organization",
+    "name": "The Cancer Imaging Archive",
+    "url": "https://www.cancerimagingarchive.net/"
+  },
+  "sdVersion": "0.1.0",
+  "isLiveDataset": true,
+  "conditionsOfAccess": "Open-access TCIA data. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+  "usageInfo": [
+    {
+      "@type": "CreativeWork",
+      "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+      "name": "TCIA Data Usage Policies and Restrictions",
+      "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+    }
+  ],
+  "distribution": [
+    {
+      "@type": "cr:FileObject",
+      "@id": "file-42107",
+      "name": "doiJNLP-Y71kLpdQ.tcia",
+      "contentUrl": "https://www.cancerimagingarchive.net/wp-content/uploads/doiJNLP-Y71kLpdQ.tcia",
+      "encodingFormat": [
+        "text/plain",
+        "application/vnd.tcia.manifest"
+      ],
+      "conditionsOfAccess": "Open-access TCIA data. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by/3.0/",
+          "name": "CC BY 3.0",
+          "url": "https://creativecommons.org/licenses/by/3.0/"
+        }
+      ],
+      "contentSize": "183.04 GB",
+      "license": "https://creativecommons.org/licenses/by/3.0/",
+      "dateModified": "2023-11-20",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download id",
+          "value": "42107"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access level",
+          "value": "open"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download types",
+          "value": [
+            "Radiology Images"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA data types",
+          "value": [
+            "CT",
+            "RTSTRUCT"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA file types",
+          "value": [
+            "DICOM"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download artifact role",
+          "value": "manifest"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access mechanism",
+          "value": "TCIA Data Retriever"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA downstream access system",
+          "value": "Imaging Data Commons (IDC)"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA search system",
+          "value": "NBIA Search"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA search/access URL",
+          "value": "https://nbia.cancerimagingarchive.net/nbia-search/?CollectionCriteria=4D-Lung"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download metadata",
+          "value": "https://www.cancerimagingarchive.net/wp-content/uploads/doiJNLP-Y71kLpdQ-nbia-digest.xlsx"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download requirements",
+          "value": "Download requires the TCIA Data Retriever"
+        }
+      ]
+    }
+  ],
+  "recordSet": [
+    {
+      "@type": "cr:RecordSet",
+      "@id": "download-42107",
+      "name": "Radiology Images",
+      "description": "TCIA current download record 42107 for 4D-Lung.",
+      "dataType": "sc:DataDownload",
+      "key": {
+        "@id": "download-42107/download_id"
+      },
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "download-42107/download_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-42107/download_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-42107/search_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-42107/file_object_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-42107/download_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-42107/data_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-42107/file_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-42107/download_artifact_role",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-42107/access_mechanism",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-42107/downstream_access_system",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-42107/search_system",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-42107/access_level",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-42107/license_label",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-42107/license_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-42107/subjects",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-42107/studies",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-42107/series",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-42107/images",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-42107/download_metadata",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-42107/download_requirements",
+          "dataType": "sc:Text"
+        }
+      ],
+      "data": [
+        {
+          "download-42107/download_id": "42107",
+          "download-42107/download_url": "https://www.cancerimagingarchive.net/wp-content/uploads/doiJNLP-Y71kLpdQ.tcia",
+          "download-42107/search_url": "https://nbia.cancerimagingarchive.net/nbia-search/?CollectionCriteria=4D-Lung",
+          "download-42107/file_object_id": "file-42107",
+          "download-42107/download_types": [
+            "Radiology Images"
+          ],
+          "download-42107/data_types": [
+            "CT",
+            "RTSTRUCT"
+          ],
+          "download-42107/file_types": [
+            "DICOM"
+          ],
+          "download-42107/download_artifact_role": "manifest",
+          "download-42107/access_mechanism": "TCIA Data Retriever",
+          "download-42107/downstream_access_system": "Imaging Data Commons (IDC)",
+          "download-42107/search_system": "NBIA Search",
+          "download-42107/access_level": "open",
+          "download-42107/license_label": "CC BY 3.0",
+          "download-42107/license_url": "https://creativecommons.org/licenses/by/3.0/",
+          "download-42107/subjects": 20,
+          "download-42107/studies": 589,
+          "download-42107/series": 6690,
+          "download-42107/images": 347330,
+          "download-42107/download_metadata": "https://www.cancerimagingarchive.net/wp-content/uploads/doiJNLP-Y71kLpdQ-nbia-digest.xlsx",
+          "download-42107/download_requirements": "Download requires the TCIA Data Retriever"
+        }
+      ],
+      "conditionsOfAccess": "Open-access TCIA data. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by/3.0/",
+          "name": "CC BY 3.0",
+          "url": "https://creativecommons.org/licenses/by/3.0/"
+        }
+      ]
+    }
+  ],
+  "sameAs": [
+    "https://doi.org/10.7937/K9/TCIA.2016.ELN8YGLE"
+  ],
+  "identifier": [
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA short title",
+      "value": "4D-Lung"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA dataset type",
+      "value": "Collection"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "DOI",
+      "value": "10.7937/K9/TCIA.2016.ELN8YGLE"
+    }
+  ],
+  "dateModified": "2016-10-19",
+  "datePublished": "2016-01-24",
+  "version": "2",
+  "citation": [
+    {
+      "@type": "CreativeWork",
+      "name": "Hugo, G. D., Weiss, E., Sleeman, W. C., Balik, S., Keall, P. J., Lu, J., & Williamson, J. F. (2017). A longitudinal four-dimensional computed tomography and cone beam computed tomography dataset for image-guided radiation therapy research in lung cancer . In Medical Physics (Vol. 44, Issue 2, pp. 762\u2013771). Wiley. https://doi.org/10.1002/mp.12059",
+      "identifier": "10.1002/mp.12059",
+      "url": "https://doi.org/10.1002/mp.12059"
+    },
+    {
+      "@type": "CreativeWork",
+      "name": "Balik, S., Weiss, E., Jan, N., Roman, N., Sleeman, W. C., Fatyga, M., Christensen, G. E., Zhang, C., Murphy, M. J., Lu, J., Keall, P., Williamson, J. F., & Hugo, G. D. (2013). Evaluation of 4-dimensional Computed Tomography to 4-dimensional Cone-Beam Computed Tomography Deformable Image Registration for Lung Cancer Adaptive Radiation Therapy . In International Journal of Radiation Oncology*Biology*Physics (Vol. 86, Issue 2, pp. 372\u2013379). Elsevier BV. PMCID: PMC3647023 . https://doi.org/10.1016/j.ijrobp.2012.12.023",
+      "identifier": "10.1016/j.ijrobp.2012.12.023",
+      "url": "https://doi.org/10.1016/j.ijrobp.2012.12.023"
+    },
+    {
+      "@type": "CreativeWork",
+      "name": "Roman, N. O., Shepherd, W., Mukhopadhyay, N., Hugo, G. D., & Weiss, E. (2012). Interfractional Positional Variability of Fiducial Markers and Primary Tumors in Locally Advanced Non-Small-Cell Lung Cancer During Audiovisual Biofeedback Radiotherapy . In International Journal of Radiation Oncology*Biology*Physics (Vol. 83, Issue 5, pp. 1566\u20131572). Elsevier BV. https://doi.org/10.1016/j.ijrobp.2011.10.051",
+      "identifier": "10.1016/j.ijrobp.2011.10.051",
+      "url": "https://doi.org/10.1016/j.ijrobp.2011.10.051"
+    },
+    {
+      "@type": "CreativeWork",
+      "name": "Clark, K., Vendt, B., Smith, K., Freymann, J., Kirby, J., Koppel, P., Moore, S., Phillips, S., Maffitt, D., Pringle, M., Tarbox, L., & Prior, F. (2013). The Cancer Imaging Archive (TCIA): Maintaining and Operating a Public Information Repository . In Journal of Digital Imaging (Vol. 26, Issue 6, pp. 1045\u20131057). Springer Science and Business Media LLC. https://doi.org/10.1007/s10278-013-9622-7",
+      "identifier": "10.1007/s10278-013-9622-7",
+      "url": "https://doi.org/10.1007/s10278-013-9622-7"
+    }
+  ],
+  "additionalProperty": [
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA access level",
+      "value": "open"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA license status",
+      "value": "Open (Creative Commons)"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA subjects",
+      "value": "20"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA program",
+      "value": "program_name: Community; related_collections: 4D-LUNG; AAPM-RT-MAC; ADRENAL-ACC-KI67-SEG; AML-CYTOMORPHOLOGY_LMU; AML-CYTOMORPHOLOGY_MLL_HELMHOLTZ; ANTI-PD-1_LUNG; ANTI-PD-1_MELANOMA; B-MODE-AND-CEUS-LIVER; BONE-MARROW-CYTOMORPHOLOGY_MLL_HELMHOLTZ_FRAUNHOFER; BRAIN-TR-GAMMAKNIFE; BRAIN-TUMOR-PROGRESSION; BREAST-CANCER-SCREENING-DBT; BREAST-DIAGNOSIS; BREAST-MRI-NACT-PILOT; BURDENKO-GBM-PROGRESSION; C4KC-KITS; CBIS-DDSM; CC-RADIOMICS-PHANTOM; CC-RADIOMICS-PHANTOM-2; CC-RADIOMICS-PHANTOM-3; CC-TUMOR-HETEROGENEITY; CMMD; C-NMC-2019; COLORECTAL-LIVER-METASTASES; CRC_FFPE-CODEX_CELLNEIGHS; CT-LYMPH-NODES; CT-ORG; CT-PHANTOM4RADIOMICS; CTPRED-SUNITINIB-PANNET; CT-VS-PET-VENTILATION-IMAGING; DRO-TOOLKIT; DUKE-BREAST-CANCER-MRI; EXACT; HCC-TACE-SEG; HEAD-NECK-PET-CT; HEAD-NECK-RADIOMICS-HN1; HNSCC; HNSCC-3DCT-RT; HNSCC-MIF-MIHC-COMPARISON; IVYGAP; LCTSC; LDCT-AND-PROJECTION-DATA; LGG-1P19QDELETION; LIDC-IDRI; LUNG-FUSED-CT-PATHOLOGY; LUNG-PET-CT-DX; LUNGCT-DIAGNOSIS; MIMM_SBILAB; MOUSE-ASTROCYTOMA; MOUSE-MAMMARY; MRI-DIR; NAF-PROSTATE; NSCLC-RADIOGENOMICS; NSCLC-RADIOMICS; NSCLC-RADIOMICS-GENOMICS; NSCLC-RADIOMICS-INTEROBSERVER1; OPC-RADIOMICS; OSTEOSARCOMA-TUMOR-ASSESSMENT; PANCREAS-CT; PANCREATIC-CT-CBCT-SEG; PEDIATRIC-CT-SEG; PELVIC-REFERENCE-DATA; POST-NAT-BRCA; PROSTATE-FUSED-MRI-PATHOLOGY; PROSTATE-3T; PROSTATE-ANATOMICAL-EDGE-CASES; PROSTATE-DIAGNOSIS; PROSTATE-MRI; PROSTATE-MRI-US-BIOPSY; PROSTATEX; REMBRANDT; SLN-BREAST; SN-AM; SOFT-TISSUE-SARCOMA; SPIE-AAPM-LUNG-CT-CHALLENGE; STAGEII-COLORECTAL-CT; UCSF-PDGM; UPENN-GBM; VESTIBULAR-SCHWANNOMA-SEG; RHUH-GBM; CATCH; CDD-CESM; DLBCL-MORPHOLOGY; FDG-PET-CT-LESIONS; GAMMAKNIFE-HIPPOCAMPAL; GLIS-RT; HEALTHY-TOTAL-BODY-CTS; HER2-TUMOR-ROIS; HUNGARIAN-COLORECTAL-SCREENING; MENINGIOMA-SEG-CLASS; NADT-PROSTATE; OVARIAN-BEVACIZUMAB-RESPONSE; PCA_BX_3DPATHOLOGY; RADCURE; REMIND; VESTIBULAR-SCHWANNOMA-MC-RC; HE-VS-MPM; BREAST-LESIONS-USG; ADVANCED-MRI-BREAST-LESIONS; PRETREAT-METSTOBRAIN-MASKS; PTRC-HGSOC; CODEX-IMAGING-OF-HCC; Spine-Mets-CT-SEG; DFCI-BCH-BWH-PEDs-HGG; HNC-IMRT-70-33; MEDIASTINAL-LYMPH-NODE-SEG; HISTOLOGYHSI-GB; BRATS-AFRICA; UCSD-PTGBM; RPA-Head-and-Neck-Lymph-Nodes; BCBM-RadioGenomics; MU-Glioma-Post; Brain-Mets-Lung-MRI-Path-Segs; Yale-Brain-Mets-Longitudinal; CT4Harmonization-Multicentric; PSMA-PET-CT-Lesions; Capsule-Endoscopy-SB-NET; HistologyHSI-BC-Recurrence; AURORA-Metastatic-Breast-Multiomics; VESTIBULAR-SCHWANNOMA-MC-RC2; HANCOCK; BraTS-PEDs; TP53-Precursor-Lesions; QIBA-CT-1C; QIBA-CT-LIVER-PHANTOM; UTSW-Glioma; Spinal-Multiple-Myeloma-SEG; UCSD-VS-Longitudinal; related_analysis_results: BRATS-TCGA-GBM; BRATS-TCGA-LGG; HEAD-NECK-CT-ATLAS; Oropharyngeal-Radiomics-Outcomes; MRQY-QUALITY-MEASURES; RSNA-ASNR-MICCAI-BRATS-2021; ISPY1-TUMOR-SEG-RADIOMICS; PROSTATEX-SEG-ZONES; IVYGAP-RADIOMICS; PLETHORA; PAN-CANCER-NUCLEI-SEG; TCGA-OV-PROTEOGENOMICS; RADIOMICS-TUMOR-PHENOTYPES; ISBI-MR-PROSTATE-2013; LUMINALB-BREAST-MR-ENHANCEMENT; SAROS; PROSTATEX-SEG-HIRES; DI-CUBED-REPORTS; CROWDS-CURE-2018; DICOM-SR-BREAST-CLINICAL; RIDER-LUNGCT-SEG; DICOM-LIDC-IDRI-NODULES; DICOM-GLIOMA-SEG; CROWDS-CURE-2017; TIL-WSI-TCGA; NSCLC-RADIOGENOMICS-STANFORD; LUAD-CT-SURVIVAL; TCGA-LGG-MASK; GLIOBLASTOMA-GENOMIC-MAPPING; PULMONARY-NODULES-SEGMENTATION; TCGA-GBM-QI-RADIOGENOMICS; TOMPEI-CMMD; NLST-New-lesion-LongCT; QIBA-VOLCT-1B"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA downstream access systems",
+      "value": [
+        "Imaging Data Commons (IDC)"
+      ]
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA search systems",
+      "value": [
+        "NBIA Search"
+      ]
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "Croissant generator",
+      "value": "tcia-croissant-prototype/0.1.0"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA snapshot schema version",
+      "value": "5"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA external resources",
+      "value": [
+        "Image Analyses"
+      ]
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA has TCIA clinical download",
+      "value": false
+    }
+  ]
+}

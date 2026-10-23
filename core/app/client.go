@@ -148,8 +148,13 @@ func newClientWithStats(proxy string, maxConnsPerHost int, httpVersion string, s
 	}
 
 	// No client-wide Timeout: it would bound the entire request (connect
-	// through full body read) and override the size-aware per-request
-	// context deadlines set in download.go's downloadFromTCIA/downloadDirect.
+	// through full body read) regardless of how much data is still actively
+	// arriving. download.go's downloadFromTCIA and downloadDirect (the
+	// latter also used by DRS downloads) instead wrap the response body in
+	// an idleTimeoutReader, which only cancels the request if no bytes
+	// arrive for downloadIdleTimeout - an arbitrarily large/slow-but-healthy
+	// transfer runs to completion, while a stalled connection still gets
+	// cut loose.
 	var rt http.RoundTripper = transport
 	if stats != nil {
 		rt = &protoRecordingTransport{RoundTripper: transport, stats: stats}

@@ -156,7 +156,7 @@ Launch with `--cli` (or `-cli`) to skip the GUI entirely:
 |---|---|---|---|
 | `--input` | `-i` | *required* | Path to manifest file (`.tcia`, `.s5cmd`, `.csv`, `.tsv`, `.xlsx`, `.json`, `.jsonld`) |
 | `--output` | `-o` | `./` | Output directory |
-| `--processes` | `-p` | `2` | Parallel download workers |
+| `--processes` | `-p` | `8` | Parallel download workers |
 | `--max-connections` | | `8` | Max connections per host |
 | `--max-retries` | | `3` | Retry attempts per series |
 | `--skip-existing` | | off | Reuse already-downloaded series and count them as completed (resume-friendly) |
@@ -169,10 +169,15 @@ Launch with `--cli` (or `-cli`) to skip the GUI entirely:
 | `--refresh-metadata` | | off | Force re-fetch all metadata |
 | `--metadata-workers` | | `20` | Parallel metadata fetch workers |
 | `--server-friendly` | | off | Conservative settings to avoid rate-limiting |
+| `--http-version` | | `1.1` | Download transport for A/B testing: `1.1` forces HTTP/1.1; `2` negotiates HTTP/2 and may fall back to HTTP/1.1. |
 | `--proxy` | `-x` | — | HTTP or SOCKS5 proxy URL |
 | `--prompt` | `-w` | off | Prompt for password interactively |
 | `--save-log` | | off | Write progress log to file |
 | `--accept-data-policy` | | off | Accept the TCIA data usage policy without interactive prompt |
+| `--croissant-list` | | off | List selectable Croissant components and exit without downloading |
+| `--croissant-include-group` | | — | Include an optional group such as `isBasedOn`; may be repeated |
+| `--croissant-include` | | — | Include one Croissant component by the ID shown by `--croissant-list`; may be repeated |
+| `--croissant-exclude` | | — | Exclude one Croissant component by ID; may be repeated |
 | `--verbose` | `-V` | off | Info-level logging |
 | `--debug` | | off | Verbose debug output |
 | `--version` | `-v` | | Print version info |
@@ -182,7 +187,18 @@ Launch with `--cli` (or `-cli`) to skip the GUI entirely:
 
 - Supported Croissant row roles: `data file`, `manifest`.
 - `manifest` rows marked for **TCIA Data Retriever** are expanded through the linked nested manifest.
+- Standard Croissant `RecordSet` fields backed by an external CSV `FileObject`
+  are expanded automatically. The CSV must use a supported Data Retriever
+  route column: `SeriesInstanceUID`, `imageUrl`, or `drs_uri`.
 - Unsupported transfer-package rows (for example Aspera handoffs) are skipped with warnings.
+- GUI users review a grouped checklist before downloading. Primary/derived
+  components are selected by default; source-image components declared through
+  `isBasedOn` are visible but opt-in.
+- CLI runs keep the same safe default. Use `--croissant-list` to inspect the
+  plan, `--croissant-include-group isBasedOn` to add all source-image
+  components, or `--croissant-include ID` / `--croissant-exclude ID` for
+  individual choices. These flags are non-interactive so scripts remain
+  reproducible.
 
 ### Examples
 
@@ -201,6 +217,17 @@ Launch with `--cli` (or `-cli`) to skip the GUI entirely:
 
 # Keep ZIP archives instead of extracting
 ./TCIA_Data_Retriever --cli -i manifest.tcia -o /data/zips --no-md5 --no-decompress
+
+# Review a Croissant plan without downloading
+./TCIA_Data_Retriever --cli -i dataset.croissant.jsonld --croissant-list
+
+# Download the defaults plus every source-image component
+./TCIA_Data_Retriever --cli -i dataset.croissant.jsonld -o /data/dataset \
+  --croissant-include-group isBasedOn
+
+# Add only one optional component by its stable ID
+./TCIA_Data_Retriever --cli -i dataset.croissant.jsonld -o /data/dataset \
+  --croissant-include source-image-access-46295
 ```
 
 ---
@@ -216,6 +243,10 @@ Pass `--server-friendly` (CLI) or lower the worker/connection counts in Advanced
 - 30s retry delay
 - 2s inter-request delay
 - 5 metadata workers
+
+Standard mode has no fixed delay between files; its 8-worker and 8-connection
+limits bound concurrency. When a download server returns HTTP 429 or 503 with
+`Retry-After`, retries wait for at least the interval requested by the server.
 
 
 ### Directory Modes

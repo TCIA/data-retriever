@@ -1,0 +1,1865 @@
+{
+  "@context": {
+    "@language": "en",
+    "@vocab": "https://schema.org/",
+    "@base": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/",
+    "sc": "https://schema.org/",
+    "cr": "http://mlcommons.org/croissant/",
+    "rai": "http://mlcommons.org/croissant/RAI/",
+    "dct": "http://purl.org/dc/terms/",
+    "prov": "http://www.w3.org/ns/prov#",
+    "odrl": "http://www.w3.org/ns/odrl/2/",
+    "duo": "http://purl.obolibrary.org/obo/DUO_",
+    "description": {
+      "@container": "@language"
+    },
+    "arrayShape": "cr:arrayShape",
+    "citeAs": "cr:citeAs",
+    "conformsTo": "dct:conformsTo",
+    "data": {
+      "@id": "cr:data",
+      "@type": "@json"
+    },
+    "dataType": {
+      "@id": "cr:dataType",
+      "@type": "@vocab"
+    },
+    "field": "cr:field",
+    "isLiveDataset": "cr:isLiveDataset",
+    "isArray": "cr:isArray",
+    "key": "cr:key",
+    "recordSet": "cr:recordSet",
+    "sdVersion": "cr:sdVersion",
+    "sha256": "cr:sha256",
+    "value": "cr:value",
+    "annotation": "cr:annotation",
+    "source": "cr:source",
+    "fileObject": "cr:fileObject",
+    "fileSet": "cr:fileSet",
+    "extract": "cr:extract",
+    "column": "cr:column",
+    "fileProperty": "cr:fileProperty",
+    "format": "cr:format",
+    "transform": "cr:transform",
+    "separator": "cr:separator",
+    "regex": "cr:regex",
+    "readLines": "cr:readLines",
+    "unArchive": "cr:unArchive",
+    "jsonPath": "cr:jsonPath",
+    "examples": {
+      "@id": "cr:examples",
+      "@type": "@json"
+    },
+    "subField": "cr:subField",
+    "parentField": "cr:parentField",
+    "references": "cr:references",
+    "equivalentProperty": "cr:equivalentProperty",
+    "includes": "cr:includes",
+    "excludes": "cr:excludes",
+    "containedIn": "cr:containedIn",
+    "md5": "cr:md5",
+    "name": {
+      "@container": "@language"
+    },
+    "path": "cr:path",
+    "repeated": "cr:repeated",
+    "replace": "cr:replace",
+    "samplingRate": "cr:samplingRate"
+  },
+  "@type": "sc:Dataset",
+  "@id": "https://doi.org/10.7937/PCTE-6M66",
+  "conformsTo": "http://mlcommons.org/croissant/1.1",
+  "name": "Cancer Moonshot Biobank - Acute Myeloid Leukemia Cancer Collection",
+  "alternateName": "CMB-AML",
+  "description": "The Cancer Moonshot Biobank is a National Cancer Institute initiative to support current and future investigations into drug resistance and sensitivity and other NCI-sponsored cancer research initiatives, with an aim of improving researchers' understanding of cancer and how to intervene in cancer initiation and progression. During the course of this study, biospecimens (blood and tissue removed during medical procedures) and associated data will be collected longitudinally from at least 1000 patients across at least 10 cancer types, who are receiving standard of care cancer treatment at multiple NCI Community Oncology Research Program (NCORP) sites. This collection contains de-identified radiology and histopathology imaging procured from subjects in NCI’s Cancer Moonshot Biobank - Acute Myeloid Leukemia Cancer (CMB-AML) cohort. Associated genomic, phenotypic and clinical data will be hosted by The Database of Genotypes and Phenotypes (dbGaP) and other NCI databases. A summary of Cancer Moonshot Biobank imaging efforts can be found on the Cancer Moonshot Biobank Imaging page.",
+  "url": "https://www.cancerimagingarchive.net/collection/cmb-aml/",
+  "identifier": "https://doi.org/10.7937/PCTE-6M66",
+  "license": [
+    "https://creativecommons.org/licenses/by/4.0/",
+    "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/"
+  ],
+  "citeAs": "https://doi.org/10.7937/PCTE-6M66",
+  "dateModified": "2026-07-02",
+  "version": "9",
+  "sdVersion": "0.2.0-draft",
+  "isLiveDataset": true,
+  "conditionsOfAccess": "Mixed open and controlled access. Each RecordSet states its own license, access conditions, retrieval key, and authorization boundary.",
+  "usageInfo": [
+    {
+      "@type": "sc:CreativeWork",
+      "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+      "name": "TCIA Data Usage Policies and Restrictions",
+      "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+    },
+    {
+      "@type": "sc:CreativeWork",
+      "@id": "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/",
+      "name": "TCIA NIH Controlled Data Access Policy",
+      "url": "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/"
+    }
+  ],
+  "recordSet": [
+    {
+      "@type": "cr:RecordSet",
+      "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records",
+      "name": "Public radiology images",
+      "description": "One CSV row per DICOM series. The sparse legacy .tcia UID list is exactly reconciled to the complete official series metadata workbook.",
+      "key": {
+        "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/SeriesInstanceUID"
+      },
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/PatientID",
+          "name": "PatientID",
+          "dataType": "sc:Text",
+          "description": "De-identified patient identifier supplied in the TCIA series metadata workbook.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "PatientID"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/PatientName",
+          "name": "PatientName",
+          "dataType": "sc:Text",
+          "description": "Source field 'PatientName'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "PatientName"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/PatientSex",
+          "name": "PatientSex",
+          "dataType": "sc:Text",
+          "description": "Source field 'PatientSex'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "PatientSex"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/Phantom",
+          "name": "Phantom",
+          "dataType": "sc:Text",
+          "description": "Source field 'Phantom'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "Phantom"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/SpeciesCode",
+          "name": "SpeciesCode",
+          "dataType": "sc:Text",
+          "description": "Source field 'SpeciesCode'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "SpeciesCode"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/SpeciesDescription",
+          "name": "SpeciesDescription",
+          "dataType": "sc:Text",
+          "description": "Source field 'SpeciesDescription'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "SpeciesDescription"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/StudyInstanceUID",
+          "name": "StudyInstanceUID",
+          "dataType": "sc:Text",
+          "description": "DICOM Study Instance UID.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "StudyInstanceUID"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/StudyDate",
+          "name": "StudyDate",
+          "dataType": "sc:Text",
+          "description": "Study date retained exactly as supplied; no date shifting or normalization is inferred here.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "StudyDate"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/StudyDescription",
+          "name": "StudyDescription",
+          "dataType": "sc:Text",
+          "description": "DICOM Study Description retained from the source metadata.",
+          "alternateName": "StudyDesc",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "StudyDescription"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/LongitudinalTemporalEventType",
+          "name": "LongitudinalTemporalEventType",
+          "dataType": "sc:Text",
+          "description": "Source field 'LongitudinalTemporalEventType'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "LongitudinalTemporalEventType"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/LongitudinalTemporalOffsetFromEvent",
+          "name": "LongitudinalTemporalOffsetFromEvent",
+          "dataType": "sc:Text",
+          "description": "Source field 'LongitudinalTemporalOffsetFromEvent'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "LongitudinalTemporalOffsetFromEvent"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/SeriesInstanceUID",
+          "name": "SeriesInstanceUID",
+          "dataType": "sc:Text",
+          "description": "DICOM Series Instance UID and retrieval key for this record.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "SeriesInstanceUID"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/Collection",
+          "name": "Collection",
+          "dataType": "sc:Text",
+          "description": "Source field 'Collection'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "Collection"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/Site",
+          "name": "Site",
+          "dataType": "sc:Text",
+          "description": "Source field 'Site'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "Site"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/Modality",
+          "name": "Modality",
+          "dataType": "sc:Text",
+          "description": "Source field 'Modality'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "Modality"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/SeriesDate",
+          "name": "SeriesDate",
+          "dataType": "sc:Text",
+          "description": "Source field 'SeriesDate'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "SeriesDate"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/SeriesDescription",
+          "name": "SeriesDescription",
+          "dataType": "sc:Text",
+          "description": "DICOM Series Description retained from the source metadata.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "SeriesDescription"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/SeriesNumber",
+          "name": "SeriesNumber",
+          "dataType": "sc:Text",
+          "description": "Source field 'SeriesNumber'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "SeriesNumber"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/Manufacturer",
+          "name": "Manufacturer",
+          "dataType": "sc:Text",
+          "description": "Source field 'Manufacturer'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "Manufacturer"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/ManufacturerModelName",
+          "name": "ManufacturerModelName",
+          "dataType": "sc:Text",
+          "description": "Source field 'ManufacturerModelName'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "ManufacturerModelName"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/PixelSpacingRowMm",
+          "name": "PixelSpacingRowMm",
+          "dataType": "sc:Text",
+          "description": "Source field 'PixelSpacing(mm)-Row'; values are retained without semantic substitution.",
+          "alternateName": "PixelSpacing(mm)-Row",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "PixelSpacingRowMm"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/SliceThicknessMm",
+          "name": "SliceThicknessMm",
+          "dataType": "sc:Text",
+          "description": "Source field 'SliceThickness(mm)'; values are retained without semantic substitution.",
+          "alternateName": "SliceThickness(mm)",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "SliceThicknessMm"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/SoftwareVersions",
+          "name": "SoftwareVersions",
+          "dataType": "sc:Text",
+          "description": "Source field 'SoftwareVersions'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "SoftwareVersions"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/ImageCount",
+          "name": "ImageCount",
+          "dataType": "sc:Integer",
+          "description": "Source field 'ImageCount'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "ImageCount"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/MaxSubmissionTimestamp",
+          "name": "MaxSubmissionTimestamp",
+          "dataType": "sc:Text",
+          "description": "Source field 'MaxSubmissionTimestamp'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "MaxSubmissionTimestamp"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/LicenseName",
+          "name": "LicenseName",
+          "dataType": "sc:Text",
+          "description": "Source field 'LicenseName'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "LicenseName"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/LicenseURI",
+          "name": "LicenseURI",
+          "dataType": "sc:URL",
+          "description": "Source field 'LicenseURI'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "LicenseURI"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/DataDescriptionURI",
+          "name": "DataDescriptionURI",
+          "dataType": "sc:URL",
+          "description": "Source field 'DataDescriptionURI'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "DataDescriptionURI"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/FileSize",
+          "name": "FileSize",
+          "dataType": "sc:Integer",
+          "description": "Source field 'FileSize'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "FileSize"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/ReleasedStatus",
+          "name": "ReleasedStatus",
+          "dataType": "sc:Text",
+          "description": "Source field 'ReleasedStatus'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "ReleasedStatus"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/DateReleased",
+          "name": "DateReleased",
+          "dataType": "sc:Text",
+          "description": "Source field 'DateReleased'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "DateReleased"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/ThirdPartyAnalysis",
+          "name": "ThirdPartyAnalysis",
+          "dataType": "sc:Text",
+          "description": "Source field 'ThirdPartyAnalysis'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "ThirdPartyAnalysis"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/Authorized",
+          "name": "Authorized",
+          "dataType": "sc:Text",
+          "description": "Source field 'Authorized'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "Authorized"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/PatientAge",
+          "name": "PatientAge",
+          "dataType": "sc:Text",
+          "description": "Source field 'PatientAge'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "PatientAge"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/ProtocolName",
+          "name": "ProtocolName",
+          "dataType": "sc:Text",
+          "description": "Source field 'ProtocolName'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "ProtocolName"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/BodyPartExamined",
+          "name": "BodyPartExamined",
+          "dataType": "sc:Text",
+          "description": "Source field 'BodyPartExamined'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "BodyPartExamined"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/EthnicGroup",
+          "name": "EthnicGroup",
+          "dataType": "sc:Text",
+          "description": "Source field 'EthnicGroup'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "EthnicGroup"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/accessLevel",
+          "name": "accessLevel",
+          "description": "Constant recordset-level value applied to every record.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "accessLevel"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105/records/retrievalRoute",
+          "name": "retrievalRoute",
+          "description": "Constant recordset-level value applied to every record.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "retrievalRoute"
+            }
+          }
+        }
+      ],
+      "conditionsOfAccess": "Open metadata and payloads subject to the listed license and TCIA usage policy.",
+      "usageInfo": [
+        {
+          "@type": "sc:CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": "sc:CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by/4.0/",
+          "name": "License or access policy supplied by TCIA",
+          "url": "https://creativecommons.org/licenses/by/4.0/"
+        }
+      ],
+      "prov:wasDerivedFrom": [
+        {
+          "@type": [
+            "sc:CreativeWork",
+            "prov:Entity"
+          ],
+          "@id": "https://www.cancerimagingarchive.net/wp-content/uploads/CMB-AML_v09_20260702.tcia",
+          "name": "Legacy TCIA Series UID manifest",
+          "url": "https://www.cancerimagingarchive.net/wp-content/uploads/CMB-AML_v09_20260702.tcia",
+          "sha256": "8183a7e48b9cff6fbd2bfef0cb16483ace22ee99612dcb66630cf1b103e1f2e7"
+        },
+        {
+          "@type": [
+            "sc:CreativeWork",
+            "prov:Entity"
+          ],
+          "@id": "https://www.cancerimagingarchive.net/wp-content/uploads/CMB-AML_v09_20260702-nbia-digest.xlsx",
+          "name": "TCIA series metadata workbook",
+          "url": "https://www.cancerimagingarchive.net/wp-content/uploads/CMB-AML_v09_20260702-nbia-digest.xlsx",
+          "sha256": "b0a0784e60913e6c5d994d078899175c78061d451452cbdebc27f30cf8360b36"
+        }
+      ],
+      "additionalProperty": [
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA WordPress download id",
+          "value": "48105"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "Record grain",
+          "value": "DICOM series"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "Retrieval key field",
+          "value": "SeriesInstanceUID"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "CSV record count",
+          "value": 52
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "External CSV model",
+          "value": "The complete record inventory is stored in a route-specific CSV FileObject. Each Croissant Field identifies its CSV column through a DataSource."
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "UID reconciliation status",
+          "value": "exact match"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "Legacy manifest UID count",
+          "value": 52
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "Metadata workbook series count",
+          "value": 52
+        }
+      ]
+    },
+    {
+      "@type": "cr:RecordSet",
+      "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records",
+      "name": "Controlled head imaging files",
+      "description": "One CSV row per public controlled-access metadata record. Each row retains the published DRS identifier and all original manifest columns.",
+      "key": {
+        "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/drs_uri"
+      },
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/drs_uri",
+          "name": "drs_uri",
+          "dataType": "sc:URL",
+          "description": "Published GA4GH DRS object identifier and retrieval key. It identifies an object but grants no access; resolution depends on current authorization and service availability.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "drs_uri"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/dbGaPStudyAccession",
+          "name": "dbGaPStudyAccession",
+          "dataType": "sc:Text",
+          "description": "dbGaP study accession governing authorization for the controlled payload.",
+          "alternateName": "CTDC Study Accession",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "dbGaPStudyAccession"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/FileName",
+          "name": "FileName",
+          "dataType": "sc:Text",
+          "description": "Source field 'CTDC File Name'; values are retained without semantic substitution.",
+          "alternateName": "CTDC File Name",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "FileName"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/CTDCSize",
+          "name": "CTDCSize",
+          "dataType": "sc:Text",
+          "description": "Source field 'CTDC Size'; values are retained without semantic substitution.",
+          "alternateName": "CTDC Size",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "CTDCSize"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/CTDCDescription",
+          "name": "CTDCDescription",
+          "dataType": "sc:Text",
+          "description": "Source field 'CTDC Description'; values are retained without semantic substitution.",
+          "alternateName": "CTDC Description",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "CTDCDescription"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/Diagnosis",
+          "name": "Diagnosis",
+          "dataType": "sc:Text",
+          "description": "Source field 'CTDC Diagnosis'; values are retained without semantic substitution.",
+          "alternateName": "CTDC Diagnosis",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "Diagnosis"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/Collection",
+          "name": "Collection",
+          "dataType": "sc:Text",
+          "description": "Source field 'TCIA Collection'; values are retained without semantic substitution.",
+          "alternateName": "TCIA Collection",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "Collection"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/PatientID",
+          "name": "PatientID",
+          "dataType": "sc:Text",
+          "description": "De-identified dataset-scoped patient identifier in the public metadata manifest.",
+          "alternateName": "Patient ID",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "PatientID"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/PatientName",
+          "name": "PatientName",
+          "dataType": "sc:Text",
+          "description": "Source field 'Patient Name'; values are retained without semantic substitution.",
+          "alternateName": "Patient Name",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "PatientName"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/PatientSex",
+          "name": "PatientSex",
+          "dataType": "sc:Text",
+          "description": "Source field 'Patient Sex'; values are retained without semantic substitution.",
+          "alternateName": "Patient Sex",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "PatientSex"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/StudyInstanceUID",
+          "name": "StudyInstanceUID",
+          "dataType": "sc:Text",
+          "description": "DICOM Study Instance UID from the public controlled-access metadata.",
+          "alternateName": "Study Instance UID",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "StudyInstanceUID"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/StudyDate",
+          "name": "StudyDate",
+          "dataType": "sc:Text",
+          "description": "Source field 'Study Date'; values are retained without semantic substitution.",
+          "alternateName": "Study Date",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "StudyDate"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/StudyDescription",
+          "name": "StudyDescription",
+          "dataType": "sc:Text",
+          "description": "Source field 'Study Description'; values are retained without semantic substitution.",
+          "alternateName": "Study Description",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "StudyDescription"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/PatientAge",
+          "name": "PatientAge",
+          "dataType": "sc:Text",
+          "description": "Source field 'Patient Age'; values are retained without semantic substitution.",
+          "alternateName": "Patient Age",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "PatientAge"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/LongitudinalTemporalEventType",
+          "name": "LongitudinalTemporalEventType",
+          "dataType": "sc:Text",
+          "description": "Source field 'Longitudinal Temporal Event Type'; values are retained without semantic substitution.",
+          "alternateName": "Longitudinal Temporal Event Type",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "LongitudinalTemporalEventType"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/LongitudinalTemporalOffsetFromEvent",
+          "name": "LongitudinalTemporalOffsetFromEvent",
+          "dataType": "sc:Text",
+          "description": "Source field 'Longitudinal Temporal Offset From Event'; values are retained without semantic substitution.",
+          "alternateName": "Longitudinal Temporal Offset From Event",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "LongitudinalTemporalOffsetFromEvent"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/Modality",
+          "name": "Modality",
+          "dataType": "sc:Text",
+          "description": "Source field 'Modality'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "Modality"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/SeriesDate",
+          "name": "SeriesDate",
+          "dataType": "sc:Text",
+          "description": "Source field 'Series Date'; values are retained without semantic substitution.",
+          "alternateName": "Series Date",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "SeriesDate"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/SeriesDescription",
+          "name": "SeriesDescription",
+          "dataType": "sc:Text",
+          "description": "Source field 'Series Description'; values are retained without semantic substitution.",
+          "alternateName": "Series Description",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "SeriesDescription"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/BodyPartExamined",
+          "name": "BodyPartExamined",
+          "dataType": "sc:Text",
+          "description": "Source field 'Body Part Examined'; values are retained without semantic substitution.",
+          "alternateName": "Body Part Examined",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "BodyPartExamined"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/SeriesNumber",
+          "name": "SeriesNumber",
+          "dataType": "sc:Text",
+          "description": "Source field 'Series Number'; values are retained without semantic substitution.",
+          "alternateName": "Series Number",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "SeriesNumber"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/Manufacturer",
+          "name": "Manufacturer",
+          "dataType": "sc:Text",
+          "description": "Source field 'Manufacturer'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "Manufacturer"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/ManufacturerModelName",
+          "name": "ManufacturerModelName",
+          "dataType": "sc:Text",
+          "description": "Source field 'Manufacturer Model Name'; values are retained without semantic substitution.",
+          "alternateName": "Manufacturer Model Name",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "ManufacturerModelName"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/SoftwareVersions",
+          "name": "SoftwareVersions",
+          "dataType": "sc:Text",
+          "description": "Source field 'Software Versions'; values are retained without semantic substitution.",
+          "alternateName": "Software Versions",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "SoftwareVersions"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/ImageCount",
+          "name": "ImageCount",
+          "dataType": "sc:Text",
+          "description": "Source field 'Image Count'; values are retained without semantic substitution.",
+          "alternateName": "Image Count",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "ImageCount"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/CollectionURI",
+          "name": "CollectionURI",
+          "dataType": "sc:URL",
+          "description": "Source field 'Collection URI'; values are retained without semantic substitution.",
+          "alternateName": "Collection URI",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "CollectionURI"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/FileSize",
+          "name": "FileSize",
+          "dataType": "sc:Text",
+          "description": "Source field 'File Size'; values are retained without semantic substitution.",
+          "alternateName": "File Size",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "FileSize"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/DateReleased",
+          "name": "DateReleased",
+          "dataType": "sc:Text",
+          "description": "Source field 'Date Released'; values are retained without semantic substitution.",
+          "alternateName": "Date Released",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "DateReleased"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/DICOMSeriesInstanceUID",
+          "name": "DICOMSeriesInstanceUID",
+          "dataType": "sc:Text",
+          "description": "DICOM Series Instance UID from the public controlled-access metadata. The CSV header is namespaced so drs_uri remains the only Data Retriever routing column; alternateName retains the source header.",
+          "alternateName": "Series Instance UID",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "DICOMSeriesInstanceUID"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/EthnicGroup",
+          "name": "EthnicGroup",
+          "dataType": "sc:Text",
+          "description": "Source field 'Ethnic Group'; values are retained without semantic substitution.",
+          "alternateName": "Ethnic Group",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "EthnicGroup"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/accessLevel",
+          "name": "accessLevel",
+          "description": "Constant recordset-level value applied to every record.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "accessLevel"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/retrievalRoute",
+          "name": "retrievalRoute",
+          "description": "Constant recordset-level value applied to every record.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "retrievalRoute"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107/records/authorizationAuthority",
+          "name": "authorizationAuthority",
+          "description": "Constant recordset-level value applied to every record.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv"
+            },
+            "extract": {
+              "column": "authorizationAuthority"
+            }
+          }
+        }
+      ],
+      "conditionsOfAccess": "The record metadata and DRS identifiers are public. Access to the referenced payloads requires authorization through the applicable dbGaP process and is enforced by the downstream CRDC service. This Croissant file grants no access and contains no credentials.",
+      "usageInfo": [
+        {
+          "@type": "sc:CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": "sc:CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/",
+          "name": "License or access policy supplied by TCIA",
+          "url": "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/"
+        },
+        {
+          "@type": "sc:CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/",
+          "name": "TCIA NIH Controlled Data Access Policy",
+          "url": "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/"
+        },
+        {
+          "@type": "sc:DefinedTerm",
+          "name": "dbGaP study phs002192",
+          "termCode": "phs002192",
+          "url": "https://www.ncbi.nlm.nih.gov/projects/gap/cgi-bin/study.cgi?study_id=phs002192",
+          "description": "Authorization authority for the controlled payload; this term is not a credential or access grant."
+        }
+      ],
+      "prov:wasDerivedFrom": [
+        {
+          "@type": [
+            "sc:CreativeWork",
+            "prov:Entity"
+          ],
+          "@id": "https://www.cancerimagingarchive.net/wp-content/uploads/CMB-AML_drs_metadata_manifest.csv",
+          "name": "TCIA CMB-AML controlled-access metadata manifest",
+          "url": "https://www.cancerimagingarchive.net/wp-content/uploads/CMB-AML_drs_metadata_manifest.csv",
+          "sha256": "22896c5ef2abc4fab444da3f56ce13b31773a8aa5ed2537638cc0a2496f6bbc3"
+        }
+      ],
+      "additionalProperty": [
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA WordPress download id",
+          "value": "48107"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "Record grain",
+          "value": "controlled DICOM series archive"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "Retrieval key field",
+          "value": "drs_uri"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "CSV record count",
+          "value": 65
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "External CSV model",
+          "value": "The complete record inventory is stored in a route-specific CSV FileObject. Each Croissant Field identifies its CSV column through a DataSource."
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "GA4GH DRS specification",
+          "value": "https://www.ga4gh.org/product/data-repository-service-drs/"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "NIH RAS GA4GH documentation",
+          "value": "https://auth.nih.gov/docs/RAS/"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "GA4GH authentication boundary",
+          "value": "NIH RAS and dbGaP support GA4GH Passport-based interoperability in documented NIH/NCBI workflows. This draft does not claim that the TCIA CTDC route accepts an NIH RAS Passport."
+        }
+      ]
+    },
+    {
+      "@type": "cr:RecordSet",
+      "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647/records",
+      "name": "Original pathology package inventory",
+      "description": "Inventoried submitted-original pathology files delivered through the TCIA Aspera package. PathDB representations are intentionally not substituted or asserted byte-equivalent.",
+      "key": {
+        "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647/records/asset_id"
+      },
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647/records/asset_id",
+          "name": "asset_id",
+          "dataType": "sc:Text",
+          "description": "Source field 'asset_id'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647-aspera-pathology-files.csv"
+            },
+            "extract": {
+              "column": "asset_id"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647/records/participant_link_status",
+          "name": "participant_link_status",
+          "dataType": "sc:Text",
+          "description": "Source field 'participant_link_status'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647-aspera-pathology-files.csv"
+            },
+            "extract": {
+              "column": "participant_link_status"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647/records/asset_name",
+          "name": "asset_name",
+          "dataType": "sc:Text",
+          "description": "Source field 'asset_name'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647-aspera-pathology-files.csv"
+            },
+            "extract": {
+              "column": "asset_name"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647/records/file_name",
+          "name": "file_name",
+          "dataType": "sc:Text",
+          "description": "Source field 'file_name'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647-aspera-pathology-files.csv"
+            },
+            "extract": {
+              "column": "file_name"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647/records/package_path",
+          "name": "package_path",
+          "dataType": "sc:Text",
+          "description": "Source field 'package_path'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647-aspera-pathology-files.csv"
+            },
+            "extract": {
+              "column": "package_path"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647/records/file_format",
+          "name": "file_format",
+          "dataType": "sc:Text",
+          "description": "Source field 'file_format'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647-aspera-pathology-files.csv"
+            },
+            "extract": {
+              "column": "file_format"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647/records/media_kind",
+          "name": "media_kind",
+          "dataType": "sc:Text",
+          "description": "Source field 'media_kind'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647-aspera-pathology-files.csv"
+            },
+            "extract": {
+              "column": "media_kind"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647/records/spatial_dimensionality",
+          "name": "spatial_dimensionality",
+          "dataType": "sc:Text",
+          "description": "Source field 'spatial_dimensionality'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647-aspera-pathology-files.csv"
+            },
+            "extract": {
+              "column": "spatial_dimensionality"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647/records/temporal_dimensionality",
+          "name": "temporal_dimensionality",
+          "dataType": "sc:Text",
+          "description": "Source field 'temporal_dimensionality'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647-aspera-pathology-files.csv"
+            },
+            "extract": {
+              "column": "temporal_dimensionality"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647/records/imaging_domain",
+          "name": "imaging_domain",
+          "dataType": "sc:Text",
+          "description": "Source field 'imaging_domain'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647-aspera-pathology-files.csv"
+            },
+            "extract": {
+              "column": "imaging_domain"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647/records/Modality",
+          "name": "Modality",
+          "dataType": "sc:Text",
+          "description": "Source field 'modality'; values are retained without semantic substitution.",
+          "alternateName": "modality",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647-aspera-pathology-files.csv"
+            },
+            "extract": {
+              "column": "Modality"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647/records/object_role",
+          "name": "object_role",
+          "dataType": "sc:Text",
+          "description": "Source field 'object_role'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647-aspera-pathology-files.csv"
+            },
+            "extract": {
+              "column": "object_role"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647/records/representation_provenance_class",
+          "name": "representation_provenance_class",
+          "dataType": "sc:Text",
+          "description": "Source field 'representation_provenance_class'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647-aspera-pathology-files.csv"
+            },
+            "extract": {
+              "column": "representation_provenance_class"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647/records/source_system",
+          "name": "source_system",
+          "dataType": "sc:Text",
+          "description": "Source field 'source_system'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647-aspera-pathology-files.csv"
+            },
+            "extract": {
+              "column": "source_system"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647/records/source_record_id",
+          "name": "source_record_id",
+          "dataType": "sc:Text",
+          "description": "Source field 'source_record_id'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647-aspera-pathology-files.csv"
+            },
+            "extract": {
+              "column": "source_record_id"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647/records/source_url",
+          "name": "source_url",
+          "dataType": "sc:URL",
+          "description": "Source field 'source_url'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647-aspera-pathology-files.csv"
+            },
+            "extract": {
+              "column": "source_url"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647/records/raw_values_json",
+          "name": "raw_values_json",
+          "dataType": "sc:Text",
+          "description": "Source field 'raw_values_json'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647-aspera-pathology-files.csv"
+            },
+            "extract": {
+              "column": "raw_values_json"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647/records/provenance_json",
+          "name": "provenance_json",
+          "dataType": "sc:Text",
+          "description": "Source field 'provenance_json'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647-aspera-pathology-files.csv"
+            },
+            "extract": {
+              "column": "provenance_json"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647/records/quality_flag_json",
+          "name": "quality_flag_json",
+          "dataType": "sc:Text",
+          "description": "Source field 'quality_flag_json'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647-aspera-pathology-files.csv"
+            },
+            "extract": {
+              "column": "quality_flag_json"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647/records/accessLevel",
+          "name": "accessLevel",
+          "description": "Constant recordset-level value applied to every record.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647-aspera-pathology-files.csv"
+            },
+            "extract": {
+              "column": "accessLevel"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647/records/retrievalRoute",
+          "name": "retrievalRoute",
+          "description": "Constant recordset-level value applied to every record.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647-aspera-pathology-files.csv"
+            },
+            "extract": {
+              "column": "retrievalRoute"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647/records/transferHandoffUrl",
+          "name": "transferHandoffUrl",
+          "description": "Constant recordset-level value applied to every record.",
+          "dataType": "sc:URL",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647-aspera-pathology-files.csv"
+            },
+            "extract": {
+              "column": "transferHandoffUrl"
+            }
+          }
+        }
+      ],
+      "conditionsOfAccess": "Open metadata and payloads subject to the listed license and TCIA usage policy.",
+      "usageInfo": [
+        {
+          "@type": "sc:CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": "sc:CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by/4.0/",
+          "name": "License or access policy supplied by TCIA",
+          "url": "https://creativecommons.org/licenses/by/4.0/"
+        }
+      ],
+      "prov:wasDerivedFrom": [
+        {
+          "@type": [
+            "sc:CreativeWork",
+            "prov:Entity"
+          ],
+          "@id": "https://github.com/kirbyju/tcia-query-skill/releases/tag/tcia-metadata-v2-latest",
+          "name": "TCIA V2 public non-DICOM metadata",
+          "url": "https://github.com/kirbyju/tcia-query-skill/releases/tag/tcia-metadata-v2-latest",
+          "sha256": "fb8e228f0f9261a692572242771db6ecb2072ff7fc9959b9ff87f5376eb8609c"
+        }
+      ],
+      "additionalProperty": [
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA WordPress download id",
+          "value": "41647"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "Record grain",
+          "value": "submitted-original package member"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "Retrieval key field",
+          "value": "asset_id"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "CSV record count",
+          "value": 62
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "External CSV model",
+          "value": "The complete record inventory is stored in a route-specific CSV FileObject. Each Croissant Field identifies its CSV column through a DataSource."
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "WordPress reported images",
+          "value": 67
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "File-grain submitted-original inventory rows",
+          "value": 62
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "Coverage status",
+          "value": "partial inventory; do not infer missing rows or substitute PathDB representations"
+        }
+      ]
+    }
+  ],
+  "prov:wasGeneratedBy": {
+    "@type": "prov:Activity",
+    "name": "TCIA Croissant recordset draft generation",
+    "description": "Deterministic projection from explicit TCIA query-skill artifacts and official manifest inputs."
+  },
+  "additionalProperty": [
+    {
+      "@type": "sc:PropertyValue",
+      "name": "Document role",
+      "value": "dataset Croissant with external recordset CSV files"
+    },
+    {
+      "@type": "sc:PropertyValue",
+      "name": "Recordset count",
+      "value": 3
+    },
+    {
+      "@type": "sc:PropertyValue",
+      "name": "External CSV model",
+      "value": "The complete record inventory is stored in a route-specific CSV FileObject. Each Croissant Field identifies its CSV column through a DataSource."
+    }
+  ],
+  "datePublished": "2023-10-19",
+  "distribution": [
+    {
+      "@type": "cr:FileObject",
+      "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv",
+      "name": "48105-public-dicom-series.csv",
+      "description": "Complete tabular inventory for the Public radiology images recordset.",
+      "contentUrl": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48105-public-dicom-series.csv",
+      "encodingFormat": "text/csv",
+      "contentSize": "28033 B",
+      "sha256": "dff1d355939fb8c0fc44355dd86401ce938fe25f5833a8f870a7b5d57202f709",
+      "license": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv",
+      "name": "48107-controlled-drs-files.csv",
+      "description": "Complete tabular inventory for the Controlled head imaging files recordset.",
+      "contentUrl": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/48107-controlled-drs-files.csv",
+      "encodingFormat": "text/csv",
+      "contentSize": "43211 B",
+      "sha256": "dde9c54ef71b75d08828e9e223c88958acb2b482a4c84c7e205278f4d96f8843",
+      "license": "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/"
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647-aspera-pathology-files.csv",
+      "name": "41647-aspera-pathology-files.csv",
+      "description": "Complete tabular inventory for the Original pathology package inventory recordset.",
+      "contentUrl": "https://www.cancerimagingarchive.net/collection/cmb-aml/croissant/recordsets/41647-aspera-pathology-files.csv",
+      "encodingFormat": "text/csv",
+      "contentSize": "68481 B",
+      "sha256": "8bd735b1095e40f7164c3fc5b4ebb216324280d2c2bcb1600e5adeffa5b218f4",
+      "license": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  ]
+}

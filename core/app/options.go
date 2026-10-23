@@ -24,6 +24,7 @@ var (
 
 const (
 	DefaultInterimUpdateInterval = 5 * time.Second
+	DefaultRequestDelay          = time.Duration(0)
 )
 
 var ErrShowHelp = errors.New("show help")
@@ -68,11 +69,15 @@ type Options struct {
 	// "2" lets the transport negotiate HTTP/2 via ALPN where the server
 	// offers it. Intended for running the same manifest twice to compare
 	// protocol performance; see HTTPVersion1_1/HTTPVersion2.
-	HTTPVersion string
-	AuthGate              *AuthGate
-	CLI                   bool
-	AcceptDataPolicy      bool
-	LogSink               io.Writer
+	HTTPVersion            string
+	AuthGate               *AuthGate
+	CLI                    bool
+	AcceptDataPolicy       bool
+	CroissantList          bool
+	CroissantIncludeGroups []string
+	CroissantIncludeIDs    []string
+	CroissantExcludeIDs    []string
+	LogSink                io.Writer
 	// Semaphore, when set, bounds how many files may be actively processed
 	// (pre-check through decompress) at once across ALL Run() calls sharing
 	// it — not just this one. The GUI shares a single instance across
@@ -129,7 +134,7 @@ func ParseOptions(args []string, promptReader io.Reader) (*Options, error) {
 		RetryDelay:            10 * time.Second,
 		InterimUpdateInterval: DefaultInterimUpdateInterval,
 		MaxConnsPerHost:       8,
-		RequestDelay:          500 * time.Millisecond,
+		RequestDelay:          DefaultRequestDelay,
 		MetadataWorkers:       20,
 		HTTPVersion:           HTTPVersion1_1,
 	}
@@ -144,7 +149,7 @@ func ParseOptions(args []string, promptReader io.Reader) (*Options, error) {
 	opt.opt.StringVar(&opt.Input, "input", "", opt.opt.Alias("i"), opt.opt.Description("path to input manifest file (.tcia, .s5cmd, .csv/.tsv/.xlsx, .json/.jsonld Croissant)"))
 	opt.opt.StringVar(&opt.Output, "output", "./", opt.opt.Alias("o"), opt.opt.Description("Output directory for downloaded files"))
 	opt.opt.StringVar(&opt.Proxy, "proxy", "", opt.opt.Alias("x"), opt.opt.Description("the proxy to use [http, socks5://user:passwd@host:port]"))
-	opt.opt.IntVar(&opt.Concurrent, "processes", 2, opt.opt.Alias("p"), opt.opt.Description("start how many download at same time"))
+	opt.opt.IntVar(&opt.Concurrent, "processes", 8, opt.opt.Alias("p"), opt.opt.Description("start how many download at same time"))
 	opt.opt.BoolVar(&opt.Meta, "meta", false, opt.opt.Alias("m"), opt.opt.Description("get Meta info of all files"))
 	opt.opt.StringVar(&opt.Username, "user", "nbia_guest", opt.opt.Alias("u"), opt.opt.Description("username for control data"))
 	opt.opt.BoolVar(&opt.Prompt, "prompt", false, opt.opt.Alias("w"), opt.opt.Description("input password for control data"))
@@ -168,6 +173,10 @@ func ParseOptions(args []string, promptReader io.Reader) (*Options, error) {
 	opt.opt.BoolVar(&opt.CLI, "cli", false, opt.opt.Description("Run in CLI mode"))
 	opt.opt.StringVar(&opt.HTTPVersion, "http-version", HTTPVersion1_1, opt.opt.Description("HTTP protocol to use for downloads: 1.1 or 2 (for A/B performance testing)"))
 	opt.opt.BoolVar(&opt.AcceptDataPolicy, "accept-data-policy", false, opt.opt.Description("accept the TCIA data usage policy without interactive prompt"))
+	opt.opt.BoolVar(&opt.CroissantList, "croissant-list", false, opt.opt.Description("list selectable Croissant download components without downloading"))
+	opt.opt.StringSliceVar(&opt.CroissantIncludeGroups, "croissant-include-group", 1, 99, opt.opt.Description("include a Croissant component group (for example isBasedOn); may be repeated"))
+	opt.opt.StringSliceVar(&opt.CroissantIncludeIDs, "croissant-include", 1, 99, opt.opt.Description("include a Croissant component by ID; may be repeated"))
+	opt.opt.StringSliceVar(&opt.CroissantExcludeIDs, "croissant-exclude", 1, 99, opt.opt.Description("exclude a Croissant component by ID; may be repeated"))
 
 	if _, err := opt.opt.Parse(args); err != nil {
 		return opt, err

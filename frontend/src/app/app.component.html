@@ -252,10 +252,46 @@
             </button>
           </div>
         </div>
+        <div *ngIf="croissantPlanLoading" class="croissant-review-status">Reading Croissant download components…</div>
+        <div *ngIf="croissantPlanError" class="croissant-review-error">{{ croissantPlanError }}</div>
+        <div *ngIf="croissantPlan" class="croissant-review">
+          <div class="croissant-review-heading">
+            <strong>Review downloads</strong>
+            <span>{{ croissantPlan.datasetName }}</span>
+          </div>
+          <p class="croissant-review-help">
+            Select the logical components to download. Source images are optional and off by default;
+            manifest components may expand into many files after confirmation.
+          </p>
+          <div class="croissant-group" *ngFor="let group of ['primary', 'isBasedOn']">
+            <label class="croissant-group-label" *ngIf="croissantItemsForGroup(group).length">
+              <input type="checkbox"
+                     [checked]="croissantGroupChecked(group)"
+                     [indeterminate]="croissantGroupIndeterminate(group)"
+                     (change)="toggleCroissantGroup(group, $any($event.target).checked)">
+              <span>{{ group === 'isBasedOn' ? 'Source images (isBasedOn)' : 'Primary/derived downloads' }}</span>
+            </label>
+            <label class="croissant-item" *ngFor="let item of croissantItemsForGroup(group)"
+                   [class.croissant-item--unsupported]="!item.supported">
+              <input type="checkbox" [disabled]="!item.supported"
+                     [checked]="croissantSelectedIDs.has(item.id)"
+                     (change)="toggleCroissantItem(item, $any($event.target).checked)">
+              <span class="croissant-item-copy">
+                <strong>{{ croissantItemLabel(item) }}</strong>
+                <small>
+                  <span *ngIf="item.contentSize">{{ item.contentSize }}</span>
+                  <span *ngIf="item.accessLevel"> · {{ item.accessLevel }}</span>
+                  <span *ngIf="item.downstreamSystem"> · {{ item.downstreamSystem }}</span>
+                  <span *ngIf="!item.supported"> · unsupported by Data Retriever</span>
+                </small>
+              </span>
+            </label>
+          </div>
+        </div>
         <div class="action-bar" style="justify-content: flex-end">
           <div style="display: flex; gap: 8px; justify-content: flex-end;">
             <button (click)="onFetchFiles()" class="fetch-btn"
-                    [disabled]="!inputFilePath || !outputDirPath">
+                    [disabled]="!inputFilePath || !outputDirPath || croissantPlanLoading">
               <span class="material-icons-outlined">file_download</span>
               Fetch Files
             </button>

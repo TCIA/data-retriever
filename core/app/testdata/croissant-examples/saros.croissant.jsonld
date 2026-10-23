@@ -1,0 +1,912 @@
+{
+  "@context": {
+    "@language": "en",
+    "@vocab": "https://schema.org/",
+    "@base": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/",
+    "sc": "https://schema.org/",
+    "cr": "http://mlcommons.org/croissant/",
+    "rai": "http://mlcommons.org/croissant/RAI/",
+    "dct": "http://purl.org/dc/terms/",
+    "prov": "http://www.w3.org/ns/prov#",
+    "odrl": "http://www.w3.org/ns/odrl/2/",
+    "duo": "http://purl.obolibrary.org/obo/DUO_",
+    "description": {
+      "@container": "@language"
+    },
+    "arrayShape": "cr:arrayShape",
+    "citeAs": "cr:citeAs",
+    "conformsTo": "dct:conformsTo",
+    "data": {
+      "@id": "cr:data",
+      "@type": "@json"
+    },
+    "dataType": {
+      "@id": "cr:dataType",
+      "@type": "@vocab"
+    },
+    "field": "cr:field",
+    "isLiveDataset": "cr:isLiveDataset",
+    "isArray": "cr:isArray",
+    "key": "cr:key",
+    "recordSet": "cr:recordSet",
+    "sdVersion": "cr:sdVersion",
+    "sha256": "cr:sha256",
+    "value": "cr:value",
+    "annotation": "cr:annotation",
+    "source": "cr:source",
+    "fileObject": "cr:fileObject",
+    "fileSet": "cr:fileSet",
+    "extract": "cr:extract",
+    "column": "cr:column",
+    "fileProperty": "cr:fileProperty",
+    "format": "cr:format",
+    "transform": "cr:transform",
+    "separator": "cr:separator",
+    "regex": "cr:regex",
+    "readLines": "cr:readLines",
+    "unArchive": "cr:unArchive",
+    "jsonPath": "cr:jsonPath",
+    "examples": {
+      "@id": "cr:examples",
+      "@type": "@json"
+    },
+    "subField": "cr:subField",
+    "parentField": "cr:parentField",
+    "references": "cr:references",
+    "equivalentProperty": "cr:equivalentProperty",
+    "includes": "cr:includes",
+    "excludes": "cr:excludes",
+    "containedIn": "cr:containedIn",
+    "md5": "cr:md5",
+    "name": {
+      "@container": "@language"
+    },
+    "path": "cr:path",
+    "repeated": "cr:repeated",
+    "replace": "cr:replace",
+    "samplingRate": "cr:samplingRate"
+  },
+  "@type": "sc:Dataset",
+  "@id": "https://doi.org/10.25737/SZ96-ZG60",
+  "conformsTo": "http://mlcommons.org/croissant/1.1",
+  "name": "SAROS - A large, heterogeneous, and sparsely annotated segmentation dataset on CT imaging data",
+  "alternateName": "SAROS",
+  "description": "Sparsely Annotated Region and Organ Segmentation (SAROS) contributes a large heterogeneous semantic segmentation annotation dataset for existing CT imaging cases on TCIA. The goal of this dataset is to provide high-quality annotations for building body composition analysis tools (References: Koitka 2020 and Haubold 2023 ). Existing in-house segmentation models were employed to generate annotation candidates on randomly selected cases. All generated annotations were manually reviewed and corrected by medical residents and students on every fifth axial slice while other slices were set to an ignore label (numeric value 255). 900 CT series from 882 patients were randomly selected from the following TCIA collections (number of CTs per collection in parenthesis): ACRIN-FLT-Breast (32), ACRIN-HNSCC-FDG-PET/CT (48), ACRIN-NSCLC-FDG-PET (129), Anti-PD-1_Lung (12), Anti-PD-1_MELANOMA (2), C4KC-KiTS (175), COVID-19-NY-SBU (1), CPTAC-CM (1), CPTAC-LSCC (3), CPTAC-LUAD (1), CPTAC-PDA (8), CPTAC-UCEC (26), HNSCC (17), Head-Neck Cetuximab (12), LIDC-IDRI (133), Lung-PET-CT-Dx (17), NSCLC Radiogenomics (7), NSCLC-Radiomics (56), NSCLC-Radiomics-Genomics (20), Pancreas-CT (58), QIN-HEADNECK (94), Soft-tissue-Sarcoma (6), TCGA-HNSC (1), TCGA-LIHC (33), TCGA-LUAD (2), TCGA-LUSC (3), TCGA-STAD (2), TCGA-UCEC (1). A script to download and resample the images is provided in our GitHub repository: https://github.com/UMEssen/saros-dataset The annotations are provided in NIfTI format and were performed on 5mm slice thickness. The annotation files define foreground labels on the same axial slices and match pixel-perfect. In total, 13 semantic body regions and 6 body part labels were annotated with an index that corresponds to a numeric value in the segmentation file. Body Regions Subcutaneous Tissue Muscle Abdominal Cavity Thoracic Cavity Bones Parotid Glands Pericardium Breast Implant Mediastinum Brain Spinal Cord Thyroid Glands Submandibular Glands Body Parts Torso Head Right Leg Left Leg Right Arm Left Arm The labels which were modified or require further commentary are listed and explained below: Subcutaneous Adipose Tissue: The cutis was included into this label due to its limited differentiation in 5mm-CT. Muscle: All muscular tissue was segmented contiguously and not separated into single muscles. Thus, fascias and intermuscular fat were included into the label. Inter- and intramuscular fat is subtracted automatically in the process. Abdominal Cavity: This label includes the pelvis. The label does not separate between the positional relationships of the peritoneum. Mediastinum: The International Thymic Malignancy Group (ITMIG) scheme was used for the segmentation guidelines. Head + Neck: The neck is confined by the base of the trapezius muscle. Right + Left Leg: The legs are separated from the torso by the line between the two lowest points of the Rami ossa pubis. Right + Left Arm: The arms are separated from the torso by the diagonal between the most lateral point of the acromion and the tuberculum infraglenoidale. For reproducibility on downstream tasks, five cross-validation folds and a test set were pre-defined and are described in the provided spreadsheet. Segmentation was conducted strictly in accordance with anatomical guidelines and only modified if required for the gain of segmentation efficiency.",
+  "url": "https://www.cancerimagingarchive.net/analysis-result/saros/",
+  "identifier": "https://doi.org/10.25737/SZ96-ZG60",
+  "license": [
+    "https://creativecommons.org/licenses/by/4.0/"
+  ],
+  "citeAs": "https://doi.org/10.25737/SZ96-ZG60",
+  "dateModified": "2024-03-07",
+  "version": "2",
+  "sdVersion": "0.2.0-draft",
+  "isLiveDataset": true,
+  "conditionsOfAccess": "Open metadata and payloads subject to the listed license and TCIA usage policy.",
+  "usageInfo": [
+    {
+      "@type": "sc:CreativeWork",
+      "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+      "name": "TCIA Data Usage Policies and Restrictions",
+      "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+    }
+  ],
+  "recordSet": [
+    {
+      "@type": "cr:RecordSet",
+      "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records",
+      "name": "SAROS segmentation archive members",
+      "description": "One CSV row per NIfTI segmentation member in the published SAROS ZIP, retaining V2 asset metadata and provenance.",
+      "key": {
+        "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/asset_id"
+      },
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/asset_id",
+          "name": "asset_id",
+          "dataType": "sc:Text",
+          "description": "Stable TCIA V2 logical-asset identifier and record key.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv"
+            },
+            "extract": {
+              "column": "asset_id"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/subject_id",
+          "name": "subject_id",
+          "dataType": "sc:Text",
+          "description": "Source field 'subject_id'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv"
+            },
+            "extract": {
+              "column": "subject_id"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/subject_id_namespace",
+          "name": "subject_id_namespace",
+          "dataType": "sc:Text",
+          "description": "Source field 'subject_id_namespace'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv"
+            },
+            "extract": {
+              "column": "subject_id_namespace"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/participant_link_status",
+          "name": "participant_link_status",
+          "dataType": "sc:Text",
+          "description": "Source field 'participant_link_status'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv"
+            },
+            "extract": {
+              "column": "participant_link_status"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/asset_granularity",
+          "name": "asset_granularity",
+          "dataType": "sc:Text",
+          "description": "Source field 'asset_granularity'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv"
+            },
+            "extract": {
+              "column": "asset_granularity"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/asset_name",
+          "name": "asset_name",
+          "dataType": "sc:Text",
+          "description": "Source field 'asset_name'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv"
+            },
+            "extract": {
+              "column": "asset_name"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/file_name",
+          "name": "file_name",
+          "dataType": "sc:Text",
+          "description": "Source field 'file_name'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv"
+            },
+            "extract": {
+              "column": "file_name"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/package_path",
+          "name": "package_path",
+          "dataType": "sc:Text",
+          "description": "Exact member path within the published SAROS ZIP archive.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv"
+            },
+            "extract": {
+              "column": "package_path"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/file_format",
+          "name": "file_format",
+          "dataType": "sc:Text",
+          "description": "Source field 'file_format'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv"
+            },
+            "extract": {
+              "column": "file_format"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/media_kind",
+          "name": "media_kind",
+          "dataType": "sc:Text",
+          "description": "Source field 'media_kind'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv"
+            },
+            "extract": {
+              "column": "media_kind"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/spatial_dimensionality",
+          "name": "spatial_dimensionality",
+          "dataType": "sc:Text",
+          "description": "Source field 'spatial_dimensionality'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv"
+            },
+            "extract": {
+              "column": "spatial_dimensionality"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/temporal_dimensionality",
+          "name": "temporal_dimensionality",
+          "dataType": "sc:Text",
+          "description": "Source field 'temporal_dimensionality'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv"
+            },
+            "extract": {
+              "column": "temporal_dimensionality"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/imaging_domain",
+          "name": "imaging_domain",
+          "dataType": "sc:Text",
+          "description": "Source field 'imaging_domain'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv"
+            },
+            "extract": {
+              "column": "imaging_domain"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/object_role",
+          "name": "object_role",
+          "dataType": "sc:Text",
+          "description": "Source field 'object_role'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv"
+            },
+            "extract": {
+              "column": "object_role"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/represented_file_count",
+          "name": "represented_file_count",
+          "dataType": "sc:Integer",
+          "description": "Source field 'represented_file_count'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv"
+            },
+            "extract": {
+              "column": "represented_file_count"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/representation_provenance_class",
+          "name": "representation_provenance_class",
+          "dataType": "sc:Text",
+          "description": "Relationship of this logical asset to the representation supplied by the source.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv"
+            },
+            "extract": {
+              "column": "representation_provenance_class"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/source_system",
+          "name": "source_system",
+          "dataType": "sc:Text",
+          "description": "Source field 'source_system'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv"
+            },
+            "extract": {
+              "column": "source_system"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/source_record_id",
+          "name": "source_record_id",
+          "dataType": "sc:Text",
+          "description": "Source field 'source_record_id'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv"
+            },
+            "extract": {
+              "column": "source_record_id"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/raw_values_json",
+          "name": "raw_values_json",
+          "dataType": "sc:Text",
+          "description": "Source field 'raw_values_json'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv"
+            },
+            "extract": {
+              "column": "raw_values_json"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/provenance_json",
+          "name": "provenance_json",
+          "dataType": "sc:Text",
+          "description": "Source field 'provenance_json'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv"
+            },
+            "extract": {
+              "column": "provenance_json"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/quality_flag_json",
+          "name": "quality_flag_json",
+          "dataType": "sc:Text",
+          "description": "Source field 'quality_flag_json'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv"
+            },
+            "extract": {
+              "column": "quality_flag_json"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/metadata_json",
+          "name": "metadata_json",
+          "dataType": "sc:Text",
+          "description": "Source field 'metadata_json'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv"
+            },
+            "extract": {
+              "column": "metadata_json"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/field_source_ids_json",
+          "name": "field_source_ids_json",
+          "dataType": "sc:Text",
+          "description": "Source field 'field_source_ids_json'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv"
+            },
+            "extract": {
+              "column": "field_source_ids_json"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/field_provenance_json",
+          "name": "field_provenance_json",
+          "dataType": "sc:Text",
+          "description": "Source field 'field_provenance_json'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv"
+            },
+            "extract": {
+              "column": "field_provenance_json"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/conflicting_values_json",
+          "name": "conflicting_values_json",
+          "dataType": "sc:Text",
+          "description": "Source field 'conflicting_values_json'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv"
+            },
+            "extract": {
+              "column": "conflicting_values_json"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/populated_field_count",
+          "name": "populated_field_count",
+          "dataType": "sc:Integer",
+          "description": "Source field 'populated_field_count'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv"
+            },
+            "extract": {
+              "column": "populated_field_count"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/conflict_field_count",
+          "name": "conflict_field_count",
+          "dataType": "sc:Integer",
+          "description": "Source field 'conflict_field_count'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv"
+            },
+            "extract": {
+              "column": "conflict_field_count"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/accessLevel",
+          "name": "accessLevel",
+          "description": "Constant recordset-level value applied to every record.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv"
+            },
+            "extract": {
+              "column": "accessLevel"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/retrievalRoute",
+          "name": "retrievalRoute",
+          "description": "Constant recordset-level value applied to every record.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv"
+            },
+            "extract": {
+              "column": "retrievalRoute"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289/records/packageUrl",
+          "name": "packageUrl",
+          "description": "Constant recordset-level value applied to every record.",
+          "dataType": "sc:URL",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv"
+            },
+            "extract": {
+              "column": "packageUrl"
+            }
+          }
+        }
+      ],
+      "conditionsOfAccess": "Open metadata and payloads subject to the listed license and TCIA usage policy.",
+      "usageInfo": [
+        {
+          "@type": "sc:CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": "sc:CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by/4.0/",
+          "name": "License or access policy supplied by TCIA",
+          "url": "https://creativecommons.org/licenses/by/4.0/"
+        }
+      ],
+      "prov:wasDerivedFrom": [
+        {
+          "@type": [
+            "sc:CreativeWork",
+            "prov:Entity"
+          ],
+          "@id": "https://github.com/kirbyju/tcia-query-skill/releases/tag/tcia-metadata-v2-latest",
+          "name": "TCIA V2 public non-DICOM metadata",
+          "url": "https://github.com/kirbyju/tcia-query-skill/releases/tag/tcia-metadata-v2-latest",
+          "sha256": "fb8e228f0f9261a692572242771db6ecb2072ff7fc9959b9ff87f5376eb8609c"
+        }
+      ],
+      "additionalProperty": [
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA WordPress download id",
+          "value": "46289"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "Record grain",
+          "value": "archive member"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "Retrieval key field",
+          "value": "asset_id"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "CSV record count",
+          "value": 1709
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "External CSV model",
+          "value": "The complete record inventory is stored in a route-specific CSV FileObject. Each Croissant Field identifies its CSV column through a DataSource."
+        }
+      ]
+    },
+    {
+      "@type": "cr:RecordSet",
+      "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46291/records",
+      "name": "SAROS segmentation information",
+      "description": "One generated CSV row per source CSV row, retaining all published columns.",
+      "key": {
+        "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46291/records/id"
+      },
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46291/records/id",
+          "name": "id",
+          "dataType": "sc:Text",
+          "description": "Source field 'id'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46291-data-records.csv"
+            },
+            "extract": {
+              "column": "id"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46291/records/tcia_study_instance_uid",
+          "name": "tcia_study_instance_uid",
+          "dataType": "sc:Text",
+          "description": "Source field 'tcia_study_instance_uid'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46291-data-records.csv"
+            },
+            "extract": {
+              "column": "tcia_study_instance_uid"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46291/records/tcia_series_instance_uid",
+          "name": "tcia_series_instance_uid",
+          "dataType": "sc:Text",
+          "description": "Source field 'tcia_series_instance_uid'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46291-data-records.csv"
+            },
+            "extract": {
+              "column": "tcia_series_instance_uid"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46291/records/Collection",
+          "name": "Collection",
+          "dataType": "sc:Text",
+          "description": "Source field 'tcia_collection'; values are retained without semantic substitution.",
+          "alternateName": "tcia_collection",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46291-data-records.csv"
+            },
+            "extract": {
+              "column": "Collection"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46291/records/tcia_case_id",
+          "name": "tcia_case_id",
+          "dataType": "sc:Text",
+          "description": "Source field 'tcia_case_id'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46291-data-records.csv"
+            },
+            "extract": {
+              "column": "tcia_case_id"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46291/records/gender",
+          "name": "gender",
+          "dataType": "sc:Text",
+          "description": "Source field 'gender'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46291-data-records.csv"
+            },
+            "extract": {
+              "column": "gender"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46291/records/anatomic_region",
+          "name": "anatomic_region",
+          "dataType": "sc:Text",
+          "description": "Source field 'anatomic_region'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46291-data-records.csv"
+            },
+            "extract": {
+              "column": "anatomic_region"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46291/records/has_breast_implant",
+          "name": "has_breast_implant",
+          "dataType": "sc:Text",
+          "description": "Source field 'has_breast_implant'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46291-data-records.csv"
+            },
+            "extract": {
+              "column": "has_breast_implant"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46291/records/orientation_code",
+          "name": "orientation_code",
+          "dataType": "sc:Text",
+          "description": "Source field 'orientation_code'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46291-data-records.csv"
+            },
+            "extract": {
+              "column": "orientation_code"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46291/records/split",
+          "name": "split",
+          "dataType": "sc:Text",
+          "description": "Source field 'split'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46291-data-records.csv"
+            },
+            "extract": {
+              "column": "split"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46291/records/accessLevel",
+          "name": "accessLevel",
+          "description": "Constant recordset-level value applied to every record.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46291-data-records.csv"
+            },
+            "extract": {
+              "column": "accessLevel"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46291/records/retrievalRoute",
+          "name": "retrievalRoute",
+          "description": "Constant recordset-level value applied to every record.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46291-data-records.csv"
+            },
+            "extract": {
+              "column": "retrievalRoute"
+            }
+          }
+        }
+      ],
+      "conditionsOfAccess": "Open metadata and payloads subject to the listed license and TCIA usage policy.",
+      "usageInfo": [
+        {
+          "@type": "sc:CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": "sc:CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by/4.0/",
+          "name": "License or access policy supplied by TCIA",
+          "url": "https://creativecommons.org/licenses/by/4.0/"
+        }
+      ],
+      "prov:wasDerivedFrom": [
+        {
+          "@type": [
+            "sc:CreativeWork",
+            "prov:Entity"
+          ],
+          "@id": "https://www.cancerimagingarchive.net/wp-content/uploads/Segmentation-Info_09-29-2023.csv",
+          "name": "SAROS segmentation information",
+          "url": "https://www.cancerimagingarchive.net/wp-content/uploads/Segmentation-Info_09-29-2023.csv",
+          "sha256": "66d932459fbb9c294fcd1322ae55b7609d302909d342658de4f641acfe96a92e"
+        }
+      ],
+      "additionalProperty": [
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA WordPress download id",
+          "value": "46291"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "Record grain",
+          "value": "source CSV row"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "Retrieval key field",
+          "value": "id"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "CSV record count",
+          "value": 900
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "External CSV model",
+          "value": "The complete record inventory is stored in a route-specific CSV FileObject. Each Croissant Field identifies its CSV column through a DataSource."
+        }
+      ]
+    }
+  ],
+  "prov:wasGeneratedBy": {
+    "@type": "prov:Activity",
+    "name": "TCIA Croissant recordset draft generation",
+    "description": "Deterministic projection from explicit TCIA query-skill artifacts and official manifest inputs."
+  },
+  "additionalProperty": [
+    {
+      "@type": "sc:PropertyValue",
+      "name": "Document role",
+      "value": "dataset Croissant with external recordset CSV files"
+    },
+    {
+      "@type": "sc:PropertyValue",
+      "name": "Recordset count",
+      "value": 2
+    },
+    {
+      "@type": "sc:PropertyValue",
+      "name": "External CSV model",
+      "value": "The complete record inventory is stored in a route-specific CSV FileObject. Each Croissant Field identifies its CSV column through a DataSource."
+    }
+  ],
+  "datePublished": "2023-09-28",
+  "distribution": [
+    {
+      "@type": "cr:FileObject",
+      "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv",
+      "name": "46289-segmentation-files.csv",
+      "description": "Complete tabular inventory for the SAROS segmentation archive members recordset.",
+      "contentUrl": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46289-segmentation-files.csv",
+      "encodingFormat": "text/csv",
+      "contentSize": "5541945 B",
+      "sha256": "46d5fc36d3cef3402e21590ba4375c055e7c105a72d3a84d2514cfa6d5943368",
+      "license": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "recordsets/46289/archive",
+      "name": "SAROS segmentation ZIP archive",
+      "contentUrl": "https://www.cancerimagingarchive.net/wp-content/uploads/SAROS-Collection-NIfTI-files-v2_03-70-2024.zip",
+      "encodingFormat": "application/zip",
+      "license": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46291-data-records.csv",
+      "name": "46291-data-records.csv",
+      "description": "Complete tabular inventory for the SAROS segmentation information recordset.",
+      "contentUrl": "https://www.cancerimagingarchive.net/analysis-result/saros/croissant/recordsets/46291-data-records.csv",
+      "encodingFormat": "text/csv",
+      "contentSize": "194310 B",
+      "sha256": "f4817246e42b1fb83d1bf53860761eace3ca69721808c41695e42dbb282f2b14",
+      "license": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  ]
+}

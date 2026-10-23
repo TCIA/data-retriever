@@ -175,6 +175,15 @@ func (a *App) CheckForUpdate() (UpdateInfo, error) {
 	}
 
 	storeName := storeDisplayName(distChannel)
+	if storeName != "" {
+		// Store builds (Mac App Store, Microsoft Store) are updated through
+		// their own storefront, which already notifies users of new
+		// versions. Comparing against GitHub's latest tag here is wrong for
+		// these builds: Apple's review can lag a GitHub release by days,
+		// which would falsely claim an update is available before the
+		// store build has caught up.
+		return UpdateInfo{}, nil
+	}
 
 	const apiURL = "https://api.github.com/repos/TCIA/data-retriever/releases/latest"
 	client := &http.Client{Timeout: 10 * time.Second}
@@ -189,7 +198,7 @@ func (a *App) CheckForUpdate() (UpdateInfo, error) {
 	if err != nil {
 		return UpdateInfo{}, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return UpdateInfo{}, nil
@@ -209,12 +218,7 @@ func (a *App) CheckForUpdate() (UpdateInfo, error) {
 	info := UpdateInfo{
 		Available:     latest != "" && latest != current,
 		LatestVersion: release.TagName,
-		StoreName:     storeName,
-	}
-	// Store builds (Mac App Store, Microsoft Store) update through their
-	// respective storefronts, so don't point users at the GitHub release.
-	if storeName == "" {
-		info.URL = release.HTMLURL
+		URL:           release.HTMLURL,
 	}
 	return info, nil
 }
@@ -234,10 +238,8 @@ func (b *App) HandleFileOpen(filePath string) {
 		return
 	}
 	go func() {
-		select {
-		case <-b.frontendReady:
-			wailsRuntime.EventsEmit(b.ctx, "file-opened", filePath)
-		}
+		<-b.frontendReady
+		wailsRuntime.EventsEmit(b.ctx, "file-opened", filePath)
 	}()
 
 }
@@ -259,7 +261,7 @@ func linuxDownloadsDir(home string) string {
 	if err != nil {
 		return ""
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -380,6 +382,12 @@ func (b *App) OpenOutputDirectoryDialog(inputFile string) (string, error) {
 	return result, nil
 }
 
+// InspectCroissantManifest returns the local document's logical download
+// components without fetching nested manifests or starting a transfer.
+func (b *App) InspectCroissantManifest(manifestPath string) (app.CroissantDownloadPlan, error) {
+	return app.InspectCroissantManifest(manifestPath)
+}
+
 // RunCLIFetch runs the CLI tool asynchronously with the given manifest and output directory and advanced options.
 func (b *App) RunCLIFetch(
 	manifestPath string,
@@ -392,6 +400,8 @@ func (b *App) RunCLIFetch(
 	authPath string,
 	directoryMode string,
 	verbose bool,
+	croissantIncludeIDs []string,
+	croissantExcludeIDs []string,
 	runId uint64,
 ) (string, error) {
 
@@ -400,25 +410,25 @@ func (b *App) RunCLIFetch(
 	}
 
 	// Create a new batch
-	//b.mu.Lock()
-	//b.runID++
 	id := runId
 
 	ctx, cancel := context.WithCancel(b.ctx)
 
 	batch := &DownloadBatch{
-		ID:            id,
-		Ctx:           ctx,
-		Cancel:        cancel,
-		Manifest:      manifestPath,
-		OutputDir:     outputDir,
-		MaxConn:       maxConnections,
-		MaxRetries:    maxRetries,
-		Parallel:      simultaneousDownloads,
-		SkipExist:     skipExisting,
-		AuthPath:      authPath,
-		DirectoryMode: directoryMode,
-		Verbose:       verbose,
+		ID:                  id,
+		Ctx:                 ctx,
+		Cancel:              cancel,
+		Manifest:            manifestPath,
+		OutputDir:           outputDir,
+		MaxConn:             maxConnections,
+		MaxRetries:          maxRetries,
+		Parallel:            simultaneousDownloads,
+		SkipExist:           skipExisting,
+		AuthPath:            authPath,
+		DirectoryMode:       directoryMode,
+		Verbose:             verbose,
+		CroissantIncludeIDs: append([]string(nil), croissantIncludeIDs...),
+		CroissantExcludeIDs: append([]string(nil), croissantExcludeIDs...),
 		// Assigned once, here, so it reflects when this manifest actually
 		// entered the queue (a fresh Fetch, a Retry, or a Resume all get a
 		// new value at this point) rather than being tied to the random
@@ -501,7 +511,7 @@ func (b *App) runBatch(batch *DownloadBatch) {
 		InterimUpdateInterval: 500 * time.Millisecond,
 		MaxConnsPerHost:       batch.MaxConn,
 		ServerFriendly:        false,
-		RequestDelay:          500 * time.Millisecond,
+		RequestDelay:          app.DefaultRequestDelay,
 		NoMD5:                 false,
 		NoDecompress:          false,
 		RefreshMetadata:       false,
@@ -512,14 +522,16 @@ func (b *App) runBatch(batch *DownloadBatch) {
 			}
 			return app.LoadSavedAuthFilePath()
 		}(),
-		DirectoryMode:    batch.DirectoryMode,
-		IDCParquetPath:   b.parquetPaths.IDCIndex,
-		PriorParquetPath: b.parquetPaths.PriorVersions,
-		AuthGate:         gate,
-		LogSink:          newGuiLogSink(b.ctx, batch.ID),
-		Semaphore:        b.downloadSemaphore,
-		SharedHTTPClient: b.httpClient,
-		Priority:         batch.Priority,
+		DirectoryMode:       batch.DirectoryMode,
+		IDCParquetPath:      b.parquetPaths.IDCIndex,
+		PriorParquetPath:    b.parquetPaths.PriorVersions,
+		AuthGate:            gate,
+		LogSink:             newGuiLogSink(b.ctx, batch.ID),
+		Semaphore:           b.downloadSemaphore,
+		SharedHTTPClient:    b.httpClient,
+		Priority:            batch.Priority,
+		CroissantIncludeIDs: append([]string(nil), batch.CroissantIncludeIDs...),
+		CroissantExcludeIDs: append([]string(nil), batch.CroissantExcludeIDs...),
 	}
 
 	logTimestamp := time.Now().Format("20060102-150405")
@@ -833,7 +845,6 @@ func (a *App) GetLatestSupportLogPath() string {
 type App struct {
 	ctx             context.Context
 	mu              sync.Mutex
-	runID           uint64
 	batches         map[uint64]*DownloadBatch
 	pausedBatches   map[string]*DownloadBatch // keyed by manifest path for resume
 	parquetPaths    app.ParquetPaths
@@ -919,6 +930,8 @@ func (b *App) ResumeManifest(manifestPath string) error {
 		pausedBatch.AuthPath,
 		pausedBatch.DirectoryMode,
 		pausedBatch.Verbose,
+		pausedBatch.CroissantIncludeIDs,
+		pausedBatch.CroissantExcludeIDs,
 		pausedBatch.ID,
 	)
 	if err != nil {
@@ -964,13 +977,15 @@ type DownloadBatch struct {
 	Manifest  string
 	OutputDir string
 
-	MaxConn       int
-	MaxRetries    int
-	Parallel      int
-	SkipExist     bool
-	AuthPath      string
-	DirectoryMode string
-	Verbose       bool
+	MaxConn             int
+	MaxRetries          int
+	Parallel            int
+	SkipExist           bool
+	AuthPath            string
+	DirectoryMode       string
+	Verbose             bool
+	CroissantIncludeIDs []string
+	CroissantExcludeIDs []string
 	// Priority is this batch's downloadSemaphore priority — see
 	// App.nextBatchPriority and Options.Priority.
 	Priority int64

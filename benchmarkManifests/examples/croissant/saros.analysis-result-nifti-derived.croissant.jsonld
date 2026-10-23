@@ -1,0 +1,1548 @@
+{
+  "@context": {
+    "@language": "en",
+    "@vocab": "https://schema.org/",
+    "arrayShape": "cr:arrayShape",
+    "citeAs": "cr:citeAs",
+    "column": "cr:column",
+    "conformsTo": "dct:conformsTo",
+    "containedIn": "cr:containedIn",
+    "cr": "http://mlcommons.org/croissant/",
+    "rai": "http://mlcommons.org/croissant/RAI/",
+    "data": {
+      "@id": "cr:data",
+      "@type": "@json"
+    },
+    "dataType": {
+      "@id": "cr:dataType",
+      "@type": "@vocab"
+    },
+    "dct": "http://purl.org/dc/terms/",
+    "description": {
+      "@container": "@language"
+    },
+    "equivalentProperty": "cr:equivalentProperty",
+    "examples": {
+      "@id": "cr:examples",
+      "@type": "@json"
+    },
+    "extract": "cr:extract",
+    "field": "cr:field",
+    "fileProperty": "cr:fileProperty",
+    "fileObject": "cr:fileObject",
+    "fileSet": "cr:fileSet",
+    "format": "cr:format",
+    "includes": "cr:includes",
+    "isArray": "cr:isArray",
+    "isLiveDataset": "cr:isLiveDataset",
+    "jsonPath": "cr:jsonPath",
+    "key": "cr:key",
+    "md5": "cr:md5",
+    "name": {
+      "@container": "@language"
+    },
+    "parentField": "cr:parentField",
+    "path": "cr:path",
+    "recordSet": "cr:recordSet",
+    "references": "cr:references",
+    "regex": "cr:regex",
+    "repeated": "cr:repeated",
+    "replace": "cr:replace",
+    "samplingRate": "cr:samplingRate",
+    "sc": "https://schema.org/",
+    "separator": "cr:separator",
+    "source": "cr:source",
+    "subField": "cr:subField",
+    "transform": "cr:transform",
+    "odrl": "http://www.w3.org/ns/odrl/2/",
+    "sdVersion": "cr:sdVersion"
+  },
+  "@type": "sc:Dataset",
+  "@id": "https://doi.org/10.25737/SZ96-ZG60",
+  "conformsTo": "http://mlcommons.org/croissant/1.1",
+  "name": "SAROS - A large, heterogeneous, and sparsely annotated segmentation dataset on CT imaging data",
+  "alternateName": "SAROS",
+  "description": "Sparsely Annotated Region and Organ Segmentation (SAROS) contributes a large heterogeneous semantic segmentation annotation dataset for existing CT imaging cases on TCIA. The goal of this dataset is to provide high-quality annotations for building body composition analysis tools (References: Koitka 2020 and Haubold 2023 ). Existing in-house segmentation models were employed to generate annotation candidates on randomly selected cases. All generated annotations were manually reviewed and corrected by medical residents and students on every fifth axial slice while other slices were set to an ignore label (numeric value 255). 900 CT series from 882 patients were randomly selected from the following TCIA collections (number of CTs per collection in parenthesis): ACRIN-FLT-Breast (32), ACRIN-HNSCC-FDG-PET/CT (48), ACRIN-NSCLC-FDG-PET (129), Anti-PD-1_Lung (12), Anti-PD-1_MELANOMA (2), C4KC-KiTS (175), COVID-19-NY-SBU (1), CPTAC-CM (1), CPTAC-LSCC (3), CPTAC-LUAD (1), CPTAC-PDA (8), CPTAC-UCEC (26), HNSCC (17), Head-Neck Cetuximab (12), LIDC-IDRI (133), Lung-PET-CT-Dx (17), NSCLC Radiogenomics (7), NSCLC-Radiomics (56), NSCLC-Radiomics-Genomics (20), Pancreas-CT (58), QIN-HEADNECK (94), Soft-tissue-Sarcoma (6), TCGA-HNSC (1), TCGA-LIHC (33), TCGA-LUAD (2), TCGA-LUSC (3), TCGA-STAD (2), TCGA-UCEC (1). A script to download and resample the images is provided in our GitHub repository: https://github.com/UMEssen/saros-dataset The annotations are provided in NIfTI format and were performed on 5mm slice thickness. The annotation files define foreground labels on the same axial slices and match pixel-perfect. In total, 13 semantic body regions and 6 body part labels were annotated with an index that corresponds to a numeric value in the segmentation file. Body Regions Subcutaneous Tissue Muscle Abdominal Cavity Thoracic Cavity Bones Parotid Glands Pericardium Breast Implant Mediastinum Brain Spinal Cord Thyroid Glands Submandibular Glands Body Parts Torso Head Right Leg Left Leg Right Arm Left Arm The labels which were modified or require further commentary are listed and explained below: Subcutaneous Adipose Tissue: The cutis was included into this label due to its limited differentiation in 5mm-CT. Muscle: All muscular tissue was segmented contiguously and not separated into single muscles. Thus, fascias and intermuscular fat were included into the label. Inter- and intramuscular fat is subtracted automatically in the process. Abdominal Cavity: This label includes the pelvis. The label does not separate between the positional relationships of the peritoneum. Mediastinum: The International Thymic Malignancy Group (ITMIG) scheme was used for the segmentation guidelines. Head + Neck: The neck is confined by the base of the trapezius muscle. Right + Left Leg: The legs are separated from the torso by the line between the two lowest points of the Rami ossa pubis. Right + Left Arm: The arms are separated from the torso by the diagonal between the most lateral point of the acromion and the tuberculum infraglenoidale. For reproducibility on downstream tasks, five cross-validation folds and a test set were pre-defined and are described in the provided spreadsheet. Segmentation was conducted strictly in accordance with anatomical guidelines and only modified if required for the gain of segmentation efficiency.",
+  "url": "https://www.cancerimagingarchive.net/analysis-result/saros/",
+  "creator": {
+    "@type": "Organization",
+    "name": "The Cancer Imaging Archive",
+    "url": "https://www.cancerimagingarchive.net/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "The Cancer Imaging Archive",
+    "url": "https://www.cancerimagingarchive.net/"
+  },
+  "includedInDataCatalog": {
+    "@type": "DataCatalog",
+    "@id": "https://www.cancerimagingarchive.net/#catalog",
+    "name": "The Cancer Imaging Archive",
+    "url": "https://www.cancerimagingarchive.net/",
+    "publisher": {
+      "@type": "Organization",
+      "name": "The Cancer Imaging Archive",
+      "url": "https://www.cancerimagingarchive.net/"
+    }
+  },
+  "license": [
+    "https://creativecommons.org/licenses/by/4.0/"
+  ],
+  "citeAs": "Koitka, S., Baldini, G., Kroll, L., van Landeghem, N., Haubold, J., Sung Kim, M., Kleesiek, J., Nensa, F., & Hosch, R. (2023). SAROS - A large, heterogeneous, and sparsely annotated segmentation dataset on CT imaging data (SAROS) (Version 2) [Data set]. The Cancer Imaging Archive. https://doi.org/10.25737/SZ96-ZG60",
+  "keywords": [
+    "SAROS",
+    "Analysis Result",
+    "Adenocarcinoma",
+    "Corpus Endometrial Carcinoma",
+    "Cutaneous Melanoma",
+    "Ductal Adenocarcinoma",
+    "Head and Neck Carcinomas",
+    "Head and Neck Squamous Cell Carcinoma",
+    "Healthy Controls (non-cancer)",
+    "Kidney Cancer",
+    "Liver Hepatocellular Carcinoma",
+    "Lung Adenocarcinoma",
+    "Lung Cancer",
+    "Lung Squamous Cell Carcinoma",
+    "Melanoma",
+    "Non-small Cell Lung Cancer",
+    "Soft-tissue Sarcoma",
+    "Squamous Cell Carcinoma",
+    "Stomach Adenocarcinoma",
+    "Uterine Corpus Endometrial Carcinoma",
+    "COVID-19 (non-cancer)",
+    "Breast Cancer",
+    "Breast",
+    "Chest",
+    "Limb",
+    "Head-and-Neck",
+    "Kidney",
+    "Liver",
+    "Lung",
+    "Pancreas",
+    "Skin of body",
+    "Stomach",
+    "Uterus",
+    "Human"
+  ],
+  "sdPublisher": {
+    "@type": "Organization",
+    "name": "The Cancer Imaging Archive",
+    "url": "https://www.cancerimagingarchive.net/"
+  },
+  "sdVersion": "0.1.0",
+  "isLiveDataset": true,
+  "conditionsOfAccess": "Open-access TCIA data. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+  "usageInfo": [
+    {
+      "@type": "CreativeWork",
+      "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+      "name": "TCIA Data Usage Policies and Restrictions",
+      "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+    }
+  ],
+  "distribution": [
+    {
+      "@type": "cr:FileObject",
+      "@id": "file-46289",
+      "name": "SAROS-Collection-NIfTI-files-v2_03-70-2024.zip",
+      "contentUrl": "https://www.cancerimagingarchive.net/wp-content/uploads/SAROS-Collection-NIfTI-files-v2_03-70-2024.zip",
+      "encodingFormat": [
+        "application/zip"
+      ],
+      "conditionsOfAccess": "Open-access TCIA data. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by/4.0/",
+          "name": "CC BY 4.0",
+          "url": "https://creativecommons.org/licenses/by/4.0/"
+        }
+      ],
+      "contentSize": "86.97 MB",
+      "license": "https://creativecommons.org/licenses/by/4.0/",
+      "dateModified": "2023-11-20",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download id",
+          "value": "46289"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access level",
+          "value": "open"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA data types",
+          "value": [
+            "Segmentation"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA file types",
+          "value": [
+            "NIfTI",
+            "ZIP"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download artifact role",
+          "value": "data file"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access mechanism",
+          "value": "direct download"
+        }
+      ]
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "file-46291",
+      "name": "Segmentation-Info_09-29-2023.csv",
+      "contentUrl": "https://www.cancerimagingarchive.net/wp-content/uploads/Segmentation-Info_09-29-2023.csv",
+      "encodingFormat": [
+        "text/csv"
+      ],
+      "conditionsOfAccess": "Open-access TCIA data. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by/4.0/",
+          "name": "CC BY 4.0",
+          "url": "https://creativecommons.org/licenses/by/4.0/"
+        }
+      ],
+      "contentSize": "176.55 KB",
+      "license": "https://creativecommons.org/licenses/by/4.0/",
+      "dateModified": "2023-11-20",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download id",
+          "value": "46291"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access level",
+          "value": "open"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA data types",
+          "value": [
+            "Radiomic Feature"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA file types",
+          "value": [
+            "CSV"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download artifact role",
+          "value": "data file"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access mechanism",
+          "value": "direct download"
+        }
+      ]
+    }
+  ],
+  "recordSet": [
+    {
+      "@type": "cr:RecordSet",
+      "@id": "download-46289",
+      "name": "Segmentation",
+      "description": "TCIA current download record 46289 for SAROS.",
+      "dataType": "sc:DataDownload",
+      "key": {
+        "@id": "download-46289/download_id"
+      },
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "download-46289/download_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-46289/download_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-46289/file_object_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-46289/download_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-46289/data_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-46289/file_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-46289/download_artifact_role",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-46289/access_mechanism",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-46289/access_level",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-46289/license_label",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-46289/license_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-46289/subjects",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-46289/images",
+          "dataType": "sc:Integer"
+        }
+      ],
+      "data": [
+        {
+          "download-46289/download_id": "46289",
+          "download-46289/download_url": "https://www.cancerimagingarchive.net/wp-content/uploads/SAROS-Collection-NIfTI-files-v2_03-70-2024.zip",
+          "download-46289/file_object_id": "file-46289",
+          "download-46289/download_types": [],
+          "download-46289/data_types": [
+            "Segmentation"
+          ],
+          "download-46289/file_types": [
+            "NIfTI",
+            "ZIP"
+          ],
+          "download-46289/download_artifact_role": "data file",
+          "download-46289/access_mechanism": "direct download",
+          "download-46289/access_level": "open",
+          "download-46289/license_label": "CC BY 4.0",
+          "download-46289/license_url": "https://creativecommons.org/licenses/by/4.0/",
+          "download-46289/subjects": 900,
+          "download-46289/images": 1709
+        }
+      ],
+      "conditionsOfAccess": "Open-access TCIA data. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by/4.0/",
+          "name": "CC BY 4.0",
+          "url": "https://creativecommons.org/licenses/by/4.0/"
+        }
+      ]
+    },
+    {
+      "@type": "cr:RecordSet",
+      "@id": "download-46291",
+      "name": "Radiomic Feature",
+      "description": "TCIA current download record 46291 for SAROS.",
+      "dataType": "sc:DataDownload",
+      "key": {
+        "@id": "download-46291/download_id"
+      },
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "download-46291/download_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-46291/download_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-46291/file_object_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-46291/download_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-46291/data_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-46291/file_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-46291/download_artifact_role",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-46291/access_mechanism",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-46291/access_level",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-46291/license_label",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-46291/license_url",
+          "dataType": "sc:URL"
+        }
+      ],
+      "data": [
+        {
+          "download-46291/download_id": "46291",
+          "download-46291/download_url": "https://www.cancerimagingarchive.net/wp-content/uploads/Segmentation-Info_09-29-2023.csv",
+          "download-46291/file_object_id": "file-46291",
+          "download-46291/download_types": [],
+          "download-46291/data_types": [
+            "Radiomic Feature"
+          ],
+          "download-46291/file_types": [
+            "CSV"
+          ],
+          "download-46291/download_artifact_role": "data file",
+          "download-46291/access_mechanism": "direct download",
+          "download-46291/access_level": "open",
+          "download-46291/license_label": "CC BY 4.0",
+          "download-46291/license_url": "https://creativecommons.org/licenses/by/4.0/"
+        }
+      ],
+      "conditionsOfAccess": "Open-access TCIA data. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by/4.0/",
+          "name": "CC BY 4.0",
+          "url": "https://creativecommons.org/licenses/by/4.0/"
+        }
+      ]
+    }
+  ],
+  "isBasedOn": [
+    {
+      "@type": "Dataset",
+      "name": "ACRIN-FLT-Breast",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source CT series count",
+          "value": 32
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source collection inference",
+          "value": "Parsed from analysis-result summary text"
+        }
+      ]
+    },
+    {
+      "@type": "Dataset",
+      "name": "ACRIN-HNSCC-FDG-PET/CT",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source CT series count",
+          "value": 48
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source collection inference",
+          "value": "Parsed from analysis-result summary text"
+        }
+      ]
+    },
+    {
+      "@type": "Dataset",
+      "name": "ACRIN-NSCLC-FDG-PET",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source CT series count",
+          "value": 129
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source collection inference",
+          "value": "Parsed from analysis-result summary text"
+        }
+      ]
+    },
+    {
+      "@type": "Dataset",
+      "name": "Anti-PD-1_Lung",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source CT series count",
+          "value": 12
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source collection inference",
+          "value": "Parsed from analysis-result summary text"
+        }
+      ]
+    },
+    {
+      "@type": "Dataset",
+      "name": "Anti-PD-1_MELANOMA",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source CT series count",
+          "value": 2
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source collection inference",
+          "value": "Parsed from analysis-result summary text"
+        }
+      ]
+    },
+    {
+      "@type": "Dataset",
+      "name": "C4KC-KiTS",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source CT series count",
+          "value": 175
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source collection inference",
+          "value": "Parsed from analysis-result summary text"
+        }
+      ]
+    },
+    {
+      "@type": "Dataset",
+      "name": "COVID-19-NY-SBU",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source CT series count",
+          "value": 1
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source collection inference",
+          "value": "Parsed from analysis-result summary text"
+        }
+      ]
+    },
+    {
+      "@type": "Dataset",
+      "name": "CPTAC-CM",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source CT series count",
+          "value": 1
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source collection inference",
+          "value": "Parsed from analysis-result summary text"
+        }
+      ]
+    },
+    {
+      "@type": "Dataset",
+      "name": "CPTAC-LSCC",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source CT series count",
+          "value": 3
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source collection inference",
+          "value": "Parsed from analysis-result summary text"
+        }
+      ]
+    },
+    {
+      "@type": "Dataset",
+      "name": "CPTAC-LUAD",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source CT series count",
+          "value": 1
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source collection inference",
+          "value": "Parsed from analysis-result summary text"
+        }
+      ]
+    },
+    {
+      "@type": "Dataset",
+      "name": "CPTAC-PDA",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source CT series count",
+          "value": 8
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source collection inference",
+          "value": "Parsed from analysis-result summary text"
+        }
+      ]
+    },
+    {
+      "@type": "Dataset",
+      "name": "CPTAC-UCEC",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source CT series count",
+          "value": 26
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source collection inference",
+          "value": "Parsed from analysis-result summary text"
+        }
+      ]
+    },
+    {
+      "@type": "Dataset",
+      "name": "HNSCC",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source CT series count",
+          "value": 17
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source collection inference",
+          "value": "Parsed from analysis-result summary text"
+        }
+      ]
+    },
+    {
+      "@type": "Dataset",
+      "name": "Head-Neck Cetuximab",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source CT series count",
+          "value": 12
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source collection inference",
+          "value": "Parsed from analysis-result summary text"
+        }
+      ]
+    },
+    {
+      "@type": "Dataset",
+      "name": "LIDC-IDRI",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source CT series count",
+          "value": 133
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source collection inference",
+          "value": "Parsed from analysis-result summary text"
+        }
+      ]
+    },
+    {
+      "@type": "Dataset",
+      "name": "Lung-PET-CT-Dx",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source CT series count",
+          "value": 17
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source collection inference",
+          "value": "Parsed from analysis-result summary text"
+        }
+      ]
+    },
+    {
+      "@type": "Dataset",
+      "name": "NSCLC Radiogenomics",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source CT series count",
+          "value": 7
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source collection inference",
+          "value": "Parsed from analysis-result summary text"
+        }
+      ]
+    },
+    {
+      "@type": "Dataset",
+      "name": "NSCLC-Radiomics",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source CT series count",
+          "value": 56
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source collection inference",
+          "value": "Parsed from analysis-result summary text"
+        }
+      ]
+    },
+    {
+      "@type": "Dataset",
+      "name": "NSCLC-Radiomics-Genomics",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source CT series count",
+          "value": 20
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source collection inference",
+          "value": "Parsed from analysis-result summary text"
+        }
+      ]
+    },
+    {
+      "@type": "Dataset",
+      "name": "Pancreas-CT",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source CT series count",
+          "value": 58
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source collection inference",
+          "value": "Parsed from analysis-result summary text"
+        }
+      ]
+    },
+    {
+      "@type": "Dataset",
+      "name": "QIN-HEADNECK",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source CT series count",
+          "value": 94
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source collection inference",
+          "value": "Parsed from analysis-result summary text"
+        }
+      ]
+    },
+    {
+      "@type": "Dataset",
+      "name": "Soft-tissue-Sarcoma",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source CT series count",
+          "value": 6
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source collection inference",
+          "value": "Parsed from analysis-result summary text"
+        }
+      ]
+    },
+    {
+      "@type": "Dataset",
+      "name": "TCGA-HNSC",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source CT series count",
+          "value": 1
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source collection inference",
+          "value": "Parsed from analysis-result summary text"
+        }
+      ]
+    },
+    {
+      "@type": "Dataset",
+      "name": "TCGA-LIHC",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source CT series count",
+          "value": 33
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source collection inference",
+          "value": "Parsed from analysis-result summary text"
+        }
+      ]
+    },
+    {
+      "@type": "Dataset",
+      "name": "TCGA-LUAD",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source CT series count",
+          "value": 2
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source collection inference",
+          "value": "Parsed from analysis-result summary text"
+        }
+      ]
+    },
+    {
+      "@type": "Dataset",
+      "name": "TCGA-LUSC",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source CT series count",
+          "value": 3
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source collection inference",
+          "value": "Parsed from analysis-result summary text"
+        }
+      ]
+    },
+    {
+      "@type": "Dataset",
+      "name": "TCGA-STAD",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source CT series count",
+          "value": 2
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source collection inference",
+          "value": "Parsed from analysis-result summary text"
+        }
+      ]
+    },
+    {
+      "@type": "Dataset",
+      "name": "TCGA-UCEC",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source CT series count",
+          "value": 1
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source collection inference",
+          "value": "Parsed from analysis-result summary text"
+        }
+      ]
+    },
+    {
+      "@type": "DataDownload",
+      "@id": "source-image-access-46293",
+      "name": "GC_manifest_SAROS_SourceImages_TCIARestricted_9-12-2023.csv",
+      "contentUrl": "https://www.cancerimagingarchive.net/wp-content/uploads/GC_manifest_SAROS_SourceImages_TCIARestricted_9-12-2023.csv",
+      "encodingFormat": [
+        "text/csv"
+      ],
+      "conditionsOfAccess": "Controlled-access TCIA data. Users must obtain authorization and follow the TCIA NIH Controlled Data Access Policy before accessing this row.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": [
+            "CreativeWork",
+            "odrl:Offer"
+          ],
+          "@id": "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/",
+          "name": "TCIA NIH Controlled Data Access Policy",
+          "url": "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/",
+          "description": "Access requires authorization under the TCIA NIH Controlled Data Access Policy.",
+          "odrl:permission": {
+            "@type": "odrl:Permission",
+            "odrl:action": {
+              "@id": "odrl:use",
+              "name": "Use"
+            },
+            "odrl:duty": {
+              "@type": "odrl:Duty",
+              "odrl:action": {
+                "@id": "odrl:obtainConsent",
+                "name": "Obtain required access approval"
+              }
+            }
+          }
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/",
+          "name": "NIH Controlled Data Access Policy",
+          "url": "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/"
+        }
+      ],
+      "contentSize": "29.75 GB",
+      "license": "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/",
+      "dateModified": "2023-11-20",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source image access row",
+          "value": true
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download id",
+          "value": "46293"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access level",
+          "value": "controlled"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA data types",
+          "value": [
+            "CT"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA file types",
+          "value": [
+            "DICOM"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download artifact role",
+          "value": "manifest"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access mechanism",
+          "value": "TCIA Data Retriever"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA downstream access system",
+          "value": "General Commons"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download metadata",
+          "value": "https://www.cancerimagingarchive.net/wp-content/uploads/SAROS_SourceImages_TCIARestricted_9-12-2023-nbia-digest.xlsx"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download requirements",
+          "value": "Download requires the TCIA Data Retriever"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA subjects",
+          "value": "174"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA studies",
+          "value": "174"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA series",
+          "value": "174"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA images",
+          "value": "56400"
+        }
+      ]
+    },
+    {
+      "@type": "DataDownload",
+      "@id": "source-image-access-46295",
+      "name": "SAROS_SourceImages_CCby30_9-12-2023.tcia",
+      "contentUrl": "https://www.cancerimagingarchive.net/wp-content/uploads/SAROS_SourceImages_CCby30_9-12-2023.tcia",
+      "encodingFormat": [
+        "text/plain",
+        "application/vnd.tcia.manifest"
+      ],
+      "conditionsOfAccess": "Open-access TCIA data. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by/3.0/",
+          "name": "CC BY 3.0",
+          "url": "https://creativecommons.org/licenses/by/3.0/"
+        }
+      ],
+      "contentSize": "66.88 GB",
+      "license": "https://creativecommons.org/licenses/by/3.0/",
+      "dateModified": "2023-11-20",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source image access row",
+          "value": true
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download id",
+          "value": "46295"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access level",
+          "value": "open"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA data types",
+          "value": [
+            "CT"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA file types",
+          "value": [
+            "DICOM"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download artifact role",
+          "value": "manifest"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access mechanism",
+          "value": "TCIA Data Retriever"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA downstream access system",
+          "value": "Imaging Data Commons (IDC)"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download metadata",
+          "value": "https://www.cancerimagingarchive.net/wp-content/uploads/SAROS_SourceImages_CCby30_9-12-2023-nbia-digest.xlsx"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download requirements",
+          "value": "Download requires the TCIA Data Retriever"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA subjects",
+          "value": "614"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA studies",
+          "value": "626"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA series",
+          "value": "632"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA images",
+          "value": "126796"
+        }
+      ]
+    },
+    {
+      "@type": "DataDownload",
+      "@id": "source-image-access-46297",
+      "name": "SAROS_SourceImages_CCbyNC30_9-12-2023.tcia",
+      "contentUrl": "https://www.cancerimagingarchive.net/wp-content/uploads/SAROS_SourceImages_CCbyNC30_9-12-2023.tcia",
+      "encodingFormat": [
+        "text/plain",
+        "application/vnd.tcia.manifest"
+      ],
+      "conditionsOfAccess": "Open-access TCIA data with a noncommercial-use license condition. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": [
+            "CreativeWork",
+            "odrl:Offer"
+          ],
+          "name": "Noncommercial use condition",
+          "description": "CC BY-NC 3.0 includes a noncommercial-use condition.",
+          "odrl:permission": {
+            "@type": "odrl:Permission",
+            "odrl:action": {
+              "@id": "odrl:use",
+              "name": "Use"
+            },
+            "odrl:constraint": {
+              "@type": "odrl:Constraint",
+              "name": "Non-commercial use only",
+              "odrl:operator": {
+                "@id": "odrl:eq"
+              },
+              "odrl:rightOperand": "noncommercial"
+            }
+          }
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by-nc/3.0/",
+          "name": "CC BY-NC 3.0",
+          "url": "https://creativecommons.org/licenses/by-nc/3.0/"
+        }
+      ],
+      "contentSize": "4.63 GB",
+      "license": "https://creativecommons.org/licenses/by-nc/3.0/",
+      "dateModified": "2023-11-20",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source image access row",
+          "value": true
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download id",
+          "value": "46297"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access level",
+          "value": "open_noncommercial"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA data types",
+          "value": [
+            "CT"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA file types",
+          "value": [
+            "DICOM"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download artifact role",
+          "value": "manifest"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access mechanism",
+          "value": "TCIA Data Retriever"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA downstream access system",
+          "value": "Imaging Data Commons (IDC)"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download metadata",
+          "value": "https://www.cancerimagingarchive.net/wp-content/uploads/SAROS_SourceImages_CCbyNC30_9-12-2023-nbia-digest.xlsx"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download requirements",
+          "value": "Download requires the TCIA Data Retriever"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA subjects",
+          "value": "76"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA studies",
+          "value": "76"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA series",
+          "value": "76"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA images",
+          "value": "8807"
+        }
+      ]
+    },
+    {
+      "@type": "DataDownload",
+      "@id": "source-image-access-46299",
+      "name": "SAROS_SourceImages_CCby40_9-12-2023.tcia",
+      "contentUrl": "https://www.cancerimagingarchive.net/wp-content/uploads/SAROS_SourceImages_CCby40_9-12-2023.tcia",
+      "encodingFormat": [
+        "text/plain",
+        "application/vnd.tcia.manifest"
+      ],
+      "conditionsOfAccess": "Open-access TCIA data. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by/4.0/",
+          "name": "CC BY 4.0",
+          "url": "https://creativecommons.org/licenses/by/4.0/"
+        }
+      ],
+      "contentSize": "1.4 GB",
+      "license": "https://creativecommons.org/licenses/by/4.0/",
+      "dateModified": "2023-11-20",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA source image access row",
+          "value": true
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download id",
+          "value": "46299"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access level",
+          "value": "open"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA data types",
+          "value": [
+            "CT"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA file types",
+          "value": [
+            "DICOM"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download artifact role",
+          "value": "manifest"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access mechanism",
+          "value": "TCIA Data Retriever"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA downstream access system",
+          "value": "Imaging Data Commons (IDC)"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download metadata",
+          "value": "https://www.cancerimagingarchive.net/wp-content/uploads/SAROS_SourceImages_CCby40_9-12-2023-nbia-digest.xlsx"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download requirements",
+          "value": "Download requires the TCIA Data Retriever"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA subjects",
+          "value": "18"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA studies",
+          "value": "18"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA series",
+          "value": "18"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA images",
+          "value": "2654"
+        }
+      ]
+    }
+  ],
+  "sameAs": [
+    "https://doi.org/10.25737/SZ96-ZG60"
+  ],
+  "identifier": [
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA short title",
+      "value": "SAROS"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA dataset type",
+      "value": "Analysis Result"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "DOI",
+      "value": "10.25737/SZ96-ZG60"
+    }
+  ],
+  "dateModified": "2024-03-07",
+  "citation": [
+    {
+      "@type": "CreativeWork",
+      "name": "Clark, K., Vendt, B., Smith, K., Freymann, J., Kirby, J., Koppel, P., Moore, S., Phillips, S., Maffitt, D., Pringle, M., Tarbox, L., & Prior, F. (2013). The Cancer Imaging Archive (TCIA): Maintaining and Operating a Public Information Repository . In Journal of Digital Imaging (Vol. 26, Issue 6, pp. 1045\u20131057). Springer Science and Business Media LLC. https://doi.org/10.1007/s10278-013-9622-7",
+      "identifier": "10.1007/s10278-013-9622-7",
+      "url": "https://doi.org/10.1007/s10278-013-9622-7"
+    },
+    {
+      "@type": "CreativeWork",
+      "name": "Koitka, S., Baldini, G., Kroll, L., van Landeghem, N., Pollok, O. B., Haubold, J., Pelka, O., Kim, M., Kleesiek, J., Nensa, F., & Hosch, R. (2024). SAROS: A dataset for whole-body region and organ segmentation in CT imaging . In Scientific Data (Vol. 11, Issue 1). Springer Science and Business Media LLC. https://doi.org/10.1038/s41597-024-03337-6",
+      "identifier": "10.1038/s41597-024-03337-6",
+      "url": "https://doi.org/10.1038/s41597-024-03337-6"
+    }
+  ],
+  "additionalProperty": [
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA access level",
+      "value": "open"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA license status",
+      "value": "Open (Creative Commons)"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA subjects",
+      "value": "882"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA program",
+      "value": "program_name: Community; related_collections: 4D-LUNG; AAPM-RT-MAC; ADRENAL-ACC-KI67-SEG; AML-CYTOMORPHOLOGY_LMU; AML-CYTOMORPHOLOGY_MLL_HELMHOLTZ; ANTI-PD-1_LUNG; ANTI-PD-1_MELANOMA; B-MODE-AND-CEUS-LIVER; BONE-MARROW-CYTOMORPHOLOGY_MLL_HELMHOLTZ_FRAUNHOFER; BRAIN-TR-GAMMAKNIFE; BRAIN-TUMOR-PROGRESSION; BREAST-CANCER-SCREENING-DBT; BREAST-DIAGNOSIS; BREAST-MRI-NACT-PILOT; BURDENKO-GBM-PROGRESSION; C4KC-KITS; CBIS-DDSM; CC-RADIOMICS-PHANTOM; CC-RADIOMICS-PHANTOM-2; CC-RADIOMICS-PHANTOM-3; CC-TUMOR-HETEROGENEITY; CMMD; C-NMC-2019; COLORECTAL-LIVER-METASTASES; CRC_FFPE-CODEX_CELLNEIGHS; CT-LYMPH-NODES; CT-ORG; CT-PHANTOM4RADIOMICS; CTPRED-SUNITINIB-PANNET; CT-VS-PET-VENTILATION-IMAGING; DRO-TOOLKIT; DUKE-BREAST-CANCER-MRI; EXACT; HCC-TACE-SEG; HEAD-NECK-PET-CT; HEAD-NECK-RADIOMICS-HN1; HNSCC; HNSCC-3DCT-RT; HNSCC-MIF-MIHC-COMPARISON; IVYGAP; LCTSC; LDCT-AND-PROJECTION-DATA; LGG-1P19QDELETION; LIDC-IDRI; LUNG-FUSED-CT-PATHOLOGY; LUNG-PET-CT-DX; LUNGCT-DIAGNOSIS; MIMM_SBILAB; MOUSE-ASTROCYTOMA; MOUSE-MAMMARY; MRI-DIR; NAF-PROSTATE; NSCLC-RADIOGENOMICS; NSCLC-RADIOMICS; NSCLC-RADIOMICS-GENOMICS; NSCLC-RADIOMICS-INTEROBSERVER1; OPC-RADIOMICS; OSTEOSARCOMA-TUMOR-ASSESSMENT; PANCREAS-CT; PANCREATIC-CT-CBCT-SEG; PEDIATRIC-CT-SEG; PELVIC-REFERENCE-DATA; POST-NAT-BRCA; PROSTATE-FUSED-MRI-PATHOLOGY; PROSTATE-3T; PROSTATE-ANATOMICAL-EDGE-CASES; PROSTATE-DIAGNOSIS; PROSTATE-MRI; PROSTATE-MRI-US-BIOPSY; PROSTATEX; REMBRANDT; SLN-BREAST; SN-AM; SOFT-TISSUE-SARCOMA; SPIE-AAPM-LUNG-CT-CHALLENGE; STAGEII-COLORECTAL-CT; UCSF-PDGM; UPENN-GBM; VESTIBULAR-SCHWANNOMA-SEG; RHUH-GBM; CATCH; CDD-CESM; DLBCL-MORPHOLOGY; FDG-PET-CT-LESIONS; GAMMAKNIFE-HIPPOCAMPAL; GLIS-RT; HEALTHY-TOTAL-BODY-CTS; HER2-TUMOR-ROIS; HUNGARIAN-COLORECTAL-SCREENING; MENINGIOMA-SEG-CLASS; NADT-PROSTATE; OVARIAN-BEVACIZUMAB-RESPONSE; PCA_BX_3DPATHOLOGY; RADCURE; REMIND; VESTIBULAR-SCHWANNOMA-MC-RC; HE-VS-MPM; BREAST-LESIONS-USG; ADVANCED-MRI-BREAST-LESIONS; PRETREAT-METSTOBRAIN-MASKS; PTRC-HGSOC; CODEX-IMAGING-OF-HCC; Spine-Mets-CT-SEG; DFCI-BCH-BWH-PEDs-HGG; HNC-IMRT-70-33; MEDIASTINAL-LYMPH-NODE-SEG; HISTOLOGYHSI-GB; BRATS-AFRICA; UCSD-PTGBM; RPA-Head-and-Neck-Lymph-Nodes; BCBM-RadioGenomics; MU-Glioma-Post; Brain-Mets-Lung-MRI-Path-Segs; Yale-Brain-Mets-Longitudinal; CT4Harmonization-Multicentric; PSMA-PET-CT-Lesions; Capsule-Endoscopy-SB-NET; HistologyHSI-BC-Recurrence; AURORA-Metastatic-Breast-Multiomics; VESTIBULAR-SCHWANNOMA-MC-RC2; HANCOCK; BraTS-PEDs; TP53-Precursor-Lesions; QIBA-CT-1C; QIBA-CT-LIVER-PHANTOM; UTSW-Glioma; Spinal-Multiple-Myeloma-SEG; UCSD-VS-Longitudinal; related_analysis_results: BRATS-TCGA-GBM; BRATS-TCGA-LGG; HEAD-NECK-CT-ATLAS; Oropharyngeal-Radiomics-Outcomes; MRQY-QUALITY-MEASURES; RSNA-ASNR-MICCAI-BRATS-2021; ISPY1-TUMOR-SEG-RADIOMICS; PROSTATEX-SEG-ZONES; IVYGAP-RADIOMICS; PLETHORA; PAN-CANCER-NUCLEI-SEG; TCGA-OV-PROTEOGENOMICS; RADIOMICS-TUMOR-PHENOTYPES; ISBI-MR-PROSTATE-2013; LUMINALB-BREAST-MR-ENHANCEMENT; SAROS; PROSTATEX-SEG-HIRES; DI-CUBED-REPORTS; CROWDS-CURE-2018; DICOM-SR-BREAST-CLINICAL; RIDER-LUNGCT-SEG; DICOM-LIDC-IDRI-NODULES; DICOM-GLIOMA-SEG; CROWDS-CURE-2017; TIL-WSI-TCGA; NSCLC-RADIOGENOMICS-STANFORD; LUAD-CT-SURVIVAL; TCGA-LGG-MASK; GLIOBLASTOMA-GENOMIC-MAPPING; PULMONARY-NODULES-SEGMENTATION; TCGA-GBM-QI-RADIOGENOMICS; TOMPEI-CMMD; NLST-New-lesion-LongCT; QIBA-VOLCT-1B"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA source collections",
+      "value": [
+        "ACRIN-FLT-Breast",
+        "ACRIN-HNSCC-FDG-PET/CT",
+        "ACRIN-NSCLC-FDG-PET",
+        "Anti-PD-1_Lung",
+        "Anti-PD-1_MELANOMA",
+        "C4KC-KiTS",
+        "COVID-19-NY-SBU",
+        "CPTAC-CM",
+        "CPTAC-LSCC",
+        "CPTAC-LUAD",
+        "CPTAC-PDA",
+        "CPTAC-UCEC",
+        "HNSCC",
+        "Head-Neck Cetuximab",
+        "LIDC-IDRI",
+        "Lung-PET-CT-Dx",
+        "NSCLC Radiogenomics",
+        "NSCLC-Radiomics",
+        "NSCLC-Radiomics-Genomics",
+        "Pancreas-CT",
+        "QIN-HEADNECK",
+        "Soft-tissue-Sarcoma",
+        "TCGA-HNSC",
+        "TCGA-LIHC",
+        "TCGA-LUAD",
+        "TCGA-LUSC",
+        "TCGA-STAD",
+        "TCGA-UCEC"
+      ]
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA source image access levels",
+      "value": [
+        "controlled",
+        "open",
+        "open_noncommercial"
+      ]
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA source image licenses",
+      "value": [
+        "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/",
+        "https://creativecommons.org/licenses/by/3.0/",
+        "https://creativecommons.org/licenses/by-nc/3.0/",
+        "https://creativecommons.org/licenses/by/4.0/"
+      ]
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA source image access systems",
+      "value": [
+        "General Commons",
+        "Imaging Data Commons (IDC)"
+      ]
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "Croissant generator",
+      "value": "tcia-croissant-prototype/0.1.0"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA snapshot schema version",
+      "value": "5"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA external resources",
+      "value": [
+        "Segmentations"
+      ]
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA has TCIA clinical download",
+      "value": false
+    }
+  ]
+}

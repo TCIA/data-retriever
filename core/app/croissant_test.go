@@ -2,6 +2,8 @@ package app
 
 import (
 	"context"
+	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -9,6 +11,12 @@ import (
 	"strings"
 	"testing"
 )
+
+type croissantRoundTripFunc func(*http.Request) (*http.Response, error)
+
+func (fn croissantRoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return fn(req)
+}
 
 func TestDecodeInputFileCroissantJSONLDDataFile(t *testing.T) {
 	outputDir := t.TempDir()
@@ -154,5 +162,196 @@ func TestDecodeInputFileCroissantSkipsTransferPackage(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "no actionable rows found") {
 		t.Fatalf("expected actionable-rows error, got: %v", err)
+	}
+}
+
+func TestCroissantExamplesDiscoverExternalRecordSetManifests(t *testing.T) {
+	tests := []struct {
+		name      string
+		fixture   string
+		fileNames []string
+	}{
+		{
+			name:      "4D-Lung public DICOM",
+			fixture:   "4d-lung.croissant.jsonld",
+			fileNames: []string{"42107-public-dicom-series.csv"},
+		},
+		{
+			name:    "CMB-AML mixed routes",
+			fixture: "cmb-aml.croissant.jsonld",
+			fileNames: []string{
+				"41647-aspera-pathology-files.csv",
+				"48105-public-dicom-series.csv",
+				"48107-controlled-drs-files.csv",
+			},
+		},
+		{
+			name:      "HNSCC PathDB",
+			fixture:   "hnscc-mif-mihc-comparison.croissant.jsonld",
+			fileNames: []string{"pathdb-images.csv"},
+		},
+		{
+			name:    "SAROS derived files",
+			fixture: "saros.croissant.jsonld",
+			fileNames: []string{
+				"46289-segmentation-files.csv",
+				"46291-data-records.csv",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			content, err := os.ReadFile(filepath.Join("testdata", "croissant-examples", tt.fixture))
+			if err != nil {
+				t.Fatalf("failed to read fixture: %v", err)
+			}
+			var doc map[string]interface{}
+			if err := json.Unmarshal(content, &doc); err != nil {
+				t.Fatalf("failed to parse fixture: %v", err)
+			}
+
+			rows := extractCroissantRows(doc)
+			manifestRows := make([]croissantDownloadRow, 0, len(rows))
+			for _, row := range rows {
+				if resolveCroissantArtifactRole(row) == croissantRoleManifest {
+					manifestRows = append(manifestRows, row)
+				}
+			}
+			if len(manifestRows) != len(tt.fileNames) {
+				t.Fatalf("expected %d external record-set manifests, got %d", len(tt.fileNames), len(manifestRows))
+			}
+			for i, expectedName := range tt.fileNames {
+				if manifestRows[i].FileName != expectedName {
+					t.Fatalf("row %d: expected %q, got %q", i, expectedName, manifestRows[i].FileName)
+				}
+				if resolveCroissantArtifactRole(manifestRows[i]) != croissantRoleManifest {
+					t.Fatalf("row %d: expected nested manifest role", i)
+				}
+				if !isCroissantDataRetrieverRow(manifestRows[i]) {
+					t.Fatalf("row %d: expected Data Retriever access mechanism", i)
+				}
+			}
+		})
+	}
+}
+
+func TestDecodeCroissantExampleExpandsPathDBRecordSet(t *testing.T) {
+	outputDir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(outputDir, "metadata"), 0755); err != nil {
+		t.Fatalf("failed to create metadata dir: %v", err)
+	}
+
+	client := &http.Client{Transport: croissantRoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if !strings.HasSuffix(req.URL.Path, "/pathdb-images.csv") {
+			return &http.Response{
+				StatusCode: http.StatusNotFound,
+				Status:     "404 Not Found",
+				Body:       io.NopCloser(strings.NewReader("not found")),
+				Header:     make(http.Header),
+				Request:    req,
+			}, nil
+		}
+		csv := "Collection,PatientID,SlideID,imageUrl,FileFormat,accessLevel,retrievalRoute\n" +
+			"HNSCC-mIF-mIHC-Comparison,HNSCC-01,slide-1,https://pathdb.example.org/slide-1.ome.tif,OME-TIFF,public,pathdb\n" +
+			"HNSCC-mIF-mIHC-Comparison,HNSCC-02,slide-2,https://pathdb.example.org/slide-2.svs,SVS,public,pathdb\n"
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Status:     "200 OK",
+			Body:       io.NopCloser(strings.NewReader(csv)),
+			Header:     http.Header{"Content-Type": []string{"text/csv"}},
+			Request:    req,
+		}, nil
+	})}
+
+	manifestPath := filepath.Join("testdata", "croissant-examples", "hnscc-mif-mihc-comparison.croissant.jsonld")
+	files, err := decodeCroissant(context.Background(), manifestPath, client, &Options{Output: outputDir}, Callbacks{}, map[string]string{})
+	if err != nil {
+		t.Fatalf("decodeCroissant returned error: %v", err)
+	}
+	if len(files) != 2 {
+		t.Fatalf("expected two PathDB file jobs, got %d", len(files))
+	}
+	if files[0].DownloadURL != "https://pathdb.example.org/slide-1.ome.tif" {
+		t.Fatalf("unexpected first PathDB URL: %s", files[0].DownloadURL)
+	}
+	if files[1].DownloadURL != "https://pathdb.example.org/slide-2.svs" {
+		t.Fatalf("unexpected second PathDB URL: %s", files[1].DownloadURL)
+	}
+}
+
+func TestInspectCroissantManifestGroupsSourceImagesAsOptional(t *testing.T) {
+	manifestPath := filepath.Join("..", "..", "benchmarkManifests", "examples", "croissant", "saros.analysis-result-nifti-derived.croissant.jsonld")
+	plan, err := InspectCroissantManifest(manifestPath)
+	if err != nil {
+		t.Fatalf("InspectCroissantManifest returned error: %v", err)
+	}
+
+	basedOn := make([]CroissantDownloadOption, 0)
+	for _, item := range plan.Items {
+		if item.Group == CroissantGroupIsBasedOn {
+			basedOn = append(basedOn, item)
+			if item.SelectedByDefault {
+				t.Fatalf("source-image component %q must be opt-in", item.ID)
+			}
+			if !item.Supported {
+				t.Fatalf("expected source-image component %q to be supported", item.ID)
+			}
+		}
+	}
+	if len(basedOn) != 4 {
+		t.Fatalf("expected 4 source-image components, got %d", len(basedOn))
+	}
+	if basedOn[0].ID != "source-image-access-46293" || basedOn[0].ContentSize != "29.75 GB" || basedOn[0].DownstreamSystem != "General Commons" {
+		t.Fatalf("unexpected first source-image component: %+v", basedOn[0])
+	}
+}
+
+func TestCroissantSourceImageSelection(t *testing.T) {
+	outputDir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(outputDir, "metadata"), 0755); err != nil {
+		t.Fatalf("failed to create metadata dir: %v", err)
+	}
+	manifestPath := filepath.Join(outputDir, "source-selection.jsonld")
+	manifest := `{
+		"@type": "sc:Dataset",
+		"name": "Selection Dataset",
+		"distribution": [{
+			"@id": "derived-file",
+			"name": "derived.csv",
+			"contentUrl": "https://example.org/derived.csv",
+			"additionalProperty": [{"name":"TCIA download artifact role","value":"data file"}]
+		}],
+		"isBasedOn": [{
+			"@type": "DataDownload",
+			"@id": "source-file",
+			"name": "source.zip",
+			"contentUrl": "https://example.org/source.zip",
+			"contentSize": "5 GB",
+			"additionalProperty": [{"name":"TCIA download artifact role","value":"data file"}]
+		}]
+	}`
+	if err := os.WriteFile(manifestPath, []byte(manifest), 0644); err != nil {
+		t.Fatalf("failed to write manifest: %v", err)
+	}
+
+	defaultFiles, err := decodeCroissant(context.Background(), manifestPath, http.DefaultClient, &Options{Output: outputDir}, Callbacks{}, map[string]string{})
+	if err != nil {
+		t.Fatalf("default decode returned error: %v", err)
+	}
+	if len(defaultFiles) != 1 || defaultFiles[0].FileName != "derived.csv" {
+		t.Fatalf("default selection should include only derived file: %+v", defaultFiles)
+	}
+
+	includedFiles, err := decodeCroissant(context.Background(), manifestPath, http.DefaultClient, &Options{
+		Output:                 outputDir,
+		CroissantIncludeGroups: []string{CroissantGroupIsBasedOn},
+		CroissantExcludeIDs:    []string{"derived-file"},
+	}, Callbacks{}, map[string]string{})
+	if err != nil {
+		t.Fatalf("selected decode returned error: %v", err)
+	}
+	if len(includedFiles) != 1 || includedFiles[0].FileName != "source.zip" {
+		t.Fatalf("explicit selection should include only source file: %+v", includedFiles)
 	}
 }

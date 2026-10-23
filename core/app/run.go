@@ -1,7 +1,6 @@
 package app
 
 import (
-	"bufio"
 	"context"
 	"encoding/csv"
 	"errors"
@@ -47,7 +46,7 @@ func (cb Callbacks) emitStdout(msg string) {
 		cb.Stdout(msg)
 		return
 	}
-	fmt.Fprint(os.Stdout, msg)
+	_, _ = fmt.Fprint(os.Stdout, msg)
 }
 
 func (cb Callbacks) emitStderr(msg string) {
@@ -55,7 +54,7 @@ func (cb Callbacks) emitStderr(msg string) {
 		cb.Stderr(msg)
 		return
 	}
-	fmt.Fprint(os.Stderr, msg)
+	_, _ = fmt.Fprint(os.Stderr, msg)
 }
 
 func (cb Callbacks) emitSeries(evt SeriesEvent) {
@@ -469,7 +468,7 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 	// Load the s5cmd series map
 	s5cmdMap, err := loadS5cmdSeriesMapFromCSVs(options.Output)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to load s5cmd series map from CSVs: %v", err)
+		return nil, fmt.Errorf("failed to load s5cmd series map from CSVs: %v", err)
 	}
 
 	ext := strings.ToLower(filepath.Ext(options.Input))
@@ -567,7 +566,13 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 		if err := copyFile(options.Input, destPath); err != nil {
 			Logger.Warnf("Failed to copy spreadsheet to metadata folder: %v", err)
 		}
-		InitCompletionStatus(options.Output, files)
+		metadataPath := filepath.Join(metaDir, "metadata.csv")
+		if err := WriteAllMetadataToCSV(files, metadataPath); err != nil {
+			return nil, fmt.Errorf("failed to write spreadsheet metadata: %w", err)
+		}
+		if err := InitCompletionStatus(options.Output, files); err != nil {
+			return nil, fmt.Errorf("failed to initialize completion status: %w", err)
+		}
 	}
 
 	stats := &DownloadStats{Total: int32(len(files)), StartTime: time.Now()}
@@ -640,7 +645,9 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 	close(inputChan)
 	wg.Wait()
 
-	MergeCompletionStatus(options.Output)
+	if err := MergeCompletionStatus(options.Output); err != nil {
+		Logger.Errorf("Failed to merge completion status: %v", err)
+	}
 
 	callbacks.emitProgress(stats, "Complete", options.Debug)
 	if !options.Debug {
@@ -766,7 +773,9 @@ feedLoop:
 	wg.Wait()
 
 	emitManifestMetadata(callbacks, options.Input, allFiles)
-	MergeCompletionStatus(options.Output)
+	if err := MergeCompletionStatus(options.Output); err != nil {
+		Logger.Errorf("Failed to merge completion status: %v", err)
+	}
 	callbacks.emitProgress(stats, "Complete", options.Debug)
 	if !options.Debug {
 		callbacks.emitStderr("\n")
@@ -860,7 +869,9 @@ func (wc *WorkerContext) applyExistingSeriesDisposition(fileInfo *FileInfo, disp
 
 	updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
 	wc.emitSeriesEvent(fileInfo, disposition.status, message, 100)
-	AppendCompletionStatus(wc.Options.Output, fileInfo.SeriesInstanceUID, nil, disposition.completionSkipped)
+	if err := AppendCompletionStatus(wc.Options.Output, fileInfo.SeriesInstanceUID, nil, disposition.completionSkipped); err != nil {
+		Logger.Warnf("Failed to record completion status for %s: %v", fileInfo.SeriesInstanceUID, err)
+	}
 }
 
 func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
@@ -982,9 +993,9 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 		wc.emitSeries(evt)
 	}
 
-	localAuth := *wc.Gen3Auth
+	localAuth := wc.Gen3Auth
 
-	err := fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.Options, onProgress, onDecompress, &localAuth)
+	err := fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.Options, onProgress, onDecompress, localAuth)
 
 	// Only Gen3/DRS downloads (downloadFromGen3) actually apply gen3Auth to
 	// the request — plain NBIA/TCIA, direct-URL, and S3 downloads ignore it
@@ -1013,8 +1024,8 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 		if savedPath := LoadSavedAuthFilePath(); savedPath != "" && savedPath != wc.Options.Auth {
 			if silentAuth, silentErr := NewGen3AuthManager(wc.HTTPClient, savedPath); silentErr == nil {
 				wc.Options.Auth = savedPath
-				localAuth = *silentAuth
-				err = fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.Options, onProgress, onDecompress, &localAuth)
+				localAuth = silentAuth
+				err = fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.Options, onProgress, onDecompress, localAuth)
 				if err == nil || !isAuthError(err) {
 					continue
 				}
@@ -1037,8 +1048,8 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 		}
 
 		wc.Options.Auth = resolvedPath
-		localAuth = *newAuth
-		err = fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.Options, onProgress, onDecompress, &localAuth)
+		localAuth = newAuth
+		err = fileInfo.Download(wc.Context, wc.Options.Output, wc.HTTPClient, wc.Options, onProgress, onDecompress, localAuth)
 		if err != nil && isAuthError(err) {
 			wc.Callbacks.emitEvent("auth-error", "Credentials file was rejected by the server (expired or insufficient permissions).")
 			wc.Options.AuthGate.PrepareRetry()
@@ -1134,32 +1145,6 @@ func (callbacks Callbacks) emitProgress(stats *DownloadStats, currentSeriesID st
 	updateProgress(stats, currentSeriesID, debugMode, callbacks)
 }
 
-func saveSeriesUIDsToFile(originalPath string, seriesUIDs []string) (string, error) {
-	dir := filepath.Dir(originalPath)
-	base := filepath.Base(originalPath)
-	outPath := filepath.Join(dir, base+".series_uids.txt")
-
-	f, err := os.Create(outPath)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-
-	writer := bufio.NewWriter(f)
-	defer writer.Flush()
-
-	for _, uid := range seriesUIDs {
-		if uid == "" {
-			continue
-		}
-		if _, err := writer.WriteString(uid + "\n"); err != nil {
-			return "", err
-		}
-	}
-
-	return outPath, nil
-}
-
 func decodeInputFile(ctx context.Context, filePath string, client *http.Client, options *Options, callbacks Callbacks, s5cmdMap map[string]string) ([]*FileInfo, int, error) {
 	return decodeInputFileInternal(ctx, filePath, client, options, callbacks, s5cmdMap, true)
 }
@@ -1240,7 +1225,9 @@ func combineWithTCIABatch(ctx context.Context, s5Files []*FileInfo, tciaUIDs []s
 		} else {
 			callbacks.emitStdout(fmt.Sprintf("Saved metadata for %d files to %s\n", len(files), csvPath))
 		}
-		InitCompletionStatus(options.Output, files)
+		if err := InitCompletionStatus(options.Output, files); err != nil {
+			Logger.Errorf("Failed to init completion status: %v", err)
+		}
 	}
 	return files
 }
@@ -1267,7 +1254,7 @@ func MergeCompletionStatus(outDir string) error {
 		return fmt.Errorf("could not open completion status CSV: %w", err)
 	}
 	statusRecords, err := csv.NewReader(sf).ReadAll()
-	sf.Close()
+	_ = sf.Close()
 	if err != nil {
 		return fmt.Errorf("could not read completion status CSV: %w", err)
 	}
@@ -1285,7 +1272,7 @@ func MergeCompletionStatus(outDir string) error {
 		return fmt.Errorf("could not open metadata CSV: %w", err)
 	}
 	records, err := csv.NewReader(mf).ReadAll()
-	mf.Close()
+	_ = mf.Close()
 	if err != nil {
 		return fmt.Errorf("could not read metadata CSV: %w", err)
 	}
@@ -1324,12 +1311,12 @@ func MergeCompletionStatus(outDir string) error {
 	}
 	w := csv.NewWriter(out)
 	if err := w.WriteAll(records); err != nil {
-		out.Close()
-		os.Remove(tmpPath)
+		_ = out.Close()
+		_ = os.Remove(tmpPath)
 		return fmt.Errorf("could not write merged metadata CSV: %w", err)
 	}
 	w.Flush()
-	out.Close()
+	_ = out.Close()
 
 	if err := os.Rename(tmpPath, metadataPath); err != nil {
 		return fmt.Errorf("could not replace metadata CSV: %w", err)

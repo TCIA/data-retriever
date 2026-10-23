@@ -10,6 +10,7 @@ import {
   GetDefaultOutputDirectory,
   RunCLIFetch,
   IsMac,
+  InspectCroissantManifest,
   GetPendingFileOpen,
   FrontendReady,
   ResolveAuth,
@@ -20,7 +21,7 @@ import {
   GetSupportInfo,
   OpenLogLocation,
 } from '../../wailsjs/go/main/App';
-import { main } from '../../wailsjs/go/models';
+import { app, main } from '../../wailsjs/go/models';
 import { DownloadStatusService } from './services/download-status.service';
 import { RunState, RunOptions } from './models/run-state.model';
 import { EventsOn, BrowserOpenURL, WindowSetBackgroundColour } from '../../wailsjs/runtime/runtime';
@@ -46,6 +47,10 @@ export class AppComponent implements OnInit, OnDestroy {
   authErrorMessage: string = '';
 
   private lastAutoSetOutputPath = '';
+  croissantPlan: app.CroissantDownloadPlan | null = null;
+  croissantSelectedIDs = new Set<string>();
+  croissantPlanLoading = false;
+  croissantPlanError = '';
 
   // ── Advanced options ──────────────────────────────────────────────────────
   showAdvancedModal = false;
@@ -118,6 +123,7 @@ export class AppComponent implements OnInit, OnDestroy {
     EventsOn('file-opened', (filePath: string) => {
       this.ngZone.run(() => {
         this.inputFilePath = filePath;
+        this.resetCroissantPlan();
         const baseName = this.baseNameOf(filePath);
         if (this.outputDirPath) {
           const parts = this.outputDirPath.split('/');
@@ -407,6 +413,7 @@ export class AppComponent implements OnInit, OnDestroy {
       .then((filePath: string) => {
         if (!filePath) return;
         this.inputFilePath = filePath;
+        this.resetCroissantPlan();
         const baseName = this.baseNameOf(filePath);
         if (!this.isMac) {
           if (!this.outputDirPath || this.outputDirPath === this.lastAutoSetOutputPath) {
@@ -421,6 +428,7 @@ export class AppComponent implements OnInit, OnDestroy {
             this.lastAutoSetOutputPath = this.outputDirPath;
           }
         }
+        if (this.isCroissantManifest(filePath)) void this.loadCroissantPlan();
       })
       .catch(err => console.error('Error selecting input file:', err));
   }
@@ -462,9 +470,26 @@ export class AppComponent implements OnInit, OnDestroy {
     return (BigInt(buf[0]) << 20n) | BigInt(buf[1] & 0xfffff);
   }
 
-  onFetchFiles() {
+  async onFetchFiles() {
     if (!this.inputFilePath || !this.outputDirPath) {
       console.warn('Please select both an input file and an output directory.');
+      return;
+    }
+
+    if (this.isCroissantManifest(this.inputFilePath) && !this.croissantPlan) {
+      await this.loadCroissantPlan();
+      if (!this.croissantPlan) return;
+    }
+
+    const croissantIncludeIDs = this.croissantPlan
+      ? this.croissantPlan.items.filter(item => item.supported && this.croissantSelectedIDs.has(item.id)).map(item => item.id)
+      : [];
+    const croissantExcludeIDs = this.croissantPlan
+      ? this.croissantPlan.items.filter(item => item.supported && !this.croissantSelectedIDs.has(item.id)).map(item => item.id)
+      : [];
+
+    if (this.croissantPlan && croissantIncludeIDs.length === 0) {
+      this.croissantPlanError = 'Select at least one supported download component.';
       return;
     }
 
@@ -479,6 +504,8 @@ export class AppComponent implements OnInit, OnDestroy {
       authFilePath: this.authFilePath,
       directoryMode: this.directoryMode,
       verbose: this.verbose,
+      croissantIncludeIDs,
+      croissantExcludeIDs,
     };
     this.downloadStatus.beginRun(runId, this.inputFilePath, this.outputDirPath, runOptions);
     this.closeManifestModal();
@@ -507,6 +534,8 @@ export class AppComponent implements OnInit, OnDestroy {
       this.authFilePath,
       this.directoryMode,
       this.verbose,
+      croissantIncludeIDs,
+      croissantExcludeIDs,
       Number(runId),
     ).catch(err => {
       this.ngZone.run(() => {
@@ -516,6 +545,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
     this.inputFilePath = '';
     this.lastAutoSetOutputPath = '';
+    this.resetCroissantPlan();
   }
 
   dismissUpdateBanner() {
@@ -574,6 +604,8 @@ export class AppComponent implements OnInit, OnDestroy {
       opts.authFilePath,
       opts.directoryMode,
       opts.verbose,
+      opts.croissantIncludeIDs ?? [],
+      opts.croissantExcludeIDs ?? [],
       Number(newRunId),
     ).catch(err => {
       this.ngZone.run(() => {
@@ -587,5 +619,70 @@ export class AppComponent implements OnInit, OnDestroy {
   private baseNameOf(filePath: string): string {
     const fileName = filePath.split(/[\\/]/).pop() ?? '';
     return fileName.replace(/\.[^/.]+$/, '');
+  }
+
+  isCroissantManifest(filePath: string): boolean {
+    return /\.(json|jsonld)$/i.test(filePath);
+  }
+
+  async loadCroissantPlan() {
+    this.resetCroissantPlan();
+    this.croissantPlanLoading = true;
+    try {
+      const plan = await InspectCroissantManifest(this.inputFilePath);
+      this.croissantPlan = plan;
+      for (const item of plan.items ?? []) {
+        if (item.supported && item.selectedByDefault) this.croissantSelectedIDs.add(item.id);
+      }
+    } catch (err) {
+      this.croissantPlanError = String(err);
+    } finally {
+      this.croissantPlanLoading = false;
+    }
+  }
+
+  resetCroissantPlan() {
+    this.croissantPlan = null;
+    this.croissantSelectedIDs = new Set<string>();
+    this.croissantPlanLoading = false;
+    this.croissantPlanError = '';
+  }
+
+  croissantItemsForGroup(group: string): app.CroissantDownloadOption[] {
+    return (this.croissantPlan?.items ?? []).filter(item => item.group === group);
+  }
+
+  croissantSupportedForGroup(group: string): app.CroissantDownloadOption[] {
+    return this.croissantItemsForGroup(group).filter(item => item.supported);
+  }
+
+  croissantGroupChecked(group: string): boolean {
+    const items = this.croissantSupportedForGroup(group);
+    return items.length > 0 && items.every(item => this.croissantSelectedIDs.has(item.id));
+  }
+
+  croissantGroupIndeterminate(group: string): boolean {
+    const items = this.croissantSupportedForGroup(group);
+    const selected = items.filter(item => this.croissantSelectedIDs.has(item.id)).length;
+    return selected > 0 && selected < items.length;
+  }
+
+  toggleCroissantGroup(group: string, checked: boolean) {
+    for (const item of this.croissantSupportedForGroup(group)) {
+      if (checked) this.croissantSelectedIDs.add(item.id);
+      else this.croissantSelectedIDs.delete(item.id);
+    }
+    this.croissantPlanError = '';
+  }
+
+  toggleCroissantItem(item: app.CroissantDownloadOption, checked: boolean) {
+    if (!item.supported) return;
+    if (checked) this.croissantSelectedIDs.add(item.id);
+    else this.croissantSelectedIDs.delete(item.id);
+    this.croissantPlanError = '';
+  }
+
+  croissantItemLabel(item: app.CroissantDownloadOption): string {
+    return item.name || item.fileName || item.id;
   }
 }

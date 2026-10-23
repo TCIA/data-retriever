@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -39,6 +40,13 @@ const (
 	// unresponsive TCIA API fails that batch instead of blocking the whole
 	// streaming download indefinitely.
 	tciaBatchTimeout = 3 * time.Minute
+
+	// downloadIdleTimeout cancels a download when no bytes have been
+	// received for this long, so a stalled connection (socket open, server
+	// gone quiet) eventually fails and frees the worker for a retry instead
+	// of hanging forever. It resets on every byte received, so a slow but
+	// healthy transfer of any size is never cut off by a wall-clock cap.
+	downloadIdleTimeout = 10 * time.Minute
 )
 
 // ProgressFunc is a callback for reporting download progress.
@@ -105,6 +113,44 @@ func (pr *progressReader) Read(p []byte) (int, error) {
 		}
 	}
 	return n, err
+}
+
+// idleTimeoutReader wraps an io.Reader and cancels cancel if no byte is
+// read within timeout. The timer resets on every read that returns data, so
+// a slow-but-active transfer runs indefinitely while a stalled one (no bytes
+// at all for timeout) is eventually aborted.
+type idleTimeoutReader struct {
+	r        io.Reader
+	timeout  time.Duration
+	timer    *time.Timer
+	cancel   context.CancelFunc
+	timedOut atomic.Bool
+}
+
+func newIdleTimeoutReader(r io.Reader, timeout time.Duration, cancel context.CancelFunc) *idleTimeoutReader {
+	it := &idleTimeoutReader{r: r, timeout: timeout, cancel: cancel}
+	it.timer = time.AfterFunc(timeout, func() {
+		it.timedOut.Store(true)
+		cancel()
+	})
+	return it
+}
+
+func (it *idleTimeoutReader) Read(p []byte) (int, error) {
+	n, err := it.r.Read(p)
+	if n > 0 {
+		it.timer.Reset(it.timeout)
+	}
+	if err != nil && it.timedOut.Load() {
+		return n, fmt.Errorf("connection stalled: no data received for %s", it.timeout)
+	}
+	return n, err
+}
+
+// Stop releases the idle timer. Call once the read loop is done, successful
+// or not, so the timer doesn't fire a no-op cancel after the fact.
+func (it *idleTimeoutReader) Stop() {
+	it.timer.Stop()
 }
 
 // MetadataStats tracks metadata fetching progress
@@ -442,7 +488,7 @@ func fetchTCIABatch(ctx context.Context, ids []string, httpClient *http.Client) 
 		logger.Errorf("Metadata request failed: %v", err)
 		return nil
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	content, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -560,7 +606,7 @@ func readTCIAXMLSeriesIDs(content []byte, httpClient *http.Client) ([]string, er
 		}
 
 		body, readErr := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if readErr != nil {
 			return nil, fmt.Errorf("failed to read XML manifest URL %q: %w", manifestURL, readErr)
 		}
@@ -731,7 +777,9 @@ func streamFilesFromSeriesIDs(ctx context.Context, prefixFiles []*FileInfo, seri
 		} else {
 			callbacks.emitStdout(fmt.Sprintf("Saved metadata for %d files to %s\n", len(allFiles), csvPath))
 		}
-		InitCompletionStatus(options.Output, allFiles)
+		if err := InitCompletionStatus(options.Output, allFiles); err != nil {
+			logger.Errorf("Failed to init completion status: %v", err)
+		}
 	}()
 
 	return total, out
@@ -762,7 +810,9 @@ func decodeTCIA(ctx context.Context, path string, httpClient *http.Client, optio
 	} else {
 		callbacks.emitStdout(fmt.Sprintf("Saved metadata for %d files to %s\n", len(files), csvPath))
 	}
-	InitCompletionStatus(options.Output, files)
+	if err := InitCompletionStatus(options.Output, files); err != nil {
+		logger.Errorf("Failed to init completion status: %v", err)
+	}
 
 	return files
 }
@@ -978,7 +1028,7 @@ func extractAndVerifyZip(zipPath string, destDir string, expectedSize int64, md5
 	if err != nil {
 		return fmt.Errorf("failed to open zip: %v", err)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	// Create destination directory
 	if err := os.MkdirAll(destDir, 0755); err != nil {
@@ -1024,7 +1074,7 @@ func extractAndVerifyZip(zipPath string, destDir string, expectedSize int64, md5
 
 		targetFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
 		if err != nil {
-			fileReader.Close()
+			_ = fileReader.Close()
 			return fmt.Errorf("failed to create file: %v", err)
 		}
 
@@ -1045,8 +1095,8 @@ func extractAndVerifyZip(zipPath string, destDir string, expectedSize int64, md5
 		}
 
 		written, err := io.Copy(writer, fileReader)
-		fileReader.Close()
-		targetFile.Close()
+		_ = fileReader.Close()
+		_ = targetFile.Close()
 
 		if err != nil {
 			return fmt.Errorf("failed to extract file %s: %v", file.Name, err)
@@ -1129,7 +1179,7 @@ func parseMD5HashesCSV(zipPath string) (map[string]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open zip: %v", err)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	// Find md5hashes.csv in the ZIP
 	for _, file := range reader.File {
@@ -1138,7 +1188,7 @@ func parseMD5HashesCSV(zipPath string) (map[string]string, error) {
 			if err != nil {
 				return nil, fmt.Errorf("failed to open md5hashes.csv: %v", err)
 			}
-			defer rc.Close()
+			defer func() { _ = rc.Close() }()
 
 			// Parse CSV
 			csvReader := csv.NewReader(rc)
@@ -1166,9 +1216,6 @@ func parseMD5HashesCSV(zipPath string) (map[string]string, error) {
 }
 
 func (info *FileInfo) GetMeta(ctx context.Context, output string) error {
-	if ctx == nil {
-		ctx = context.Background()
-	}
 	logger.Debugf("getting meta information and save to %s", output)
 	f, err := os.OpenFile(info.MetaFile(output), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
 	if err != nil {
@@ -1190,9 +1237,10 @@ func (info *FileInfo) Download(ctx context.Context, output string, httpClient *h
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	// Add rate limiting delay between requests
-	if options.RequestDelay > 0 {
-		time.Sleep(options.RequestDelay)
+	// Ordinary downloads rely on the worker and per-host connection limits.
+	// Server-friendly mode sets RequestDelay to add an extra conservative pause.
+	if err := waitWithContext(ctx, options.RequestDelay); err != nil {
+		return err
 	}
 	return info.DownloadWithRetry(ctx, output, httpClient, options, onProgress, onDecompress, gen3Auth)
 }
@@ -1204,43 +1252,130 @@ func (info *FileInfo) DownloadWithRetry(ctx context.Context, output string, http
 	}
 	var lastErr error
 	delay := options.RetryDelay
+	var retryAfter time.Duration
+
+	recordStatus := func(dlErr error) {
+		if statusErr := AppendCompletionStatus(output, info.SeriesInstanceUID, dlErr, false); statusErr != nil {
+			logger.Warnf("Failed to record completion status for %s: %v", info.SeriesInstanceUID, statusErr)
+		}
+	}
 
 	for attempt := 0; attempt <= options.MaxRetries; attempt++ {
 		if attempt > 0 {
-			logger.Infof("Retrying download %s (attempt %d/%d) after %v delay", info.SeriesInstanceUID, attempt, options.MaxRetries, delay)
-			time.Sleep(delay)
+			wait := delay
+			if retryAfter > wait {
+				wait = retryAfter
+			}
+			logger.Infof("Retrying download %s (attempt %d/%d) after %v delay", info.SeriesInstanceUID, attempt, options.MaxRetries, wait)
+			if err := waitWithContext(ctx, wait); err != nil {
+				recordStatus(err)
+				return err
+			}
 			delay *= 2 // Exponential backoff
 		}
 
 		if ctx.Err() != nil {
-			AppendCompletionStatus(output, info.SeriesInstanceUID, ctx.Err(), false)
+			recordStatus(ctx.Err())
 			return ctx.Err()
 		}
 
 		err := info.doDownload(ctx, output, httpClient, options, onProgress, onDecompress, gen3Auth)
 		if err == nil {
-			AppendCompletionStatus(output, info.SeriesInstanceUID, nil, false)
+			recordStatus(nil)
 			return nil
 		}
 
 		lastErr = err
+		retryAfter = retryAfterFromError(err)
 		logger.Warnf("Download %s failed (attempt %d/%d): %v", info.SeriesInstanceUID, attempt+1, options.MaxRetries+1, err)
 
 		// Check if error is retryable
 		if !isRetryableError(err) {
 			logger.Errorf("Non-retryable error for %s: %v", info.SeriesInstanceUID, err)
-			AppendCompletionStatus(output, info.SeriesInstanceUID, err, false)
+			recordStatus(err)
 			return err
 		}
 	}
 
 	finalErr := fmt.Errorf("download failed after %d attempts: %v", options.MaxRetries+1, lastErr)
-	AppendCompletionStatus(output, info.SeriesInstanceUID, finalErr, false)
+	recordStatus(finalErr)
 	return finalErr
+}
+
+func waitWithContext(ctx context.Context, delay time.Duration) error {
+	if delay <= 0 {
+		return nil
+	}
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+type httpStatusError struct {
+	statusCode int
+	status     string
+	retryAfter time.Duration
+}
+
+func (e *httpStatusError) Error() string {
+	return fmt.Sprintf("HTTP error %d: %s", e.statusCode, e.status)
+}
+
+func newHTTPStatusError(resp *http.Response, now time.Time) error {
+	return &httpStatusError{
+		statusCode: resp.StatusCode,
+		status:     resp.Status,
+		retryAfter: parseRetryAfter(resp.Header.Get("Retry-After"), now),
+	}
+}
+
+func parseRetryAfter(value string, now time.Time) time.Duration {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return 0
+	}
+	if seconds, err := strconv.ParseInt(value, 10, 64); err == nil {
+		if seconds <= 0 {
+			return 0
+		}
+		return time.Duration(seconds) * time.Second
+	}
+	when, err := http.ParseTime(value)
+	if err != nil || !when.After(now) {
+		return 0
+	}
+	return when.Sub(now)
+}
+
+func retryAfterFromError(err error) time.Duration {
+	var statusErr *httpStatusError
+	if errors.As(err, &statusErr) {
+		return statusErr.retryAfter
+	}
+	return 0
 }
 
 // isRetryableError checks if an error is retryable
 func isRetryableError(err error) bool {
+	var statusErr *httpStatusError
+	if errors.As(err, &statusErr) {
+		switch statusErr.statusCode {
+		case http.StatusTooManyRequests,
+			http.StatusInternalServerError,
+			http.StatusBadGateway,
+			http.StatusServiceUnavailable,
+			http.StatusGatewayTimeout:
+			return true
+		default:
+			return false
+		}
+	}
+
 	// Check for network errors, timeouts, and certain HTTP status codes
 	errStr := err.Error()
 
@@ -1302,47 +1437,6 @@ func (info *FileInfo) doDownload(ctx context.Context, output string, httpClient 
 		return info.downloadDirect(ctx, output, httpClient, options, onProgress, gen3Auth)
 	}
 	return info.downloadFromTCIA(ctx, output, httpClient, options, onProgress, onDecompress)
-}
-
-func downloadS3Object(ctx context.Context, client *s3.Client, bucket, key, targetDir string, onProgress ProgressFunc) error {
-	input := &s3.GetObjectInput{
-		Bucket: &bucket,
-		Key:    &key,
-	}
-
-	output, err := client.GetObject(ctx, input)
-	if err != nil {
-		return fmt.Errorf("failed to get S3 object %s/%s: %w", bucket, key, err)
-	}
-	defer output.Body.Close()
-
-	localPath := filepath.Join(targetDir, filepath.Base(key))
-
-	f, err := os.Create(localPath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	downloader := manager.NewDownloader(client, func(d *manager.Downloader) {
-		d.PartSize = 10 * 1024 * 1024 // 10 MB parts
-		d.Concurrency = 16            // parallel part downloads
-	})
-
-	numBytes, err := downloader.Download(ctx, f, &s3.GetObjectInput{
-		Bucket: &bucket,
-		Key:    &key,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to download %s/%s: %w", bucket, key, err)
-	}
-
-	// call onProgress once with total bytes (optional)
-	if onProgress != nil {
-		onProgress(100.0, numBytes, numBytes)
-	}
-
-	return nil
 }
 
 func (info *FileInfo) downloadFromS3(
@@ -1469,9 +1563,9 @@ func (info *FileInfo) downloadFromS3(
 						Bucket: &bucket,
 						Key:    aws.String(obj.key),
 					})
-					f.Close()
+					_ = f.Close()
 					if err != nil {
-						os.Remove(tmpPath)
+						_ = os.Remove(tmpPath)
 						select {
 						case errCh <- fmt.Errorf("failed to download s3://%s/%s: %w", bucket, obj.key, err):
 						default:
@@ -1480,7 +1574,7 @@ func (info *FileInfo) downloadFromS3(
 					}
 
 					if err := os.Rename(tmpPath, localPath); err != nil {
-						os.Remove(tmpPath)
+						_ = os.Remove(tmpPath)
 						select {
 						case errCh <- fmt.Errorf("could not move %s into place: %w", filepath.Base(obj.key), err):
 						default:
@@ -1543,14 +1637,14 @@ func (info *FileInfo) downloadFromS3(
 		Bucket: &bucket,
 		Key:    &key,
 	})
-	f.Close()
+	_ = f.Close()
 	if err != nil {
-		os.Remove(tmpPath)
+		_ = os.Remove(tmpPath)
 		return fmt.Errorf("failed to download s3://%s/%s: %w", bucket, key, err)
 	}
 
 	if err := os.Rename(tmpPath, localPath); err != nil {
-		os.Remove(tmpPath)
+		_ = os.Remove(tmpPath)
 		return fmt.Errorf("could not move downloaded file into place: %w", err)
 	}
 
@@ -1609,7 +1703,7 @@ func (info *FileInfo) downloadFromGen3(ctx context.Context, output string, httpC
 	objectID = url.PathEscape(objectID)
 	downloadURL, err := getGen3DownloadURL(httpClient, commonsURL, objectID, gen3Auth)
 	if err != nil {
-		return fmt.Errorf("failed to get download URL from Gen3: %v", err)
+		return fmt.Errorf("failed to get download URL from Gen3: %w", err)
 	}
 
 	// Download the file
@@ -1709,10 +1803,10 @@ func getGen3AccessToken(client *http.Client, commonsURL, apiKey string) (string,
 	if err != nil {
 		return "", fmt.Errorf("failed to make request for access token: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("Gen3 access token endpoint returned status %s", resp.Status)
+		return "", newHTTPStatusError(resp, time.Now())
 	}
 
 	var result map[string]string
@@ -1725,7 +1819,7 @@ func getGen3AccessToken(client *http.Client, commonsURL, apiKey string) (string,
 		return "", fmt.Errorf("no 'access_token' found in Gen3 response")
 	}
 
-	logger.Infof("Successfully retrieved Gen3 access token: %s", accessToken)
+	logger.Info("Successfully retrieved Gen3 access token")
 	return accessToken, nil
 }
 
@@ -1742,7 +1836,7 @@ func getGen3DownloadURL(client *http.Client, commonsURL, objectID string, gen3Au
 	if gen3Auth != nil && gen3Auth.apiKey != "" {
 		accessToken, err := gen3Auth.GetAccessToken(commonsURL)
 		if err != nil {
-			return "", fmt.Errorf("failed to get access token for %s: %v", commonsURL, err)
+			return "", fmt.Errorf("failed to get access token for %s: %w", commonsURL, err)
 		}
 		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 	}
@@ -1759,10 +1853,10 @@ func getGen3DownloadURL(client *http.Client, commonsURL, objectID string, gen3Au
 	if err != nil {
 		return "", fmt.Errorf("failed to make request to Gen3 API: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("Gen3 API returned status %s", resp.Status)
+		return "", newHTTPStatusError(resp, time.Now())
 	}
 
 	var result map[string]interface{}
@@ -1796,7 +1890,7 @@ func (info *FileInfo) downloadDirect(ctx context.Context, output string, httpCli
 	// Clean up any previous temporary files
 	if _, err := os.Stat(tempPath); err == nil {
 		logger.Debugf("Removing incomplete download: %s", tempPath)
-		os.Remove(tempPath)
+		_ = os.Remove(tempPath)
 	}
 
 	req, err := http.NewRequest("GET", info.DownloadURL, nil)
@@ -1804,8 +1898,11 @@ func (info *FileInfo) downloadDirect(ctx context.Context, output string, httpCli
 		return fmt.Errorf("failed to create request: %v", err)
 	}
 
-	// Use a reasonable timeout for direct downloads
-	reqCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
+	// No wall-clock deadline: large/slow direct downloads must be allowed to
+	// run as long as they need. reqCtx is instead cancelled by the idle
+	// timer below if the connection stalls, and still respects ctx
+	// cancellation (e.g. the user cancelling the batch).
+	reqCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	req = req.WithContext(reqCtx)
 
@@ -1813,10 +1910,10 @@ func (info *FileInfo) downloadDirect(ctx context.Context, output string, httpCli
 	if err != nil {
 		return fmt.Errorf("failed to do request: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("HTTP error %d: %s", resp.StatusCode, resp.Status)
+		return newHTTPStatusError(resp, time.Now())
 	}
 
 	f, err := os.OpenFile(tempPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
@@ -1824,16 +1921,23 @@ func (info *FileInfo) downloadDirect(ctx context.Context, output string, httpCli
 		return fmt.Errorf("failed to open file: %v", err)
 	}
 	defer func() {
-		f.Close()
+		_ = f.Close()
 		if err != nil {
-			os.Remove(tempPath)
+			_ = os.Remove(tempPath)
 		}
 	}()
 
-	// Wrap with progress reader if callback provided and content length known
-	var reader io.Reader = resp.Body
-	if onProgress != nil && resp.ContentLength > 0 {
-		reader = newProgressReader(resp.Body, resp.ContentLength, onProgress)
+	idleBody := newIdleTimeoutReader(resp.Body, downloadIdleTimeout, cancel)
+	defer idleBody.Stop()
+
+	// Wrap with progress reader whenever a callback is provided, even when
+	// Content-Length is unknown (e.g. chunked responses report -1): the
+	// reader still emits running byte counts with total=0 in that case, so
+	// the caller can compute a live speed instead of waiting on a total that
+	// never arrives.
+	var reader io.Reader = idleBody
+	if onProgress != nil {
+		reader = newProgressReader(idleBody, resp.ContentLength, onProgress)
 	}
 
 	written, err := io.Copy(f, reader)
@@ -1886,7 +1990,7 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 	// Clean up any previous temporary files
 	if _, err := os.Stat(tempZipPath); err == nil {
 		logger.Debugf("Removing incomplete download: %s", tempZipPath)
-		os.Remove(tempZipPath)
+		_ = os.Remove(tempZipPath)
 	}
 
 	// For extraction mode, also clean up temporary extraction directory
@@ -1894,7 +1998,7 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 		tempExtractDir := finalPath + ".uncompressed.tmp"
 		if _, err := os.Stat(tempExtractDir); err == nil {
 			logger.Debugf("Removing incomplete extraction: %s", tempExtractDir)
-			os.RemoveAll(tempExtractDir)
+			_ = os.RemoveAll(tempExtractDir)
 		}
 	}
 
@@ -1903,22 +2007,11 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 		return fmt.Errorf("failed to create request: %v", err)
 	}
 
-	// Set timeout based on file size (if known)
-	var timeout time.Duration
-	if info.FileSize != "" {
-		fileSize, _ := strconv.ParseInt(info.FileSize, 10, 64)
-		// Calculate timeout: base 5 minutes + 1 minute per 100MB
-		timeout = 5*time.Minute + time.Duration(fileSize/(100*1024*1024))*time.Minute
-		// Cap at 60 minutes for very large files
-		if timeout > 60*time.Minute {
-			timeout = 60 * time.Minute
-		}
-	} else {
-		// Default timeout for unknown size
-		timeout = 30 * time.Minute
-	}
-	logger.Debugf("Setting download timeout to %v for %s", timeout, info.SeriesInstanceUID)
-	reqCtx, cancel := context.WithTimeout(ctx, timeout)
+	// No wall-clock deadline: large/slow downloads must be allowed to run as
+	// long as they need. reqCtx is instead cancelled by the idle timer below
+	// if the connection stalls, and still respects ctx cancellation (e.g.
+	// the user cancelling the batch).
+	reqCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	req = req.WithContext(reqCtx)
 
@@ -1926,7 +2019,7 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 	if err != nil {
 		return fmt.Errorf("failed to do request: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Log response headers for debugging
 	logger.Debugf("Response headers for %s: Status=%s, Content-Length=%d, Transfer-Encoding=%s",
@@ -1934,7 +2027,7 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 
 	// Check HTTP status
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("HTTP error %d: %s", resp.StatusCode, resp.Status)
+		return newHTTPStatusError(resp, time.Now())
 	}
 
 	// Create new temp ZIP file
@@ -1943,13 +2036,13 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 		return fmt.Errorf("failed to open file: %v", err)
 	}
 	defer func() {
-		f.Close()
+		_ = f.Close()
 		// Clean up temp files on error
 		if err != nil {
-			os.Remove(tempZipPath)
+			_ = os.Remove(tempZipPath)
 			if !options.NoDecompress {
 				tempExtractDir := finalPath + ".uncompressed.tmp"
-				os.RemoveAll(tempExtractDir)
+				_ = os.RemoveAll(tempExtractDir)
 			}
 		}
 	}()
@@ -1961,8 +2054,11 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 		logger.Debugf("Downloading %s (size: unknown)", info.SeriesInstanceUID)
 	}
 
+	idleBody := newIdleTimeoutReader(resp.Body, downloadIdleTimeout, cancel)
+	defer idleBody.Stop()
+
 	// Buffer the response body for better handling of chunked transfers
-	bufferedReader := bufio.NewReaderSize(resp.Body, 64*1024) // 64KB buffer
+	bufferedReader := bufio.NewReaderSize(idleBody, 64*1024) // 64KB buffer
 
 	// Determine total size for progress tracking
 	// Prefer Content-Length from response, fall back to estimated compressed size from metadata
@@ -1976,9 +2072,11 @@ func (info *FileInfo) downloadFromTCIA(ctx context.Context, output string, httpC
 		}
 	}
 
-	// Wrap with progress reader if callback provided and we have a size estimate
+	// Wrap with progress reader whenever a callback is provided, even
+	// without a size estimate, so byte counts (and therefore speed) are
+	// still reported; see downloadDirect for the same reasoning.
 	var reader io.Reader = bufferedReader
-	if onProgress != nil && totalSize > 0 {
+	if onProgress != nil {
 		reader = newProgressReader(bufferedReader, totalSize, onProgress)
 	}
 
@@ -2105,7 +2203,7 @@ func SeriesUpToDate(seriesDir string) bool {
 		// md5hashes.csv doesn't exist → need to download
 		return false
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	reader := csv.NewReader(f)
 	records, err := reader.ReadAll()
@@ -2128,7 +2226,7 @@ func SeriesUpToDate(seriesDir string) bool {
 
 		h := md5.New()
 		_, err = io.Copy(h, file)
-		file.Close()
+		_ = file.Close()
 		if err != nil {
 			return false
 		}

@@ -44,7 +44,7 @@ func UnTar(dst string, r io.Reader) error {
 			}
 
 			if _, err := io.Copy(f, tr); err != nil {
-				f.Close()
+				_ = f.Close()
 				return err
 			}
 
@@ -69,13 +69,13 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 
 	out, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
 	if _, err = io.Copy(out, in); err != nil {
 		return err
@@ -99,7 +99,7 @@ func WriteAllMetadataToCSV(files []*FileInfo, outPath string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	writer := csv.NewWriter(f)
 	defer writer.Flush()
@@ -163,80 +163,6 @@ func WriteAllMetadataToCSV(files []*FileInfo, outPath string) error {
 }
 
 
-// writeMetadataToCSV writes/appends a slice of FileInfo structs to a CSV file.
-func writeMetadataToCSV(filePath string, fileInfos []*FileInfo) error {
-	// Check if file exists to determine if we need to write a header
-	stat, err := os.Stat(filePath)
-	writeHeader := os.IsNotExist(err)
-
-	// Open with read/write/create permissions.
-	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0644)
-	if err != nil {
-		return fmt.Errorf("could not open/create CSV file: %w", err)
-	}
-	defer file.Close()
-
-	// If the file is not new and not empty, check for a trailing newline.
-	if !writeHeader && stat.Size() > 0 {
-		buf := make([]byte, 1)
-		// Read the last byte.
-		if _, err := file.ReadAt(buf, stat.Size()-1); err == nil {
-			// If it's not a newline, we need to add one.
-			if buf[0] != '\n' {
-				// Seek to the end and write a newline.
-				if _, err := file.Seek(0, io.SeekEnd); err != nil {
-					return fmt.Errorf("could not seek to end of file to add newline: %w", err)
-				}
-				if _, err := file.WriteString("\n"); err != nil {
-					return fmt.Errorf("failed to write missing newline: %w", err)
-				}
-			}
-		}
-	}
-
-	// Ensure we are at the end of the file before letting the CSV writer take over.
-	if _, err := file.Seek(0, io.SeekEnd); err != nil {
-		return fmt.Errorf("could not seek to end of file for writing: %w", err)
-	}
-
-	writer := csv.NewWriter(file)
-	defer writer.Flush()
-
-	header := []string{
-		"SeriesInstanceUID", "PatientID", "Collection", "Modality",
-		"StudyInstanceUID", "SeriesDescription", "SeriesNumber",
-		"Manufacturer", "ImageCount", "FileSize", 
-		"OriginalS5cmdURI",
-	}
-
-	if writeHeader {
-		if err := writer.Write(header); err != nil {
-			return fmt.Errorf("failed to write CSV header: %w", err)
-		}
-	}
-
-	// Write rows
-	for _, info := range fileInfos {
-		record := []string{
-			info.SeriesInstanceUID,
-			info.Collection,
-			info.Modality,
-			info.StudyInstanceUID,
-			info.SeriesDescription,
-			info.SeriesNumber,
-			info.Manufacturer,
-			info.ImageCount,
-			info.FileSize,
-			info.OriginalS5cmdURI,
-		}
-		if err := writer.Write(record); err != nil {
-			return fmt.Errorf("failed to write CSV record for series %s: %w", info.SeriesInstanceUID, err)
-		}
-	}
-
-	return nil
-}
-
 // InitCompletionStatus creates the completion status CSV with all series set to "incomplete".
 func InitCompletionStatus(outDir string, files []*FileInfo) error {
     statusMu.Lock()
@@ -248,7 +174,7 @@ func InitCompletionStatus(outDir string, files []*FileInfo) error {
     if err != nil {
         return fmt.Errorf("could not create completion status file: %w", err)
     }
-    defer f.Close()
+    defer func() { _ = f.Close() }()
 
     w := csv.NewWriter(f)
     defer w.Flush()
@@ -287,7 +213,7 @@ func AppendCompletionStatus(outDir string, seriesUID string, dlErr error, skippe
         return fmt.Errorf("could not open completion status file: %w", err)
     }
     records, err := csv.NewReader(f).ReadAll()
-    f.Close()
+    _ = f.Close()
     if err != nil {
         return fmt.Errorf("could not read completion status file: %w", err)
     }
@@ -308,12 +234,12 @@ func AppendCompletionStatus(outDir string, seriesUID string, dlErr error, skippe
     }
     w := csv.NewWriter(out)
     if err := w.WriteAll(records); err != nil {
-        out.Close()
-        os.Remove(tmpPath)
+        _ = out.Close()
+        _ = os.Remove(tmpPath)
         return fmt.Errorf("could not write completion status file: %w", err)
     }
     w.Flush()
-    out.Close()
+    _ = out.Close()
 
     return os.Rename(tmpPath, filePath)
 }

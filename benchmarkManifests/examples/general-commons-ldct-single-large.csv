@@ -1,0 +1,2 @@
+drs_uri,name,collection,patient_id,modality,file_size_bytes,source_manifest_url
+drs://nci-crdc.datacommons.io/dg.4DFC/430c816a-02c8-5bf5-9825-527118551a13,1.2.840.113713.4.2.70113640310596978706969120101849436820.zip,LDCT-and-Projection-data,N293,CT,4954943258,https://www.cancerimagingarchive.net/wp-content/uploads/GC_manifest_LDCT-and-Projection-data_20260326.csv

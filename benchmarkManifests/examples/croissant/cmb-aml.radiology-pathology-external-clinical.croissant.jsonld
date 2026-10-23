@@ -1,0 +1,1016 @@
+{
+  "@context": {
+    "@language": "en",
+    "@vocab": "https://schema.org/",
+    "arrayShape": "cr:arrayShape",
+    "citeAs": "cr:citeAs",
+    "column": "cr:column",
+    "conformsTo": "dct:conformsTo",
+    "containedIn": "cr:containedIn",
+    "cr": "http://mlcommons.org/croissant/",
+    "rai": "http://mlcommons.org/croissant/RAI/",
+    "data": {
+      "@id": "cr:data",
+      "@type": "@json"
+    },
+    "dataType": {
+      "@id": "cr:dataType",
+      "@type": "@vocab"
+    },
+    "dct": "http://purl.org/dc/terms/",
+    "description": {
+      "@container": "@language"
+    },
+    "equivalentProperty": "cr:equivalentProperty",
+    "examples": {
+      "@id": "cr:examples",
+      "@type": "@json"
+    },
+    "extract": "cr:extract",
+    "field": "cr:field",
+    "fileProperty": "cr:fileProperty",
+    "fileObject": "cr:fileObject",
+    "fileSet": "cr:fileSet",
+    "format": "cr:format",
+    "includes": "cr:includes",
+    "isArray": "cr:isArray",
+    "isLiveDataset": "cr:isLiveDataset",
+    "jsonPath": "cr:jsonPath",
+    "key": "cr:key",
+    "md5": "cr:md5",
+    "name": {
+      "@container": "@language"
+    },
+    "parentField": "cr:parentField",
+    "path": "cr:path",
+    "recordSet": "cr:recordSet",
+    "references": "cr:references",
+    "regex": "cr:regex",
+    "repeated": "cr:repeated",
+    "replace": "cr:replace",
+    "samplingRate": "cr:samplingRate",
+    "sc": "https://schema.org/",
+    "separator": "cr:separator",
+    "source": "cr:source",
+    "subField": "cr:subField",
+    "transform": "cr:transform",
+    "odrl": "http://www.w3.org/ns/odrl/2/",
+    "sdVersion": "cr:sdVersion"
+  },
+  "@type": "sc:Dataset",
+  "@id": "https://doi.org/10.7937/PCTE-6M66",
+  "conformsTo": "http://mlcommons.org/croissant/1.1",
+  "name": "Cancer Moonshot Biobank - Acute Myeloid Leukemia Cancer Collection",
+  "alternateName": "CMB-AML",
+  "description": "The Cancer Moonshot Biobank is a National Cancer Institute initiative to support current and future investigations into drug resistance and sensitivity and other NCI-sponsored cancer research initiatives, with an aim of improving researchers' understanding of cancer and how to intervene in cancer initiation and progression. During the course of this study, biospecimens (blood and tissue removed during medical procedures) and associated data will be collected longitudinally from at least 1000 patients across at least 10 cancer types, who are receiving standard of care cancer treatment at multiple NCI Community Oncology Research Program (NCORP) sites. This collection contains de-identified radiology and histopathology imaging procured from subjects in NCI\u2019s Cancer Moonshot Biobank - Acute Myeloid Leukemia Cancer (CMB-AML) cohort. Associated genomic, phenotypic and clinical data will be hosted by The Database of Genotypes and Phenotypes (dbGaP) and other NCI databases. A summary of Cancer Moonshot Biobank imaging efforts can be found on the Cancer Moonshot Biobank Imaging page.",
+  "url": "https://www.cancerimagingarchive.net/collection/cmb-aml/",
+  "creator": {
+    "@type": "Organization",
+    "name": "The Cancer Imaging Archive",
+    "url": "https://www.cancerimagingarchive.net/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "The Cancer Imaging Archive",
+    "url": "https://www.cancerimagingarchive.net/"
+  },
+  "includedInDataCatalog": {
+    "@type": "DataCatalog",
+    "@id": "https://www.cancerimagingarchive.net/#catalog",
+    "name": "The Cancer Imaging Archive",
+    "url": "https://www.cancerimagingarchive.net/",
+    "publisher": {
+      "@type": "Organization",
+      "name": "The Cancer Imaging Archive",
+      "url": "https://www.cancerimagingarchive.net/"
+    }
+  },
+  "license": [
+    "https://creativecommons.org/licenses/by/4.0/",
+    "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/"
+  ],
+  "citeAs": "Cancer Moonshot Biobank. (2023). Cancer Moonshoot Biobank - Acute Myeloid Leukemia (CMB-AML) (Version 8) [dataset]. The Cancer Imaging Archive. https://doi.org/10.7937/pcte-6m66",
+  "keywords": [
+    "CMB-AML",
+    "Collection",
+    "CT",
+    "MR",
+    "PT",
+    "XA",
+    "Histopathology",
+    "Acute Myeloid Leukemia",
+    "Blood",
+    "Human"
+  ],
+  "sdPublisher": {
+    "@type": "Organization",
+    "name": "The Cancer Imaging Archive",
+    "url": "https://www.cancerimagingarchive.net/"
+  },
+  "sdVersion": "0.1.0",
+  "isLiveDataset": true,
+  "conditionsOfAccess": "Mixed open and controlled access. Review each TCIA download row for its license, access mechanism, and controlled-access requirements.",
+  "usageInfo": [
+    {
+      "@type": "CreativeWork",
+      "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+      "name": "TCIA Data Usage Policies and Restrictions",
+      "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+    }
+  ],
+  "distribution": [
+    {
+      "@type": "cr:FileObject",
+      "@id": "file-48105",
+      "name": "CMB-AML_v06_20250509.tcia",
+      "contentUrl": "https://www.cancerimagingarchive.net/wp-content/uploads/CMB-AML_v06_20250509.tcia",
+      "encodingFormat": [
+        "text/plain",
+        "application/vnd.tcia.manifest"
+      ],
+      "conditionsOfAccess": "Open-access TCIA data. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by/4.0/",
+          "name": "CC BY 4.0",
+          "url": "https://creativecommons.org/licenses/by/4.0/"
+        }
+      ],
+      "description": "New Release, release 6",
+      "contentSize": "1.57 GB",
+      "license": "https://creativecommons.org/licenses/by/4.0/",
+      "dateModified": "2025-05-09",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download id",
+          "value": "48105"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access level",
+          "value": "open"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download types",
+          "value": [
+            "Radiology Images"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA data types",
+          "value": [
+            "CT",
+            "MR",
+            "XA"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA file types",
+          "value": [
+            "DICOM"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download artifact role",
+          "value": "manifest"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access mechanism",
+          "value": "TCIA Data Retriever"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA downstream access system",
+          "value": "Imaging Data Commons (IDC)"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA search system",
+          "value": "NBIA Search"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA search/access URL",
+          "value": "https://nbia.cancerimagingarchive.net/nbia-search/?saved-cart=nbia-82081746621919817"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download metadata",
+          "value": "https://www.cancerimagingarchive.net/wp-content/uploads/CMB-AML_v06_20250509-nbia-digest.xlsx"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download requirements",
+          "value": "Download requires the TCIA Data Retriever"
+        }
+      ]
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "file-48107",
+      "name": "CMB-AML_drs_metadata_manifest.csv",
+      "contentUrl": "https://www.cancerimagingarchive.net/wp-content/uploads/CMB-AML_drs_metadata_manifest.csv",
+      "encodingFormat": [
+        "text/csv"
+      ],
+      "conditionsOfAccess": "Controlled-access TCIA data. Users must obtain authorization and follow the TCIA NIH Controlled Data Access Policy before accessing this row.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": [
+            "CreativeWork",
+            "odrl:Offer"
+          ],
+          "@id": "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/",
+          "name": "TCIA NIH Controlled Data Access Policy",
+          "url": "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/",
+          "description": "Access requires authorization under the TCIA NIH Controlled Data Access Policy.",
+          "odrl:permission": {
+            "@type": "odrl:Permission",
+            "odrl:action": {
+              "@id": "odrl:use",
+              "name": "Use"
+            },
+            "odrl:duty": {
+              "@type": "odrl:Duty",
+              "odrl:action": {
+                "@id": "odrl:obtainConsent",
+                "name": "Obtain required access approval"
+              }
+            }
+          }
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/",
+          "name": "NIH Controlled Data Access Policy",
+          "url": "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/"
+        }
+      ],
+      "description": "rerelease through CTDC",
+      "contentSize": "1.49 GB",
+      "license": "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/",
+      "dateModified": "2026-05-29",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download id",
+          "value": "48107"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access level",
+          "value": "controlled"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download types",
+          "value": [
+            "Radiology Images"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA data types",
+          "value": [
+            "CT",
+            "MR",
+            "PT"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA file types",
+          "value": [
+            "DICOM"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download artifact role",
+          "value": "manifest"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access mechanism",
+          "value": "TCIA Data Retriever"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA downstream access system",
+          "value": "Clinical Translational Data Commons (CTDC)"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA search system",
+          "value": "Clinical Translational Data Commons (CTDC)"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA search/access URL",
+          "value": "https://clinical.datacommons.cancer.gov/?cid=eb_govdel#/study/NCT04314401"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download requirements",
+          "value": "Download requires the TCIA Data Retriever"
+        }
+      ]
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "file-41647",
+      "name": "faspex",
+      "contentUrl": "https://faspex.cancerimagingarchive.net/aspera/faspex?context=eyJyZXNvdXJjZSI6InBhY2thZ2VzIiwidHlwZSI6ImV4dGVybmFsX2Rvd25sb2FkX3BhY2thZ2UiLCJpZCI6IjExNjIiLCJwYXNzY29kZSI6ImUzODlhMzRhOTc0MTkzNTA5MDRmMzcxNjE0ZThmZDkyNzM2ZDZkNjUiLCJwYWNrYWdlX2lkIjoiMTE2MiIsImVtYWlsIjoiaGVscEBjYW5jZXJpbWFnaW5nYXJjaGl2ZS5uZXQifQ==",
+      "encodingFormat": [
+        "application/json",
+        "image/tiff"
+      ],
+      "conditionsOfAccess": "Open-access TCIA data. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by/4.0/",
+          "name": "CC BY 4.0",
+          "url": "https://creativecommons.org/licenses/by/4.0/"
+        }
+      ],
+      "contentSize": "217 GB",
+      "license": "https://creativecommons.org/licenses/by/4.0/",
+      "dateModified": "2025-10-10",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download id",
+          "value": "41647"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access level",
+          "value": "open"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download types",
+          "value": [
+            "Pathology Images"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA data types",
+          "value": [
+            "Histopathology",
+            "Whole Slide Image"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA file types",
+          "value": [
+            "JSON",
+            "SVS"
+          ]
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download artifact role",
+          "value": "transfer package"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA access mechanism",
+          "value": "Aspera"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA downstream access system",
+          "value": "Aspera"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA search system",
+          "value": "PathDB"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA search/access URL",
+          "value": "https://pathdb.cancerimagingarchive.net/eaglescope/dist/?configurl=%2Fsystem%2Ffiles%2Fcollectionmetadata%2F202208%2Fbiobank_metadata_page_first50_4.json&filterState=%5B%7B%22id%22%3A%22TCIA_Collection%22%2C%22title%22%3A%22Collection%22%2C%22field%22%3A%22TCIA_Collection%22%2C%22operation%22%3A%22eq%22%2C%22values%22%3A%22CMB-AML%22%7D%5D"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TCIA download requirements",
+          "value": "Download requires the IBM-Aspera-Connect plugin"
+        }
+      ]
+    }
+  ],
+  "recordSet": [
+    {
+      "@type": "cr:RecordSet",
+      "@id": "download-48105",
+      "name": "Radiology Images",
+      "description": "TCIA current download record 48105 for CMB-AML.",
+      "dataType": "sc:DataDownload",
+      "key": {
+        "@id": "download-48105/download_id"
+      },
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "download-48105/download_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48105/download_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48105/search_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48105/file_object_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48105/download_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48105/data_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48105/file_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48105/download_artifact_role",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48105/access_mechanism",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48105/downstream_access_system",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48105/search_system",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48105/access_level",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48105/license_label",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48105/license_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48105/subjects",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48105/studies",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48105/series",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48105/images",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48105/download_metadata",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48105/download_requirements",
+          "dataType": "sc:Text"
+        }
+      ],
+      "data": [
+        {
+          "download-48105/download_id": "48105",
+          "download-48105/download_url": "https://www.cancerimagingarchive.net/wp-content/uploads/CMB-AML_v06_20250509.tcia",
+          "download-48105/search_url": "https://nbia.cancerimagingarchive.net/nbia-search/?saved-cart=nbia-82081746621919817",
+          "download-48105/file_object_id": "file-48105",
+          "download-48105/download_types": [
+            "Radiology Images"
+          ],
+          "download-48105/data_types": [
+            "CT",
+            "MR",
+            "XA"
+          ],
+          "download-48105/file_types": [
+            "DICOM"
+          ],
+          "download-48105/download_artifact_role": "manifest",
+          "download-48105/access_mechanism": "TCIA Data Retriever",
+          "download-48105/downstream_access_system": "Imaging Data Commons (IDC)",
+          "download-48105/search_system": "NBIA Search",
+          "download-48105/access_level": "open",
+          "download-48105/license_label": "CC BY 4.0",
+          "download-48105/license_url": "https://creativecommons.org/licenses/by/4.0/",
+          "download-48105/subjects": 8,
+          "download-48105/studies": 15,
+          "download-48105/series": 49,
+          "download-48105/images": 2825,
+          "download-48105/download_metadata": "https://www.cancerimagingarchive.net/wp-content/uploads/CMB-AML_v06_20250509-nbia-digest.xlsx",
+          "download-48105/download_requirements": "Download requires the TCIA Data Retriever"
+        }
+      ],
+      "conditionsOfAccess": "Open-access TCIA data. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by/4.0/",
+          "name": "CC BY 4.0",
+          "url": "https://creativecommons.org/licenses/by/4.0/"
+        }
+      ]
+    },
+    {
+      "@type": "cr:RecordSet",
+      "@id": "download-48107",
+      "name": "Radiology Images",
+      "description": "TCIA current download record 48107 for CMB-AML.",
+      "dataType": "sc:DataDownload",
+      "key": {
+        "@id": "download-48107/download_id"
+      },
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "download-48107/download_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48107/download_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48107/search_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48107/file_object_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48107/download_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48107/data_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48107/file_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48107/download_artifact_role",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48107/access_mechanism",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48107/downstream_access_system",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48107/search_system",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48107/access_level",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48107/license_label",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48107/license_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48107/subjects",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48107/studies",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48107/series",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48107/images",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-48107/download_requirements",
+          "dataType": "sc:Text"
+        }
+      ],
+      "data": [
+        {
+          "download-48107/download_id": "48107",
+          "download-48107/download_url": "https://www.cancerimagingarchive.net/wp-content/uploads/CMB-AML_drs_metadata_manifest.csv",
+          "download-48107/search_url": "https://clinical.datacommons.cancer.gov/?cid=eb_govdel#/study/NCT04314401",
+          "download-48107/file_object_id": "file-48107",
+          "download-48107/download_types": [
+            "Radiology Images"
+          ],
+          "download-48107/data_types": [
+            "CT",
+            "MR",
+            "PT"
+          ],
+          "download-48107/file_types": [
+            "DICOM"
+          ],
+          "download-48107/download_artifact_role": "manifest",
+          "download-48107/access_mechanism": "TCIA Data Retriever",
+          "download-48107/downstream_access_system": "Clinical Translational Data Commons (CTDC)",
+          "download-48107/search_system": "Clinical Translational Data Commons (CTDC)",
+          "download-48107/access_level": "controlled",
+          "download-48107/license_label": "NIH Controlled Data Access Policy",
+          "download-48107/license_url": "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/",
+          "download-48107/subjects": 4,
+          "download-48107/studies": 10,
+          "download-48107/series": 65,
+          "download-48107/images": 3704,
+          "download-48107/download_requirements": "Download requires the TCIA Data Retriever"
+        }
+      ],
+      "conditionsOfAccess": "Controlled-access TCIA data. Users must obtain authorization and follow the TCIA NIH Controlled Data Access Policy before accessing this row.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": [
+            "CreativeWork",
+            "odrl:Offer"
+          ],
+          "@id": "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/",
+          "name": "TCIA NIH Controlled Data Access Policy",
+          "url": "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/",
+          "description": "Access requires authorization under the TCIA NIH Controlled Data Access Policy.",
+          "odrl:permission": {
+            "@type": "odrl:Permission",
+            "odrl:action": {
+              "@id": "odrl:use",
+              "name": "Use"
+            },
+            "odrl:duty": {
+              "@type": "odrl:Duty",
+              "odrl:action": {
+                "@id": "odrl:obtainConsent",
+                "name": "Obtain required access approval"
+              }
+            }
+          }
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/",
+          "name": "NIH Controlled Data Access Policy",
+          "url": "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/"
+        }
+      ]
+    },
+    {
+      "@type": "cr:RecordSet",
+      "@id": "download-41647",
+      "name": "Pathology Images",
+      "description": "TCIA current download record 41647 for CMB-AML.",
+      "dataType": "sc:DataDownload",
+      "key": {
+        "@id": "download-41647/download_id"
+      },
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "download-41647/download_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41647/download_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41647/search_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41647/file_object_id",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41647/download_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41647/data_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41647/file_types",
+          "dataType": "sc:Text",
+          "isArray": true
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41647/download_artifact_role",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41647/access_mechanism",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41647/downstream_access_system",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41647/search_system",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41647/access_level",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41647/license_label",
+          "dataType": "sc:Text"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41647/license_url",
+          "dataType": "sc:URL"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41647/subjects",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41647/images",
+          "dataType": "sc:Integer"
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "download-41647/download_requirements",
+          "dataType": "sc:Text"
+        }
+      ],
+      "data": [
+        {
+          "download-41647/download_id": "41647",
+          "download-41647/download_url": "https://faspex.cancerimagingarchive.net/aspera/faspex?context=eyJyZXNvdXJjZSI6InBhY2thZ2VzIiwidHlwZSI6ImV4dGVybmFsX2Rvd25sb2FkX3BhY2thZ2UiLCJpZCI6IjExNjIiLCJwYXNzY29kZSI6ImUzODlhMzRhOTc0MTkzNTA5MDRmMzcxNjE0ZThmZDkyNzM2ZDZkNjUiLCJwYWNrYWdlX2lkIjoiMTE2MiIsImVtYWlsIjoiaGVscEBjYW5jZXJpbWFnaW5nYXJjaGl2ZS5uZXQifQ==",
+          "download-41647/search_url": "https://pathdb.cancerimagingarchive.net/eaglescope/dist/?configurl=%2Fsystem%2Ffiles%2Fcollectionmetadata%2F202208%2Fbiobank_metadata_page_first50_4.json&filterState=%5B%7B%22id%22%3A%22TCIA_Collection%22%2C%22title%22%3A%22Collection%22%2C%22field%22%3A%22TCIA_Collection%22%2C%22operation%22%3A%22eq%22%2C%22values%22%3A%22CMB-AML%22%7D%5D",
+          "download-41647/file_object_id": "file-41647",
+          "download-41647/download_types": [
+            "Pathology Images"
+          ],
+          "download-41647/data_types": [
+            "Histopathology",
+            "Whole Slide Image"
+          ],
+          "download-41647/file_types": [
+            "JSON",
+            "SVS"
+          ],
+          "download-41647/download_artifact_role": "transfer package",
+          "download-41647/access_mechanism": "Aspera",
+          "download-41647/downstream_access_system": "Aspera",
+          "download-41647/search_system": "PathDB",
+          "download-41647/access_level": "open",
+          "download-41647/license_label": "CC BY 4.0",
+          "download-41647/license_url": "https://creativecommons.org/licenses/by/4.0/",
+          "download-41647/subjects": 16,
+          "download-41647/images": 62,
+          "download-41647/download_requirements": "Download requires the IBM-Aspera-Connect plugin"
+        }
+      ],
+      "conditionsOfAccess": "Open-access TCIA data. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+      "usageInfo": [
+        {
+          "@type": "CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": "CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by/4.0/",
+          "name": "CC BY 4.0",
+          "url": "https://creativecommons.org/licenses/by/4.0/"
+        }
+      ]
+    }
+  ],
+  "sameAs": [
+    "https://doi.org/10.7937/PCTE-6M66"
+  ],
+  "identifier": [
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA short title",
+      "value": "CMB-AML"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA dataset type",
+      "value": "Collection"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "DOI",
+      "value": "10.7937/PCTE-6M66"
+    }
+  ],
+  "dateModified": "2026-05-29",
+  "datePublished": "2023-06-12",
+  "version": "8",
+  "citation": [
+    {
+      "@type": "CreativeWork",
+      "name": "The Cancer Moonshot Biobank program requests that publications using data from this program include the following statement: \u201c Data used in this publication were generated by the National Cancer Institute\u2019s Cancer Moonshot Biobank .\u201d"
+    }
+  ],
+  "additionalProperty": [
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA access level",
+      "value": "mixed"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA license status",
+      "value": "Mixed open/controlled"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA subjects",
+      "value": "16"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA program",
+      "value": "program_name: CMB; related_collections: CMB-AML; CMB-CRC; CMB-GEC; CMB-LCA; CMB-MEL; CMB-MML; CMB-PCA; CMB-BRCA; CMB-OV"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA downstream access systems",
+      "value": [
+        "Imaging Data Commons (IDC)",
+        "Clinical Translational Data Commons (CTDC)",
+        "Aspera"
+      ]
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA search systems",
+      "value": [
+        "NBIA Search",
+        "Clinical Translational Data Commons (CTDC)",
+        "PathDB"
+      ]
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "Croissant generator",
+      "value": "tcia-croissant-prototype/0.1.0"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA snapshot schema version",
+      "value": "5"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA external resources",
+      "value": [
+        "Clinical"
+      ]
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA has external clinical resource",
+      "value": true
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "TCIA has TCIA clinical download",
+      "value": false
+    }
+  ]
+}

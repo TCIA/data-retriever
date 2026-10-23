@@ -1,0 +1,697 @@
+{
+  "@context": {
+    "@language": "en",
+    "@vocab": "https://schema.org/",
+    "@base": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/",
+    "sc": "https://schema.org/",
+    "cr": "http://mlcommons.org/croissant/",
+    "rai": "http://mlcommons.org/croissant/RAI/",
+    "dct": "http://purl.org/dc/terms/",
+    "prov": "http://www.w3.org/ns/prov#",
+    "odrl": "http://www.w3.org/ns/odrl/2/",
+    "duo": "http://purl.obolibrary.org/obo/DUO_",
+    "description": {
+      "@container": "@language"
+    },
+    "arrayShape": "cr:arrayShape",
+    "citeAs": "cr:citeAs",
+    "conformsTo": "dct:conformsTo",
+    "data": {
+      "@id": "cr:data",
+      "@type": "@json"
+    },
+    "dataType": {
+      "@id": "cr:dataType",
+      "@type": "@vocab"
+    },
+    "field": "cr:field",
+    "isLiveDataset": "cr:isLiveDataset",
+    "isArray": "cr:isArray",
+    "key": "cr:key",
+    "recordSet": "cr:recordSet",
+    "sdVersion": "cr:sdVersion",
+    "sha256": "cr:sha256",
+    "value": "cr:value",
+    "annotation": "cr:annotation",
+    "source": "cr:source",
+    "fileObject": "cr:fileObject",
+    "fileSet": "cr:fileSet",
+    "extract": "cr:extract",
+    "column": "cr:column",
+    "fileProperty": "cr:fileProperty",
+    "format": "cr:format",
+    "transform": "cr:transform",
+    "separator": "cr:separator",
+    "regex": "cr:regex",
+    "readLines": "cr:readLines",
+    "unArchive": "cr:unArchive",
+    "jsonPath": "cr:jsonPath",
+    "examples": {
+      "@id": "cr:examples",
+      "@type": "@json"
+    },
+    "subField": "cr:subField",
+    "parentField": "cr:parentField",
+    "references": "cr:references",
+    "equivalentProperty": "cr:equivalentProperty",
+    "includes": "cr:includes",
+    "excludes": "cr:excludes",
+    "containedIn": "cr:containedIn",
+    "md5": "cr:md5",
+    "name": {
+      "@container": "@language"
+    },
+    "path": "cr:path",
+    "repeated": "cr:repeated",
+    "replace": "cr:replace",
+    "samplingRate": "cr:samplingRate"
+  },
+  "@type": "sc:Dataset",
+  "@id": "https://doi.org/10.7937/K9/TCIA.2016.ELN8YGLE",
+  "conformsTo": "http://mlcommons.org/croissant/1.1",
+  "name": "Data from 4D Lung Imaging of NSCLC Patients",
+  "alternateName": "4D-Lung",
+  "description": "This data collection consists of images acquired during chemoradiotherapy of 20 locally-advanced, non-small cell lung cancer patients. The images include four-dimensional (4D) fan beam (4D-FBCT) and 4D cone beam CT (4D-CBCT). All patients underwent concurrent radiochemotherapy to a total dose of 64.8-70 Gy using daily 1.8 or 2 Gy fractions. 4D-FBCT images were acquired on a 16-slice helical CT scanner (Brilliance Big Bore, Philips Medical Systems, Andover, MA) as respiration-correlated CTs with 10 breathing phases (0 to 90%, phase-based binning) and 3 mm slice thickness. 4D-FBCT images were acquired during simulation, prior to therapy, and used for therapy planning. In 14 of the 20 subjects, 4D-FBCTs were also acquired on the same scanner weekly during therapy. 4D-CBCT images were acquired on a commercial CBCT scanner (On-Board Imager™, Varian Medical Systems, Inc.). An external surrogate (Real-time Position Management, Varian Medical Systems, Inc.) was integrated into the CBCT acquisition system to stamp each CBCT projection with the surrogate respiratory signal through in-house software and hardware tools. Approximately 2500 projections were acquired over a period of 8-10 minutes in half-fan mode with half bow-tie filter. The technique was 125 kVp, 20 mA, and 20 ms in a single 360° slow gantry arc. Using the external surrogate, the CBCT projections were sorted into 10 breathing phases (0 to 90%, phase-based binning) and reconstructed with an in-house FDK reconstruction algorithm. Audio-visual biofeedback was performed for all 4D-FBCT and 4D-CBCT acquisitions in all subjects. A single Radiation Oncologist delineated targets and organs at risk in all 4D-FBCT and a limited number of 4D-CBCT images, on all 10 phases per scan. Seven of the subjects had gold coils implanted as fiducial markers in or near the tumor. The dataset is most fully described in detail in Balik et al. 1 Seven of the subjects had gold coils implanted as fiducial markers in or near the tumor. The implantation procedure and details of marker location are described in detail in Roman et al. 2 References 1 S. Balik et al., “Evaluation of 4-Dimensional Computed Tomography to 4-Dimensional Cone-Beam Computed Tomography Deformable Image Registration for Lung Cancer Adaptive Radiation Therapy.” Int. J. Radiat. Oncol. Biol. Phys. 86 , 372–9 (2013) PMCID: PMC3647023. 2 N.O. Roman, W. Shepherd, N. Mukhopadhyay, G.D. Hugo, and E. Weiss, “Interfractional Positional Variability of Fiducial Markers and Primary Tumors in Locally Advanced Non-Small-Cell Lung Cancer during Audiovisual Biofeedback Radiotherapy.” Int. J. Radiat. Oncol. Biol. Phys. 83 , 1566–72 (2012).",
+  "url": "https://www.cancerimagingarchive.net/collection/4d-lung/",
+  "identifier": "https://doi.org/10.7937/K9/TCIA.2016.ELN8YGLE",
+  "license": [
+    "https://creativecommons.org/licenses/by/3.0/"
+  ],
+  "citeAs": "https://doi.org/10.7937/K9/TCIA.2016.ELN8YGLE",
+  "dateModified": "2016-10-19",
+  "version": "2",
+  "sdVersion": "0.2.0-draft",
+  "isLiveDataset": true,
+  "conditionsOfAccess": "Open metadata and payloads subject to the listed license and TCIA usage policy.",
+  "usageInfo": [
+    {
+      "@type": "sc:CreativeWork",
+      "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+      "name": "TCIA Data Usage Policies and Restrictions",
+      "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+    }
+  ],
+  "recordSet": [
+    {
+      "@type": "cr:RecordSet",
+      "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records",
+      "name": "Images and Radiation Therapy Structures",
+      "description": "One CSV row per DICOM series. The sparse legacy .tcia UID list is exactly reconciled to the complete official series metadata workbook.",
+      "key": {
+        "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/SeriesInstanceUID"
+      },
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/PatientID",
+          "name": "PatientID",
+          "dataType": "sc:Text",
+          "description": "De-identified patient identifier supplied in the TCIA series metadata workbook.",
+          "alternateName": "Patient ID",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "PatientID"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/PatientName",
+          "name": "PatientName",
+          "dataType": "sc:Text",
+          "description": "Source field 'Patient Name'; values are retained without semantic substitution.",
+          "alternateName": "Patient Name",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "PatientName"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/PatientSex",
+          "name": "PatientSex",
+          "dataType": "sc:Text",
+          "description": "Source field 'Patient Sex'; values are retained without semantic substitution.",
+          "alternateName": "Patient Sex",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "PatientSex"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/Phantom",
+          "name": "Phantom",
+          "dataType": "sc:Text",
+          "description": "Source field 'Phantom'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "Phantom"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/SpeciesCode",
+          "name": "SpeciesCode",
+          "dataType": "sc:Text",
+          "description": "Source field 'Species Code'; values are retained without semantic substitution.",
+          "alternateName": "Species Code",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "SpeciesCode"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/SpeciesDescription",
+          "name": "SpeciesDescription",
+          "dataType": "sc:Text",
+          "description": "Source field 'Species Description'; values are retained without semantic substitution.",
+          "alternateName": "Species Description",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "SpeciesDescription"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/StudyInstanceUID",
+          "name": "StudyInstanceUID",
+          "dataType": "sc:Text",
+          "description": "DICOM Study Instance UID.",
+          "alternateName": "Study Instance UID",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "StudyInstanceUID"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/StudyDate",
+          "name": "StudyDate",
+          "dataType": "sc:Text",
+          "description": "Study date retained exactly as supplied; no date shifting or normalization is inferred here.",
+          "alternateName": "Study Date",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "StudyDate"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/StudyDescription",
+          "name": "StudyDescription",
+          "dataType": "sc:Text",
+          "description": "DICOM Study Description retained from the source metadata.",
+          "alternateName": "Study Description",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "StudyDescription"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/PatientAge",
+          "name": "PatientAge",
+          "dataType": "sc:Text",
+          "description": "Source field 'Patient Age'; values are retained without semantic substitution.",
+          "alternateName": "Patient Age",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "PatientAge"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/SeriesInstanceUID",
+          "name": "SeriesInstanceUID",
+          "dataType": "sc:Text",
+          "description": "DICOM Series Instance UID and retrieval key for this record.",
+          "alternateName": "Series Instance UID",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "SeriesInstanceUID"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/Collection",
+          "name": "Collection",
+          "dataType": "sc:Text",
+          "description": "Source field 'Project'; values are retained without semantic substitution.",
+          "alternateName": "Project",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "Collection"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/Modality",
+          "name": "Modality",
+          "dataType": "sc:Text",
+          "description": "Source field 'Modality'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "Modality"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/ProtocolName",
+          "name": "ProtocolName",
+          "dataType": "sc:Text",
+          "description": "Source field 'Protocol Name'; values are retained without semantic substitution.",
+          "alternateName": "Protocol Name",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "ProtocolName"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/SeriesDate",
+          "name": "SeriesDate",
+          "dataType": "sc:Text",
+          "description": "Source field 'Series Date'; values are retained without semantic substitution.",
+          "alternateName": "Series Date",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "SeriesDate"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/SeriesDescription",
+          "name": "SeriesDescription",
+          "dataType": "sc:Text",
+          "description": "DICOM Series Description retained from the source metadata.",
+          "alternateName": "Series Description",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "SeriesDescription"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/BodyPartExamined",
+          "name": "BodyPartExamined",
+          "dataType": "sc:Text",
+          "description": "Source field 'Body Part Examined'; values are retained without semantic substitution.",
+          "alternateName": "Body Part Examined",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "BodyPartExamined"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/SeriesNumber",
+          "name": "SeriesNumber",
+          "dataType": "sc:Text",
+          "description": "Source field 'Series Number'; values are retained without semantic substitution.",
+          "alternateName": "Series Number",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "SeriesNumber"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/Manufacturer",
+          "name": "Manufacturer",
+          "dataType": "sc:Text",
+          "description": "Source field 'Manufacturer'; values are retained without semantic substitution.",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "Manufacturer"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/ManufacturerModelName",
+          "name": "ManufacturerModelName",
+          "dataType": "sc:Text",
+          "description": "Source field 'Manufacturer Model Name'; values are retained without semantic substitution.",
+          "alternateName": "Manufacturer Model Name",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "ManufacturerModelName"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/SoftwareVersions",
+          "name": "SoftwareVersions",
+          "dataType": "sc:Text",
+          "description": "Source field 'Software Versions'; values are retained without semantic substitution.",
+          "alternateName": "Software Versions",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "SoftwareVersions"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/ImageCount",
+          "name": "ImageCount",
+          "dataType": "sc:Integer",
+          "description": "Source field 'Image Count'; values are retained without semantic substitution.",
+          "alternateName": "Image Count",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "ImageCount"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/MaxSubmissionTimestamp",
+          "name": "MaxSubmissionTimestamp",
+          "dataType": "sc:Text",
+          "description": "Source field 'Max Submission Timestamp'; values are retained without semantic substitution.",
+          "alternateName": "Max Submission Timestamp",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "MaxSubmissionTimestamp"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/LicenseName",
+          "name": "LicenseName",
+          "dataType": "sc:Text",
+          "description": "Source field 'License Name'; values are retained without semantic substitution.",
+          "alternateName": "License Name",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "LicenseName"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/LicenseURI",
+          "name": "LicenseURI",
+          "dataType": "sc:URL",
+          "description": "Source field 'License URI'; values are retained without semantic substitution.",
+          "alternateName": "License URI",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "LicenseURI"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/CollectionURI",
+          "name": "CollectionURI",
+          "dataType": "sc:URL",
+          "description": "Source field 'Collection URI'; values are retained without semantic substitution.",
+          "alternateName": "Collection URI",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "CollectionURI"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/FileSize",
+          "name": "FileSize",
+          "dataType": "sc:Integer",
+          "description": "Source field 'File Size'; values are retained without semantic substitution.",
+          "alternateName": "File Size",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "FileSize"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/DateReleased",
+          "name": "DateReleased",
+          "dataType": "sc:Text",
+          "description": "Source field 'Date Released'; values are retained without semantic substitution.",
+          "alternateName": "Date Released",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "DateReleased"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/accessLevel",
+          "name": "accessLevel",
+          "description": "Constant recordset-level value applied to every record.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "accessLevel"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107/records/retrievalRoute",
+          "name": "retrievalRoute",
+          "description": "Constant recordset-level value applied to every record.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv"
+            },
+            "extract": {
+              "column": "retrievalRoute"
+            }
+          }
+        }
+      ],
+      "conditionsOfAccess": "Open metadata and payloads subject to the listed license and TCIA usage policy.",
+      "usageInfo": [
+        {
+          "@type": "sc:CreativeWork",
+          "@id": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/",
+          "name": "TCIA Data Usage Policies and Restrictions",
+          "url": "https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/"
+        },
+        {
+          "@type": "sc:CreativeWork",
+          "@id": "https://creativecommons.org/licenses/by/3.0/",
+          "name": "License or access policy supplied by TCIA",
+          "url": "https://creativecommons.org/licenses/by/3.0/"
+        }
+      ],
+      "prov:wasDerivedFrom": [
+        {
+          "@type": [
+            "sc:CreativeWork",
+            "prov:Entity"
+          ],
+          "@id": "https://www.cancerimagingarchive.net/wp-content/uploads/doiJNLP-Y71kLpdQ.tcia",
+          "name": "Legacy TCIA Series UID manifest",
+          "url": "https://www.cancerimagingarchive.net/wp-content/uploads/doiJNLP-Y71kLpdQ.tcia",
+          "sha256": "52473706a6c41e6ebeffc9d23873f3d7d070cb6a16f8d5fd51da7dc0b7cdf8db"
+        },
+        {
+          "@type": [
+            "sc:CreativeWork",
+            "prov:Entity"
+          ],
+          "@id": "https://www.cancerimagingarchive.net/wp-content/uploads/doiJNLP-Y71kLpdQ-nbia-digest.xlsx",
+          "name": "TCIA series metadata workbook",
+          "url": "https://www.cancerimagingarchive.net/wp-content/uploads/doiJNLP-Y71kLpdQ-nbia-digest.xlsx",
+          "sha256": "8df3c4059f979d181bbaa87480c17d243669eaf750dc7a8a572727206dd2bed9"
+        }
+      ],
+      "additionalProperty": [
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA WordPress download id",
+          "value": "42107"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "Record grain",
+          "value": "DICOM series"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "Retrieval key field",
+          "value": "SeriesInstanceUID"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "CSV record count",
+          "value": 6690
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "External CSV model",
+          "value": "The complete record inventory is stored in a route-specific CSV FileObject. Each Croissant Field identifies its CSV column through a DataSource."
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "UID reconciliation status",
+          "value": "exact match"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "Legacy manifest UID count",
+          "value": 6690
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "Metadata workbook series count",
+          "value": 6690
+        }
+      ]
+    }
+  ],
+  "prov:wasGeneratedBy": {
+    "@type": "prov:Activity",
+    "name": "TCIA Croissant recordset draft generation",
+    "description": "Deterministic projection from explicit TCIA query-skill artifacts and official manifest inputs."
+  },
+  "additionalProperty": [
+    {
+      "@type": "sc:PropertyValue",
+      "name": "Document role",
+      "value": "dataset Croissant with external recordset CSV files"
+    },
+    {
+      "@type": "sc:PropertyValue",
+      "name": "Recordset count",
+      "value": 1
+    },
+    {
+      "@type": "sc:PropertyValue",
+      "name": "External CSV model",
+      "value": "The complete record inventory is stored in a route-specific CSV FileObject. Each Croissant Field identifies its CSV column through a DataSource."
+    }
+  ],
+  "datePublished": "2015-09-14",
+  "distribution": [
+    {
+      "@type": "cr:FileObject",
+      "@id": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv",
+      "name": "42107-public-dicom-series.csv",
+      "description": "Complete tabular inventory for the Images and Radiation Therapy Structures recordset.",
+      "contentUrl": "https://www.cancerimagingarchive.net/collection/4d-lung/croissant/recordsets/42107-public-dicom-series.csv",
+      "encodingFormat": "text/csv",
+      "contentSize": "3902809 B",
+      "sha256": "92bd48196ee654641560fe8a6d7c242268893a5fcb1fdb5b81b1467b9cfa4444",
+      "license": "https://creativecommons.org/licenses/by/3.0/"
+    }
+  ]
+}
