@@ -24,6 +24,7 @@ type Report struct {
 	Status          string  `json:"status"`
 	ErrorCode       string  `json:"error_code,omitempty"`
 	Version         string  `json:"version"`
+	GitCommit       string  `json:"git_commit,omitempty"`
 	OutputDirectory string  `json:"output_directory"`
 	Total           int32   `json:"total"`
 	Downloaded      int32   `json:"downloaded"`
@@ -37,11 +38,11 @@ type runFunc func(context.Context, *app.Options, app.Callbacks) (*app.Summary, e
 
 // Main returns 0 on success, 1 on transfer/report failure, 2 on invalid usage,
 // or 130 on cancellation. The caller owns signal handling and process exit.
-func Main(ctx context.Context, args []string, stdout, stderr io.Writer, version string) int {
-	return execute(ctx, args, stdout, stderr, version, app.Run)
+func Main(ctx context.Context, args []string, stdout, stderr io.Writer, version string, revision ...string) int {
+	return execute(ctx, args, stdout, stderr, version, app.Run, revision...)
 }
 
-func execute(ctx context.Context, args []string, stdout, stderr io.Writer, version string, run runFunc) int {
+func execute(ctx context.Context, args []string, stdout, stderr io.Writer, version string, run runFunc, revision ...string) int {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -51,6 +52,9 @@ func execute(ctx context.Context, args []string, stdout, stderr io.Writer, versi
 		return 0
 	}
 	report := Report{SchemaVersion: 1, Version: version, Status: "failed"}
+	if len(revision) > 0 {
+		report.GitCommit = revision[0]
+	}
 	if opts != nil {
 		report.OutputDirectory, _ = filepath.Abs(opts.Output)
 	}

@@ -88,6 +88,7 @@ Statuses are `success`, `failed`, `cancelled`. Failures may include an
 `policy_not_accepted`, `invalid_arguments`, `transfer_failed`, `empty_manifest`,
 `items_failed`, `cancelled`, or `incomplete_run`. Counts are files or series,
 matching the manifest route; they are not necessarily individual DICOM instances.
+Release builds also include `git_commit` when supplied through Go ldflags.
 Reports exclude raw errors, file identifiers, credentials and temporary URLs.
 
 Reports are replaced atomically with private permissions. A provisional

@@ -17,7 +17,7 @@ var gitHash string
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	code := cli.Main(ctx, os.Args[1:], os.Stdout, os.Stderr, version)
+	code := cli.Main(ctx, os.Args[1:], os.Stdout, os.Stderr, version, gitHash)
 	stop()
 	os.Exit(code)
 }
