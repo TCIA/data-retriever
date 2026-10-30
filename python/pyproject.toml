@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=77", "wheel", "packaging>=24"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tcia-data-retriever"
+dynamic = ["version"]
+description = "TCIA Data Retriever headless executable and Python interface"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{name = "The Cancer Imaging Archive"}]
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/TCIA/data-retriever"
+Issues = "https://github.com/TCIA/data-retriever/issues"
+
+[project.scripts]
+tcia-data-retriever = "tcia_data_retriever:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
