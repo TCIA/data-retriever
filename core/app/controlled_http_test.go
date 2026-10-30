@@ -225,7 +225,7 @@ func TestDirectIntegrityBeforePromotion(t *testing.T) {
 		{"no metadata", "", "", "", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.Write(payload) }))
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write(payload) }))
 			defer srv.Close()
 			info := &FileInfo{DownloadURL: srv.URL, FileName: "file.bin", FileSize: tc.size, MD5: tc.md5, SHA256: tc.sha256}
 			output, options := t.TempDir(), &Options{}
