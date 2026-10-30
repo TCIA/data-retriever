@@ -122,7 +122,7 @@ func newClientWithStats(proxy string, maxConnsPerHost int, httpVersion string, s
 		ForceAttemptHTTP2:     httpVersion == HTTPVersion2,
 		ResponseHeaderTimeout: 300 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
-		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig:       &tls.Config{MinVersion: tls.VersionTLS12},
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 			dialer := &net.Dialer{
 				Timeout:   300 * time.Second,
