@@ -6,6 +6,17 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      release_version:
+        type: string
+        default: 0.0.0.dev0
+      source_ref:
+        type: string
+        default: ''
+      artifact_prefix:
+        type: string
+        default: python-wheel
 
 permissions:
   contents: read
@@ -41,11 +52,14 @@ jobs:
       CGO_ENABLED: '0'
       GOOS: ${{ matrix.goos }}
       GOARCH: ${{ matrix.goarch }}
-      TDR_VERSION: 0.0.0.dev0
-      TDR_GIT_COMMIT: ${{ github.sha }}
+      TDR_VERSION: ${{ inputs.release_version || '0.0.0.dev0' }}
+      TDR_GIT_COMMIT: ${{ inputs.source_ref || github.sha }}
       TDR_WHEEL_PLATFORM: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref || github.sha }}
+          persist-credentials: false
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -92,7 +106,7 @@ jobs:
       - name: Upload review artifacts (no publication)
         uses: actions/upload-artifact@v4
         with:
-          name: python-wheel-${{ matrix.platform }}
+          name: ${{ inputs.artifact_prefix || 'python-wheel' }}-${{ matrix.platform }}
           path: |
             wheelhouse/*.whl
             wheelhouse/SHA256SUMS
