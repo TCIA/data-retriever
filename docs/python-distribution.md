@@ -1,5 +1,8 @@
 # Headless CLI and Python wheel review
 
+For publishing configuration and the external account/environment steps, see
+the [PyPI release setup and runbook](pypi-release-setup.md).
+
 The Python distribution is a separate package, `tcia-data-retriever`, containing
 the headless Go executable and a small Python subprocess wrapper. It has no
 Python runtime dependencies. It is not embedded in `tcia_utils`: a future
