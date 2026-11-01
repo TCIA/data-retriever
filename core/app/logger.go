@@ -27,6 +27,10 @@ func init() {
 
 // newEncoderConfig creates EncoderConfig for zap logging.
 func newEncoderConfig() zapcore.EncoderConfig {
+	encodeLevel := zapcore.CapitalLevelEncoder
+	if consoleTerminal(os.Stdout) {
+		encodeLevel = zapcore.CapitalColorLevelEncoder
+	}
 	return zapcore.EncoderConfig{
 		TimeKey:        "T",
 		LevelKey:       "L",
@@ -35,7 +39,7 @@ func newEncoderConfig() zapcore.EncoderConfig {
 		MessageKey:     "M",
 		StacktraceKey:  "S",
 		LineEnding:     zapcore.DefaultLineEnding,
-		EncodeLevel:    zapcore.CapitalColorLevelEncoder,
+		EncodeLevel:    encodeLevel,
 		EncodeTime:     timeEncoder,
 		EncodeDuration: zapcore.StringDurationEncoder,
 		EncodeCaller:   zapcore.ShortCallerEncoder,
@@ -51,6 +55,10 @@ func timeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 // Levels: default = Warn (quiet), verbose = Info, debug = Debug.
 // Extra sinks receive console-encoded log lines at the same level as stdout.
 func setLogger(debug, verbose bool, logfile string, extraSinks ...io.Writer) {
+	setLoggerOutput(debug, verbose, logfile, os.Stdout, extraSinks...)
+}
+
+func setLoggerOutput(debug, verbose bool, logfile string, output io.Writer, extraSinks ...io.Writer) {
 	encoder := newEncoderConfig()
 	// Extra sinks (e.g. the GUI panel) don't render ANSI color codes well.
 	plainEncoder := encoder
@@ -65,7 +73,7 @@ func setLogger(debug, verbose bool, logfile string, extraSinks ...io.Writer) {
 	}
 
 	cores := []zapcore.Core{
-		zapcore.NewCore(zapcore.NewConsoleEncoder(encoder), zapcore.AddSync(os.Stdout), level),
+		zapcore.NewCore(zapcore.NewConsoleEncoder(encoder), zapcore.AddSync(output), level),
 	}
 	for _, w := range extraSinks {
 		if w == nil {

@@ -41,6 +41,34 @@ func TestHelpVersionAndUsageNeverRunTransfers(t *testing.T) {
 	}
 }
 
+func TestCLIProgressModeShowsActiveBytesAndCancellation(t *testing.T) {
+	for _, mode := range []string{"plain", "terminal"} {
+		t.Run(mode, func(t *testing.T) {
+			args, path := manifestArgs(t)
+			args = append(args, "--progress", mode)
+			var out bytes.Buffer
+			code := execute(context.Background(), args, &out, &out, "test", func(_ context.Context, opts *app.Options, cb app.Callbacks) (*app.Summary, error) {
+				if opts.ProgressMode != mode {
+					t.Fatal("progress mode not passed through")
+				}
+				cb.Manifest(app.ManifestPayload{})
+				cb.Progress(app.ProgressUpdate{Kind: "series", Series: app.SeriesEvent{SeriesInstanceUID: "large-file", Status: "downloading", BytesDownloaded: 50, BytesTotal: 100}})
+				return &app.Summary{Total: 1}, context.Canceled
+			})
+			if code != 130 || !strings.Contains(out.String(), "50 B/100 B (50.0%)") || !strings.Contains(out.String(), "Run cancelled") {
+				t.Fatalf("progress lost: code=%d output=%q", code, out.String())
+			}
+			if mode == "plain" && strings.ContainsAny(out.String(), "\r\x1b") {
+				t.Fatalf("plain CLI used terminal controls: %q", out.String())
+			}
+			report, _ := readReport(t, path)
+			if report.Status != "cancelled" {
+				t.Fatalf("progress changed cancellation outcome: %+v", report)
+			}
+		})
+	}
+}
+
 func manifestArgs(t *testing.T) ([]string, string) {
 	t.Helper()
 	dir := t.TempDir()
@@ -138,6 +166,29 @@ func TestPolicyAndReportDestinationFailBeforeTransfer(t *testing.T) {
 				t.Fatal("invalid run reported success")
 			}
 		})
+	}
+}
+
+func TestInvalidExplicitCredentialExplainsRequirementWithoutLoggingContents(t *testing.T) {
+	args, reportPath := manifestArgs(t)
+	key := filepath.Join(filepath.Dir(reportPath), "invalid-key.json")
+	if err := os.WriteFile(key, []byte(`{"api_key":{"private":"never-print-this"}}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	args = append(args, "--auth", key, "--max-retries", "0")
+	var out bytes.Buffer
+	if code := Main(context.Background(), args, &out, &out, "test"); code == 0 {
+		t.Fatal("invalid explicit key was accepted")
+	}
+	if !strings.Contains(out.String(), "--auth") || !strings.Contains(out.String(), "api_key") {
+		t.Fatalf("missing credential requirement: %s", out.String())
+	}
+	if strings.Contains(out.String(), "never-print-this") {
+		t.Fatal("credential contents leaked")
+	}
+	report, _ := readReport(t, reportPath)
+	if report.Status != "failed" {
+		t.Fatal("invalid key reported success")
 	}
 }
 

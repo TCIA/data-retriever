@@ -120,8 +120,10 @@ this change. Ordinary core logs still appear on the terminal.
    parity before replacing an existing route. Merge alone is insufficient: the
    wheel must be published for the extra to resolve.
 
-Approved controlled-data credentials remain required. The current core may save
-a private copy of a supplied key in the platform application configuration
-directory; document and account for this in notebook/HPC environments. Downloads
+Approved controlled-data credentials remain required. CLI/Python runs use only
+the key path supplied for the invocation, without saving a private copy or using
+the GUI's saved-key fallback. Desktop GUI credential persistence is unchanged;
+existing saved GUI keys are not deleted by a CLI run. Published RC1 predates this
+change and retains its original behavior. Downloads
 currently restart after interruption rather than resuming byte ranges. Aspera
 package support is not introduced by this distribution change.

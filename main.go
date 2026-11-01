@@ -108,6 +108,7 @@ func runCLI() {
 	setupCloseHandler(cancel)
 
 	options := app.InitOptions()
+	options.CLI = true
 	appLogger := app.Logger
 
 	if options.CroissantList {
@@ -206,7 +207,19 @@ func runCLI() {
 		},
 	}
 
-	summary, err := app.Run(ctx, options, callbacks)
+	progress, progressErr := app.NewConsoleProgress(os.Stderr, options.ProgressMode)
+	if progressErr != nil {
+		appLogger.Fatal(progressErr)
+	}
+	options.ConsoleLogWriter = progress.Writer(os.Stdout)
+	summary, err := app.Run(ctx, options, progress.Wrap(callbacks))
+	progressErr = err
+	if ctx.Err() != nil {
+		progressErr = ctx.Err()
+	} else if err == nil && (!manifestReceived || summary == nil || summary.Total == 0) {
+		progressErr = errors.New("no downloadable items")
+	}
+	progress.Finish(summary, progressErr)
 	if eventLog != nil {
 		eventLog.LogRunFinished(summary, err)
 	}

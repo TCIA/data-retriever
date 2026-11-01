@@ -1,4 +1,5 @@
 import json
+import io
 from pathlib import Path
 import subprocess
 import tempfile
@@ -39,6 +40,7 @@ class WrapperTests(unittest.TestCase):
             credential = Path(directory) / "key.json"
             credential.write_text('{"api_key":"TEST-SECRET"}')
             process = Mock()
+            process.stdout, process.stderr = io.BytesIO(), io.BytesIO()
             process.wait.return_value = 1
 
             def launch(args, **kwargs):
@@ -64,6 +66,7 @@ class WrapperTests(unittest.TestCase):
             manifest = Path(directory) / "input.csv"
             manifest.touch()
             process = Mock()
+            process.stdout, process.stderr = io.BytesIO(), io.BytesIO()
             process.wait.side_effect = KeyboardInterrupt
             with patch.object(tdr, "executable", return_value=Path("/packaged/tdr")), \
                  patch.object(subprocess, "Popen", return_value=process), \
@@ -96,6 +99,39 @@ class WrapperTests(unittest.TestCase):
         process.wait.side_effect = [subprocess.TimeoutExpired("tdr", 10), 1]
         tdr._cancel(process)
         process.kill.assert_called_once()
+
+    def test_auto_progress_follows_python_stream_not_child_pipe(self):
+        with patch.object(tdr.sys, "stderr", io.StringIO()):
+            self.assertEqual(tdr._progress_mode("auto"), "plain")
+        stream = Mock()
+        stream.isatty.return_value = True
+        with patch.object(tdr.sys, "stderr", stream), patch.dict(tdr.os.environ, {"TERM": "xterm"}):
+            self.assertEqual(tdr._progress_mode("auto"), "terminal")
+        with self.assertRaises(ValueError):
+            tdr._progress_mode("quiet")
+
+    def test_progress_is_relayed_before_eof_including_split_utf8(self):
+        target = io.StringIO()
+        class Chunks:
+            def __init__(self):
+                self.chunks = iter([b"File 25%\r", b"caf\xc3", b"\xa9\n", b""])
+            def read1(self, _):
+                chunk = next(self.chunks)
+                if chunk == b"caf\xc3":
+                    self_check.assertEqual(target.getvalue(), "File 25%\r")
+                return chunk
+            def close(self):
+                pass
+        self_check = self
+        tdr._relay_output(Chunks(), target)
+        self.assertEqual(target.getvalue(), "File 25%\rcafé\n")
+
+    def test_closed_python_capture_still_drains_child(self):
+        target = io.StringIO()
+        target.close()
+        pipe = io.BytesIO(b"progress\n" * 10000)
+        tdr._relay_output(pipe, target)
+        self.assertTrue(pipe.closed)
 
 
 if __name__ == "__main__":
