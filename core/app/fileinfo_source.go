@@ -27,11 +27,11 @@ func (info *FileInfo) sourceURL() string {
 		return ""
 	}
 
-	if url := strings.TrimSpace(info.DownloadURL); url != "" {
-		return url
-	}
 	if uri := strings.TrimSpace(info.DRSURI); uri != "" {
 		return uri
+	}
+	if url := strings.TrimSpace(info.DownloadURL); url != "" {
+		return url
 	}
 
 	return ""

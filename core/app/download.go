@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/md5"
+	"crypto/sha256"
 	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
@@ -868,6 +869,8 @@ type FileInfo struct {
 	AWSBucket                           string `csv:"aws_bucket" json:"aws_bucket,omitempty"`
 	CRDCSeriesUUID                      string `csv:"crdc_series_uuid" json:"crdc_series_uuid,omitempty"`
 	SourceDOI                           string `csv:"source_DOI" json:"source_DOI,omitempty"`
+	MD5                                 string `csv:"md5" json:"md5,omitempty"`
+	SHA256                              string `csv:"sha256" json:"sha256,omitempty"`
 	DownloadURL                         string
 	DRSURI                              string `json:"drs_uri,omitempty"`
 	S5cmdManifestPath                   string `json:"s5cmd_manifest_path,omitempty"`
@@ -926,6 +929,9 @@ func (info *FileInfo) NeedsDownload(output string, force bool, noDecompress bool
 	if force {
 		logger.Debugf("Force flag set, will re-download %s", info.SeriesInstanceUID)
 		return true
+	}
+	if info.DRSURI != "" || info.DownloadURL != "" && !strings.HasPrefix(info.DownloadURL, "s3://") && info.S5cmdManifestPath == "" {
+		return !directFileVerified(filepath.Join(info.DcimFiles(output, options), info.FileName), info)
 	}
 	//logger.Warnf("running needs download: %s", output)
 
@@ -1362,6 +1368,10 @@ func retryAfterFromError(err error) time.Duration {
 
 // isRetryableError checks if an error is retryable
 func isRetryableError(err error) bool {
+	var redacted *redactedRequestError
+	if errors.As(err, &redacted) {
+		return isRetryableError(redacted.cause)
+	}
 	var statusErr *httpStatusError
 	if errors.As(err, &statusErr) {
 		switch statusErr.statusCode {
@@ -1687,197 +1697,6 @@ func parseS3URL(s string) (bucket string, key string, isWildcard bool, err error
 	return bucket, key, isWildcard, nil
 }
 
-// downloadFromGen3 downloads a file from a Gen3 server
-func (info *FileInfo) downloadFromGen3(ctx context.Context, output string, httpClient *http.Client, gen3Auth *Gen3AuthManager, options *Options, onProgress ProgressFunc) error {
-	logger.Debugf("Downloading from Gen3 DRS URI: %s", info.DRSURI)
-
-	// Parse DRS URI
-	parsedURI, err := url.Parse(info.DRSURI)
-	if err != nil {
-		return fmt.Errorf("invalid DRS URI: %s", info.DRSURI)
-	}
-	commonsURL := parsedURI.Host
-	objectID := strings.TrimPrefix(parsedURI.Path, "/")
-
-	// Get download URL from Gen3
-	objectID = url.PathEscape(objectID)
-	downloadURL, err := getGen3DownloadURL(httpClient, commonsURL, objectID, gen3Auth)
-	if err != nil {
-		return fmt.Errorf("failed to get download URL from Gen3: %w", err)
-	}
-
-	// Download the file
-	info.DownloadURL = downloadURL
-	return info.downloadDirect(ctx, output, httpClient, options, onProgress, gen3Auth)
-}
-
-type AccessMethod struct {
-	AccessID string `json:"access_id"`
-	Type     string `json:"type"`
-}
-
-// Gen3AuthManager handles fetching and caching of Gen3 access tokens.
-type Gen3AuthManager struct {
-	client *http.Client
-	apiKey string
-	tokens map[string]string // Cache: host -> access token
-	mu     sync.Mutex
-}
-
-// NewGen3AuthManager creates a new Gen3AuthManager.
-func NewGen3AuthManager(client *http.Client, authFile string) (*Gen3AuthManager, error) {
-	if authFile == "" {
-		// No auth file provided, return a manager that can't authenticate.
-		return &Gen3AuthManager{}, nil
-	}
-
-	keyData, err := os.ReadFile(authFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read API key file: %v", err)
-	}
-
-	var apiKeyData struct {
-		APIKey string `json:"api_key"`
-	}
-	if err := json.Unmarshal(keyData, &apiKeyData); err != nil {
-		return nil, fmt.Errorf("failed to parse API key from JSON: %v", err)
-	}
-
-	if apiKeyData.APIKey == "" {
-		return nil, fmt.Errorf("'api_key' not found in JSON key file")
-	}
-
-	if saveErr := SaveAuthFile(authFile); saveErr != nil {
-		logger.Warnf("Failed to save auth file to safe location: %v", saveErr)
-	}
-
-	return &Gen3AuthManager{
-		client: client,
-		apiKey: strings.TrimSpace(apiKeyData.APIKey),
-		tokens: make(map[string]string),
-	}, nil
-}
-
-// GetAccessToken retrieves a token for a given Gen3 host, using the cache if possible.
-func (m *Gen3AuthManager) GetAccessToken(commonsURL string) (string, error) {
-	if m.apiKey == "" {
-		return "", fmt.Errorf("Gen3 authentication requires an API key, but none was provided")
-	}
-
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	// Check cache first
-	if token, found := m.tokens[commonsURL]; found {
-		logger.Debugf("Using cached Gen3 access token for %s", commonsURL)
-		return token, nil
-	}
-
-	// Not in cache, fetch new token
-	logger.Infof("Fetching new Gen3 access token for %s", commonsURL)
-	token, err := getGen3AccessToken(m.client, commonsURL, m.apiKey)
-	if err != nil {
-		return "", err
-	}
-
-	// Store in cache
-	m.tokens[commonsURL] = token
-	return token, nil
-}
-
-// getGen3AccessToken retrieves an access token from Gen3 using an API key
-func getGen3AccessToken(client *http.Client, commonsURL, apiKey string) (string, error) {
-	apiEndpoint := fmt.Sprintf("https://%s/user/credentials/api/access_token", commonsURL)
-	apiKeyJSON, err := json.Marshal(map[string]string{"api_key": apiKey})
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal API key: %v", err)
-	}
-
-	req, err := http.NewRequest("POST", apiEndpoint, bytes.NewBuffer(apiKeyJSON))
-	if err != nil {
-		return "", fmt.Errorf("failed to create request for access token: %v", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("failed to make request for access token: %v", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", newHTTPStatusError(resp, time.Now())
-	}
-
-	var result map[string]string
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", fmt.Errorf("failed to decode access token response: %v", err)
-	}
-
-	accessToken, ok := result["access_token"]
-	if !ok {
-		return "", fmt.Errorf("no 'access_token' found in Gen3 response")
-	}
-
-	logger.Info("Successfully retrieved Gen3 access token")
-	return accessToken, nil
-}
-
-// getGen3DownloadURL retrieves the download URL from a Gen3 server
-func getGen3DownloadURL(client *http.Client, commonsURL, objectID string, gen3Auth *Gen3AuthManager) (string, error) {
-	apiEndpoint := fmt.Sprintf("https://%s/user/data/download/%s", commonsURL, objectID)
-
-	req, err := http.NewRequest("GET", apiEndpoint, nil)
-	if err != nil {
-		return "", fmt.Errorf("failed to create request: %v", err)
-	}
-
-	// If a manager is configured and has an API key, get and use a token.
-	if gen3Auth != nil && gen3Auth.apiKey != "" {
-		accessToken, err := gen3Auth.GetAccessToken(commonsURL)
-		if err != nil {
-			return "", fmt.Errorf("failed to get access token for %s: %w", commonsURL, err)
-		}
-		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", accessToken))
-	}
-
-	// Log the request for debugging
-	logger.Debugf("Gen3 API Request URL: %s", req.URL.String())
-	for name, headers := range req.Header {
-		for _, h := range headers {
-			logger.Debugf("Gen3 API Request Header: %s: %s", name, h)
-		}
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("failed to make request to Gen3 API: %v", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", newHTTPStatusError(resp, time.Now())
-	}
-
-	var result map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		// It's possible the response is just the URL, not a JSON object.
-		// To handle this, we can try to read the response body as a string.
-		bodyBytes, readErr := io.ReadAll(resp.Body)
-		if readErr != nil {
-			return "", fmt.Errorf("failed to decode and read Gen3 API response: %v and %v", err, readErr)
-		}
-		return string(bodyBytes), nil
-	}
-
-	accessURL, ok := result["url"].(string)
-	if !ok {
-		return "", fmt.Errorf("no 'url' found in Gen3 API response")
-	}
-
-	return accessURL, nil
-}
-
 // downloadDirect downloads a file from a direct URL without decompression
 func (info *FileInfo) downloadDirect(ctx context.Context, output string, httpClient *http.Client, options *Options, onProgress ProgressFunc, gen3Auth *Gen3AuthManager) error {
 	if ctx == nil {
@@ -1886,6 +1705,13 @@ func (info *FileInfo) downloadDirect(ctx context.Context, output string, httpCli
 
 	finalPath := filepath.Join(info.DcimFiles(output, options), info.FileName)
 	tempPath := finalPath + ".tmp"
+	if info.FileName == "" || filepath.Base(info.FileName) != info.FileName || info.FileName == "." || info.FileName == ".." || strings.ContainsAny(info.FileName, `/\`) {
+		return fmt.Errorf("direct download requires a simple file name")
+	}
+	expectedSize, md5sum, sha256sum, err := directIntegrity(info)
+	if err != nil {
+		return err
+	}
 
 	// Clean up any previous temporary files
 	if _, err := os.Stat(tempPath); err == nil {
@@ -1895,8 +1721,9 @@ func (info *FileInfo) downloadDirect(ctx context.Context, output string, httpCli
 
 	req, err := http.NewRequest("GET", info.DownloadURL, nil)
 	if err != nil {
-		return fmt.Errorf("failed to create request: %v", err)
+		return fmt.Errorf("failed to create direct download request")
 	}
+	req.Header.Set("Accept-Encoding", "identity")
 
 	// No wall-clock deadline: large/slow direct downloads must be allowed to
 	// run as long as they need. reqCtx is instead cancelled by the idle
@@ -1908,7 +1735,7 @@ func (info *FileInfo) downloadDirect(ctx context.Context, output string, httpCli
 
 	resp, err := doRequest(httpClient, req)
 	if err != nil {
-		return fmt.Errorf("failed to do request: %v", err)
+		return &redactedRequestError{"direct file request", err}
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -1922,9 +1749,7 @@ func (info *FileInfo) downloadDirect(ctx context.Context, output string, httpCli
 	}
 	defer func() {
 		_ = f.Close()
-		if err != nil {
-			_ = os.Remove(tempPath)
-		}
+		_ = os.Remove(tempPath)
 	}()
 
 	idleBody := newIdleTimeoutReader(resp.Body, downloadIdleTimeout, cancel)
@@ -1940,11 +1765,28 @@ func (info *FileInfo) downloadDirect(ctx context.Context, output string, httpCli
 		reader = newProgressReader(idleBody, resp.ContentLength, onProgress)
 	}
 
-	written, err := io.Copy(f, reader)
+	md5hash, sha256hash := md5.New(), sha256.New()
+	writers := []io.Writer{f}
+	if md5sum != "" {
+		writers = append(writers, md5hash)
+	}
+	if sha256sum != "" {
+		writers = append(writers, sha256hash)
+	}
+	written, err := io.Copy(io.MultiWriter(writers...), reader)
 	if err != nil {
 		return fmt.Errorf("failed to write data after %d bytes: %v", written, err)
 	}
 
+	if expectedSize >= 0 && written != expectedSize {
+		return fmt.Errorf("direct-file size mismatch: expected %d bytes, received %d", expectedSize, written)
+	}
+	if resp.ContentLength >= 0 && resp.Header.Get("Content-Encoding") == "" && written != resp.ContentLength {
+		return fmt.Errorf("incomplete download: expected %d bytes, received %d", resp.ContentLength, written)
+	}
+	if md5sum != "" && hex.EncodeToString(md5hash.Sum(nil)) != md5sum || sha256sum != "" && hex.EncodeToString(sha256hash.Sum(nil)) != sha256sum {
+		return fmt.Errorf("direct-file checksum mismatch")
+	}
 	logger.Debugf("Downloaded %d bytes for %s", written, info.SeriesInstanceUID)
 
 	if err := f.Close(); err != nil {

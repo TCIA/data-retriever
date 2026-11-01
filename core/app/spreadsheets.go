@@ -133,6 +133,7 @@ func decodeSpreadsheet(filePath string) ([]*FileInfo, error) {
 	studyIdIndex := -1
 	studyDateIndex := -1
 	studyDescIndex := -1
+	sizeIndex, md5Index, sha256Index := -1, -1, -1
 	for i, col := range header {
 		switch normalize(col) {
 		case "drsuri", "fileid", "access", "guid", "fileguid", "drsguid":
@@ -149,6 +150,12 @@ func decodeSpreadsheet(filePath string) ([]*FileInfo, error) {
 			studyIdIndex = i
 		case "studydescription", "studydesc", "studyshortname", "studyname":
 			studyDescIndex = i
+		case "filesize", "filesizebytes", "sizebytes", "ctdcsize", "size":
+			sizeIndex = i
+		case "md5", "md5sum", "md5checksum":
+			md5Index = i
+		case "sha256", "sha256sum", "sha256checksum":
+			sha256Index = i
 		case "studydate":
 			studyDateIndex = i
 		}
@@ -160,6 +167,12 @@ func decodeSpreadsheet(filePath string) ([]*FileInfo, error) {
 
 	var fileInfos []*FileInfo
 	for _, record := range records[1:] {
+		value := func(index int) string {
+			if index >= 0 && index < len(record) {
+				return strings.TrimSpace(record[index])
+			}
+			return ""
+		}
 		var fileName string
 		var collection string
 		var patientId string
@@ -200,6 +213,9 @@ func decodeSpreadsheet(filePath string) ([]*FileInfo, error) {
 					DRSURI:            uri,
 					SeriesInstanceUID: strings.TrimSuffix(base, ext),
 					FileName:          fileName,
+					FileSize:          value(sizeIndex),
+					MD5:               value(md5Index),
+					SHA256:            value(sha256Index),
 					Collection:        collection,
 					PatientID:         patientId,
 					StudyID:           studyId,
@@ -219,6 +235,9 @@ func decodeSpreadsheet(filePath string) ([]*FileInfo, error) {
 					DownloadURL:       url,
 					SeriesInstanceUID: strings.TrimSuffix(base, ext),
 					FileName:          fileName,
+					FileSize:          value(sizeIndex),
+					MD5:               value(md5Index),
+					SHA256:            value(sha256Index),
 					Collection:        collection,
 					PatientID:         patientId,
 					StudyID:           studyId,
