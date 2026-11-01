@@ -163,6 +163,7 @@ type MetadataStats struct {
 	StartTime     time.Time
 	LastUpdate    time.Time
 	CurrentSeries string
+	Progress      func(ProgressUpdate)
 	mu            sync.Mutex
 }
 
@@ -192,6 +193,10 @@ func (m *MetadataStats) updateProgress(action string, seriesID string) {
 	}
 
 	completed := int(m.Fetched + m.Cached + m.Failed)
+	if m.Progress != nil {
+		m.Progress(ProgressUpdate{Kind: "metadata", Total: int32(m.Total), Fetched: m.Fetched, Cached: m.Cached, Failed: m.Failed})
+		return
+	}
 	now := time.Now()
 
 	// Update display at most once per 100ms or when complete
@@ -387,6 +392,7 @@ func FetchMetadataForSeriesUIDs(ctx context.Context, seriesIDs []string, httpCli
 	metaStats := &MetadataStats{
 		Total:     len(seriesIDs),
 		StartTime: time.Now(),
+		Progress:  callbacks.Progress,
 	}
 
 	// Use parallel workers to fetch metadata
@@ -674,8 +680,12 @@ func streamFilesFromSeriesIDs(ctx context.Context, prefixFiles []*FileInfo, seri
 
 	tciaTotal := len(seriesIDs)
 	total := len(prefixFiles) + tciaTotal
+	metadataProgress := &MetadataStats{Total: tciaTotal, StartTime: time.Now(), Progress: callbacks.Progress}
 	if tciaTotal > 0 {
 		callbacks.emitStdout(fmt.Sprintf("Found %d series to fetch metadata for\n", tciaTotal))
+		if callbacks.Progress != nil {
+			callbacks.Progress(ProgressUpdate{Kind: "metadata", Total: int32(tciaTotal)})
+		}
 	}
 
 	bufSize := total
@@ -758,7 +768,23 @@ func streamFilesFromSeriesIDs(ctx context.Context, prefixFiles []*FileInfo, seri
 				allFiles = append(allFiles, batchFiles...)
 				mu.Unlock()
 
-				callbacks.emitStdout(fmt.Sprintf("Fetched metadata batch %d/%d\n", idx+1, len(batches)))
+				if callbacks.Progress == nil {
+					callbacks.emitStdout(fmt.Sprintf("Fetched metadata batch %d/%d\n", idx+1, len(batches)))
+				} else {
+					found := make(map[string]bool, len(batchFiles))
+					for _, file := range batchFiles {
+						if file != nil {
+							found[file.SeriesInstanceUID] = true
+						}
+					}
+					for _, id := range ids {
+						action := "failed"
+						if found[id] {
+							action = "fetched"
+						}
+						metadataProgress.updateProgress(action, id)
+					}
+				}
 
 				for _, f := range batchFiles {
 					select {

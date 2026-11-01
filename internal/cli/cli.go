@@ -142,12 +142,21 @@ func execute(ctx context.Context, args []string, stdout, stderr io.Writer, versi
 		return finish(130, "cancelled", "cancelled", "Download cancelled.")
 	}
 	start := time.Now()
+	progress, _ := app.NewConsoleProgress(stderr, opts.ProgressMode)
+	opts.ConsoleLogWriter = progress.Writer(stdout)
 	manifestReceived := false
-	summary, runErr := run(ctx, opts, app.Callbacks{
+	summary, runErr := run(ctx, opts, progress.Wrap(app.Callbacks{
 		Stdout:   func(s string) { fmt.Fprint(stdout, s) },
 		Stderr:   func(s string) { fmt.Fprint(stderr, s) },
 		Manifest: func(app.ManifestPayload) { manifestReceived = true },
-	})
+	}))
+	progressErr := runErr
+	if ctx.Err() != nil {
+		progressErr = context.Canceled
+	} else if runErr == nil && (!manifestReceived || summary == nil || summary.Total == 0) {
+		progressErr = errors.New("no downloadable items")
+	}
+	progress.Finish(summary, progressErr)
 	report.ElapsedSeconds = time.Since(start).Seconds()
 	if summary != nil {
 		report.Total, report.Downloaded = summary.Total, summary.Downloaded

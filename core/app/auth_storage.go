@@ -9,7 +9,10 @@ import (
 // SaveAuthFile copies srcPath to the platform-standard saved auth location with mode 0600.
 // If srcPath is already the saved location, this is a no-op.
 func SaveAuthFile(srcPath string) error {
-	destPath := DefaultAuthFilePath()
+	return saveAuthFileToPath(srcPath, DefaultAuthFilePath())
+}
+
+func saveAuthFileToPath(srcPath, destPath string) error {
 	if filepath.Clean(srcPath) == filepath.Clean(destPath) {
 		return nil
 	}

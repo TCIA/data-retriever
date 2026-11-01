@@ -74,11 +74,15 @@ type Options struct {
 	CLI                    bool
 	AcceptDataPolicy       bool
 	ReportJSON             string
+	ProgressMode           string
 	CroissantList          bool
 	CroissantIncludeGroups []string
 	CroissantIncludeIDs    []string
 	CroissantExcludeIDs    []string
 	LogSink                io.Writer
+	// ConsoleLogWriter lets CLI renderers start a new line before primary
+	// log messages. Nil preserves the existing stdout/GUI logging behavior.
+	ConsoleLogWriter io.Writer
 	// Semaphore, when set, bounds how many files may be actively processed
 	// (pre-check through decompress) at once across ALL Run() calls sharing
 	// it — not just this one. The GUI shares a single instance across
@@ -187,6 +191,7 @@ func parseOptions(args []string, promptReader io.Reader, interactive bool) (*Opt
 	opt.opt.StringVar(&opt.HTTPVersion, "http-version", HTTPVersion1_1, opt.opt.Description("HTTP protocol to use for downloads: 1.1 or 2 (for A/B performance testing)"))
 	opt.opt.BoolVar(&opt.AcceptDataPolicy, "accept-data-policy", false, opt.opt.Description("accept the TCIA data usage policy without interactive prompt"))
 	opt.opt.StringVar(&opt.ReportJSON, "report-json", "", opt.opt.Description("write a machine-readable completion report (headless tdr only)"))
+	opt.opt.StringVar(&opt.ProgressMode, "progress", "auto", opt.opt.Description("progress display: auto, plain (newline snapshots), or terminal (one updating line)"))
 	opt.opt.BoolVar(&opt.CroissantList, "croissant-list", false, opt.opt.Description("list selectable Croissant download components without downloading"))
 	opt.opt.StringSliceVar(&opt.CroissantIncludeGroups, "croissant-include-group", 1, 99, opt.opt.Description("include a Croissant component group (for example isBasedOn); may be repeated"))
 	opt.opt.StringSliceVar(&opt.CroissantIncludeIDs, "croissant-include", 1, 99, opt.opt.Description("include a Croissant component by ID; may be repeated"))
@@ -219,6 +224,9 @@ func parseOptions(args []string, promptReader io.Reader, interactive bool) (*Opt
 
 	if opt.HTTPVersion != HTTPVersion1_1 && opt.HTTPVersion != HTTPVersion2 {
 		return opt, fmt.Errorf("--http-version must be %q or %q, got %q", HTTPVersion1_1, HTTPVersion2, opt.HTTPVersion)
+	}
+	if opt.ProgressMode != "auto" && opt.ProgressMode != "plain" && opt.ProgressMode != "terminal" {
+		return opt, fmt.Errorf("--progress must be auto, plain or terminal")
 	}
 
 	if opt.TokenUrl != "" && opt.TokenUrl != TokenUrl {

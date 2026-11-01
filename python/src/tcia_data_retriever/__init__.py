@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import codecs
 import json
 import os
 from pathlib import Path
@@ -9,6 +10,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
 from typing import Any
 
 __all__ = ["DownloadError", "download", "executable", "build_info", "main"]
@@ -97,18 +99,63 @@ def _cancel(process: subprocess.Popen) -> None:
         process.wait()
 
 
+def _relay_output(pipe, target) -> None:
+    """Drain a binary child pipe without waiting for a newline or buffering a log."""
+    decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
+    forwarding = target is not None
+    try:
+        while True:
+            chunk = pipe.read1(4096)
+            text = decoder.decode(chunk, final=not chunk)
+            if text and forwarding:
+                try:
+                    target.write(text)
+                    target.flush()
+                except (OSError, ValueError):
+                    # A closed notebook capture must not block the downloader.
+                    # Keep draining the pipe; status still comes from the report.
+                    forwarding = False
+            if not chunk:
+                break
+    finally:
+        pipe.close()
+
+
+def _output_readers(process):
+    readers = []
+    for pipe, target in ((process.stdout, sys.stdout), (process.stderr, sys.stderr)):
+        if pipe is not None:
+            reader = threading.Thread(target=_relay_output, args=(pipe, target), daemon=True)
+            reader.start()
+            readers.append(reader)
+    return readers
+
+
+def _progress_mode(mode):
+    if mode not in {"auto", "plain", "terminal"}:
+        raise ValueError("progress must be auto, plain or terminal")
+    if mode == "auto":
+        try:
+            return "terminal" if sys.stderr.isatty() and os.environ.get("TERM") != "dumb" else "plain"
+        except (AttributeError, OSError, ValueError):
+            return "plain"
+    return mode
+
+
 def download(manifest: str | os.PathLike, output_directory: str | os.PathLike, *,
              accept_data_policy: bool = False, credential_file: str | os.PathLike | None = None,
              processes: int = 8, max_retries: int = 3, skip_existing: bool = False,
-             directory_mode: str = "descriptive") -> dict[str, Any]:
+             directory_mode: str = "descriptive", progress: str = "auto") -> dict[str, Any]:
     """Download a local manifest and return its versioned summary.
 
     Explicit policy acceptance is required. Supply a credential file path,
-    never its contents. Progress is inherited by the notebook/terminal. Ctrl-C
+    never its contents. Progress is relayed to Python's notebook/terminal streams.
+    Automatic mode uses a live terminal line or paced plain-text snapshots. Ctrl-C
     requests CLI cancellation before re-raising KeyboardInterrupt.
     """
     if accept_data_policy is not True:
         raise ValueError("Set accept_data_policy=True after reviewing TCIA's data usage policy")
+    mode = _progress_mode(progress)
     for name, value, minimum in (("processes", processes, 1), ("max_retries", max_retries, 0)):
         if type(value) is not int or value < minimum:
             raise ValueError(f"{name} must be an integer >= {minimum}")
@@ -120,7 +167,8 @@ def download(manifest: str | os.PathLike, output_directory: str | os.PathLike, *
     destination = Path(output_directory).expanduser().resolve()
     args = [str(executable()), "--input", str(source), "--output", str(destination),
             "--accept-data-policy", "--processes", str(processes),
-            "--max-retries", str(max_retries), "--directory-mode", directory_mode]
+            "--max-retries", str(max_retries), "--directory-mode", directory_mode,
+            "--progress", mode]
     if credential_file is not None:
         credential = Path(credential_file).expanduser().resolve(strict=True)
         if not credential.is_file():
@@ -133,14 +181,19 @@ def download(manifest: str | os.PathLike, output_directory: str | os.PathLike, *
         args.extend(["--report-json", str(report_path)])
         flags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
         try:
-            process = subprocess.Popen(args, stdin=subprocess.DEVNULL, creationflags=flags)
+            process = subprocess.Popen(args, stdin=subprocess.DEVNULL, creationflags=flags,
+                                       stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         except OSError:
             raise DownloadError("Could not launch the packaged TDR executable") from None
+        readers = _output_readers(process)
         try:
             returncode = process.wait()
         except KeyboardInterrupt:
             _cancel(process)
             raise
+        finally:
+            for reader in readers:
+                reader.join(timeout=5)
         report = _completion(report_path, returncode)
         if returncode:
             raise DownloadError("TDR download did not complete successfully", returncode=returncode, report=report)
