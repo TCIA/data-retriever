@@ -19,7 +19,12 @@ LDFLAGS := -s -w \
 	-X main.goVersion=$(GO_VERSION) \
 	-X main.distChannel=$(DIST_CHANNEL)
 
-.PHONY: all build build-appstore build-msstore dev test clean fmt lint deps help
+.PHONY: all build build-cli build-appstore build-msstore dev test clean fmt lint deps help
+
+# Headless transfer executable; no Wails/frontend/native GUI build required.
+build-cli:
+	@mkdir -p build/bin
+	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o build/bin/tdr ./cmd/tdr
 
 # Default target
 all: clean build
@@ -82,6 +87,7 @@ help:
 	@echo "Targets:"
 	@echo "  all              Clean and build (default)"
 	@echo "  build            Build GUI binary via wails (GitHub channel)"
+	@echo "  build-cli        Build headless executable (no desktop runtime)"
 	@echo "  build-appstore   Build for Mac App Store (no update check)"
 	@echo "  build-msstore    Build for Microsoft Store (no update check)"
 	@echo "  dev              Run wails dev server"

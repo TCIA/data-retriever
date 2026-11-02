@@ -68,6 +68,13 @@ Thumbs.db
 *.tar.gz
 *.zip
 checksums.txt
+/wheel-build/
+/wheelhouse/
+/python/build/
+/python/*.egg-info/
+/python/src/*.egg-info/
+__pycache__/
+*.pyc
 go.mod
 go.mod
 

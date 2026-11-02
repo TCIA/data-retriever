@@ -4,6 +4,12 @@
 
 If you encounter any issues using the software, please email the [TCIA Helpdesk](mailto:help@cancerimagingarchive.net).
 
+A headless entry point is available at `./cmd/tdr` (`make build-cli`). The
+proposed standalone `tcia-data-retriever` Python package bundles this executable
+in platform wheels. See the [Python package guide](python/README.md) and
+[build, report contract, and release notes](docs/python-distribution.md).
+Wheel CI produces review artifacts; it does not publish to PyPI.
+
 [![Go Version](https://img.shields.io/badge/Go-1.24.4-blue.svg)](https://golang.org)
 ![Windows downloads](https://img.shields.io/github/downloads/TCIA/data-retriever/TCIA_Data_Retriever_windows_amd64.zip?label=Windows%20downloads&cacheSeconds=21600)
 ![Mac downloads](https://img.shields.io/github/downloads/TCIA/data-retriever/TCIA_Data_Retriever_mac.zip?label=Mac%20downloads&cacheSeconds=21600)

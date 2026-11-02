@@ -73,6 +73,7 @@ type Options struct {
 	AuthGate               *AuthGate
 	CLI                    bool
 	AcceptDataPolicy       bool
+	ReportJSON             string
 	CroissantList          bool
 	CroissantIncludeGroups []string
 	CroissantIncludeIDs    []string
@@ -125,6 +126,18 @@ func InitOptions() *Options {
 
 // ParseOptions parses CLI arguments and returns normalized options.
 func ParseOptions(args []string, promptReader io.Reader) (*Options, error) {
+	return parseOptions(args, promptReader, true)
+}
+
+// ParseHeadlessOptions parses the shared options without ever reading stdin.
+func ParseHeadlessOptions(args []string) (*Options, error) {
+	return parseOptions(args, nil, false)
+}
+
+// HelpText returns the usage text generated for the shared options.
+func (o *Options) HelpText() string { return o.opt.Help() }
+
+func parseOptions(args []string, promptReader io.Reader, interactive bool) (*Options, error) {
 	if promptReader == nil {
 		promptReader = os.Stdin
 	}
@@ -173,6 +186,7 @@ func ParseOptions(args []string, promptReader io.Reader) (*Options, error) {
 	opt.opt.BoolVar(&opt.CLI, "cli", false, opt.opt.Description("Run in CLI mode"))
 	opt.opt.StringVar(&opt.HTTPVersion, "http-version", HTTPVersion1_1, opt.opt.Description("HTTP protocol to use for downloads: 1.1 or 2 (for A/B performance testing)"))
 	opt.opt.BoolVar(&opt.AcceptDataPolicy, "accept-data-policy", false, opt.opt.Description("accept the TCIA data usage policy without interactive prompt"))
+	opt.opt.StringVar(&opt.ReportJSON, "report-json", "", opt.opt.Description("write a machine-readable completion report (headless tdr only)"))
 	opt.opt.BoolVar(&opt.CroissantList, "croissant-list", false, opt.opt.Description("list selectable Croissant download components without downloading"))
 	opt.opt.StringSliceVar(&opt.CroissantIncludeGroups, "croissant-include-group", 1, 99, opt.opt.Description("include a Croissant component group (for example isBasedOn); may be repeated"))
 	opt.opt.StringSliceVar(&opt.CroissantIncludeIDs, "croissant-include", 1, 99, opt.opt.Description("include a Croissant component by ID; may be repeated"))
@@ -223,6 +237,9 @@ func ParseOptions(args []string, promptReader io.Reader) (*Options, error) {
 	}
 
 	if opt.Prompt {
+		if !interactive {
+			return opt, fmt.Errorf("--prompt is unavailable in headless mode; supply credentials without an interactive prompt")
+		}
 		Logger.Infof("Please input password for %s: ", opt.Username)
 		if _, err := fmt.Fscanln(promptReader, &opt.Password); err != nil {
 			return opt, fmt.Errorf("failed to scan prompt: %w", err)
