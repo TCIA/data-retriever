@@ -33,6 +33,10 @@ type Callbacks struct {
 	Series    func(SeriesEvent)
 	Manifest  func(ManifestPayload)
 	EmitEvent func(name string, data ...interface{})
+	// Progress receives unthrottled console snapshots separately from GUI
+	// events. When supplied, the caller owns progress display and legacy
+	// carriage-return output is disabled.
+	Progress func(ProgressUpdate)
 }
 
 func (cb Callbacks) emitEvent(name string, data ...interface{}) {
@@ -439,7 +443,11 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 
 	// Always (re)initialise the logger so per-run verbose/debug flags and an
 	// optional GUI LogSink take effect even after earlier runs configured it.
-	setLogger(options.Debug, options.Verbose, "", options.LogSink)
+	if options.ConsoleLogWriter != nil {
+		setLoggerOutput(options.Debug, options.Verbose, "", options.ConsoleLogWriter, options.LogSink)
+	} else {
+		setLogger(options.Debug, options.Verbose, "", options.LogSink)
+	}
 
 	if ctx == nil {
 		ctx = context.Background()
@@ -593,8 +601,12 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 	}
 
 	// Create Gen3 Auth Manager
-	gen3Auth, err := NewGen3AuthManager(client, options.Auth)
+	gen3Auth, err := newRunGen3AuthManager(client, options.Auth, options)
 	if err != nil {
+		if options.CLI {
+			Logger.Warn("Could not read the supplied controlled-access key; pass --auth with a readable JSON file containing a nonempty api_key.")
+			return nil, fmt.Errorf("could not read the supplied controlled-access key: %w", err)
+		}
 		Logger.Warnf("Failed to initialize Gen3 auth manager: %v", err)
 		gen3Auth = &Gen3AuthManager{}
 	}
@@ -689,8 +701,12 @@ func runTCIAStreamingDownload(ctx context.Context, client *http.Client, options 
 		callbacks.emitStderr(fmt.Sprintf("\nDownloading ~%d series with %d workers...\n\n", seriesCount, options.Concurrent))
 	}
 
-	gen3Auth, gaErr := NewGen3AuthManager(client, options.Auth)
+	gen3Auth, gaErr := newRunGen3AuthManager(client, options.Auth, options)
 	if gaErr != nil {
+		if options.CLI {
+			Logger.Warn("Could not read the supplied controlled-access key; pass --auth with a readable JSON file containing a nonempty api_key.")
+			return nil, fmt.Errorf("could not read the supplied controlled-access key: %w", gaErr)
+		}
 		Logger.Warnf("Failed to initialize Gen3 auth manager: %v", gaErr)
 		gen3Auth = &Gen3AuthManager{}
 	}
@@ -854,6 +870,9 @@ func (wc *WorkerContext) emitSeriesEvent(fileInfo *FileInfo, status, message str
 }
 
 func (wc *WorkerContext) emitSeries(evt SeriesEvent) {
+	if wc.Callbacks.Progress != nil {
+		wc.Callbacks.Progress(ProgressUpdate{Kind: "series", Series: evt})
+	}
 	if wc.EventGate != nil && !wc.EventGate.Allow(evt) {
 		return
 	}
@@ -1006,7 +1025,7 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 	// public downloads where re-selecting an auth file could never help.
 	isGen3Download := fileInfo.DRSURI != ""
 
-	if err != nil && isGen3Download && isAuthError(err) && wc.Options.AuthGate != nil {
+	if err != nil && isGen3Download && isAuthError(err) && !wc.Options.CLI && wc.Options.AuthGate != nil {
 		// Distinguish format failure (already caught in Run) vs server rejection
 		Logger.Debugf("auth check: err=%v, Auth=%q, isAuthErr=%v", err, wc.Options.Auth, isAuthError(err))
 
@@ -1019,7 +1038,7 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 		}
 	}
 
-	for err != nil && isGen3Download && isAuthError(err) && wc.Options.AuthGate != nil {
+	for err != nil && isGen3Download && isAuthError(err) && !wc.Options.CLI && wc.Options.AuthGate != nil {
 		// Try the saved auth file silently before opening the prompt.
 		if savedPath := LoadSavedAuthFilePath(); savedPath != "" && savedPath != wc.Options.Auth {
 			if silentAuth, silentErr := NewGen3AuthManager(wc.HTTPClient, savedPath); silentErr == nil {
@@ -1103,6 +1122,16 @@ func (wc *WorkerContext) handleMetadataOnly(fileInfo *FileInfo, isSpreadsheetInp
 }
 
 func updateProgress(stats *DownloadStats, currentSeriesID string, debugMode bool, callbacks Callbacks) {
+	if callbacks.Progress != nil {
+		callbacks.Progress(ProgressUpdate{
+			Kind: "items", Total: stats.Total,
+			Downloaded: atomic.LoadInt32(&stats.Downloaded),
+			Synced:     atomic.LoadInt32(&stats.Synced),
+			Skipped:    atomic.LoadInt32(&stats.Skipped),
+			Failed:     atomic.LoadInt32(&stats.Failed),
+		})
+		return
+	}
 	stats.mu.Lock()
 	defer stats.mu.Unlock()
 

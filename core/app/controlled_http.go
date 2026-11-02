@@ -107,6 +107,29 @@ type Gen3AuthManager struct {
 }
 
 func NewGen3AuthManager(client *http.Client, authFile string) (*Gen3AuthManager, error) {
+	return newGen3AuthManager(client, authFile, SaveAuthFile)
+}
+
+// NewTransientGen3AuthManager reads a supplied key for this invocation only.
+// Unlike the GUI-compatible constructor, it never copies the credential file.
+func NewTransientGen3AuthManager(client *http.Client, authFile string) (*Gen3AuthManager, error) {
+	return newGen3AuthManager(client, authFile, nil)
+}
+
+func newRunGen3AuthManager(client *http.Client, authFile string, options *Options) (*Gen3AuthManager, error) {
+	return newRunGen3AuthManagerWithSaver(client, authFile, options, SaveAuthFile)
+}
+
+// The saver parameter keeps persistence policy testable without accessing a
+// user's actual GUI credential cache.
+func newRunGen3AuthManagerWithSaver(client *http.Client, authFile string, options *Options, save func(string) error) (*Gen3AuthManager, error) {
+	if options != nil && options.CLI {
+		return newGen3AuthManager(client, authFile, nil)
+	}
+	return newGen3AuthManager(client, authFile, save)
+}
+
+func newGen3AuthManager(client *http.Client, authFile string, save func(string) error) (*Gen3AuthManager, error) {
 	if authFile == "" {
 		return &Gen3AuthManager{}, nil
 	}
@@ -124,8 +147,10 @@ func NewGen3AuthManager(client *http.Client, authFile string) (*Gen3AuthManager,
 	if key.APIKey == "" {
 		return nil, fmt.Errorf("'api_key' not found in JSON key file")
 	}
-	if err := SaveAuthFile(authFile); err != nil {
-		logger.Warn("Failed to save auth file to safe location")
+	if save != nil {
+		if err := save(authFile); err != nil {
+			logger.Warn("Failed to save auth file to safe location")
+		}
 	}
 	return &Gen3AuthManager{client: client, apiKey: key.APIKey, tokens: make(map[string]string)}, nil
 }

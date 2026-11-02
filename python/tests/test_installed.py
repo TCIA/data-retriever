@@ -1,5 +1,7 @@
 """Exercise the installed wheel against local HTTP fixtures, never production data."""
 import csv
+import contextlib
+import io
 import json
 import http.server
 import os
@@ -74,20 +76,34 @@ class InstalledWheelTests(unittest.TestCase):
                                      resource, "Synthetic", "Test"])
                 output = root / resource
                 if success:
-                    report = tdr.download(manifest, output, accept_data_policy=True,
-                                          max_retries=0, processes=1)
+                    console_out, console_err = io.StringIO(), io.StringIO()
+                    with contextlib.redirect_stdout(console_out), contextlib.redirect_stderr(console_err):
+                        report = tdr.download(manifest, output, accept_data_policy=True,
+                                              max_retries=0, processes=1)
                     self.assertEqual(report["status"], "success")
                     self.assertEqual(report["downloaded"], 1)
+                    rendered = console_out.getvalue() + console_err.getvalue()
+                    self.assertIn("Items completed:", rendered)
+                    self.assertIn("Run complete", rendered)
+                    self.assertNotIn("\r", rendered)
+                    self.assertNotIn("\x1b", rendered)
                     files = list(output.rglob("fixture.bin"))
                     self.assertEqual(len(files), 1)
                     self.assertEqual(files[0].read_bytes(), PAYLOAD)
                 else:
-                    with self.assertRaises(tdr.DownloadError) as error:
-                        tdr.download(manifest, output, accept_data_policy=True,
-                                     max_retries=0, processes=1)
+                    console_out, console_err = io.StringIO(), io.StringIO()
+                    with contextlib.redirect_stdout(console_out), contextlib.redirect_stderr(console_err):
+                        with self.assertRaises(tdr.DownloadError) as error:
+                            tdr.download(manifest, output, accept_data_policy=True,
+                                         max_retries=0, processes=1)
                     self.assertNotEqual(error.exception.returncode, 0)
                     self.assertEqual(error.exception.report["status"], "failed")
                     self.assertEqual(error.exception.report["failed"], 1)
+                    rendered = console_out.getvalue() + console_err.getvalue()
+                    self.assertIn("Run failed", rendered)
+                    self.assertIn("Failed: 1", rendered)
+                    self.assertNotIn("\r", rendered)
+                    self.assertNotIn("\x1b", rendered)
 
     def test_invalid_manifest_is_failure(self):
         with tempfile.TemporaryDirectory() as directory:
