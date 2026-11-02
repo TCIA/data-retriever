@@ -923,7 +923,18 @@ func (info *FileInfo) getOutput(output string, options *Options) string {
 		)
 		outputDir = filepath.Join(output, collection, patientID, studySegment, seriesSegment)
 	} else {
-		outputDir = filepath.Join(output, info.Collection, info.PatientID, info.StudyInstanceUID, info.SeriesInstanceUID)
+		// sanitizePathSegment strips path separators and collapses pure-dot
+		// segments (".", "..") to empty, so a manifest-supplied field (e.g.
+		// from a direct/DRS spreadsheet row, which is never TCIA-API
+		// controlled) can't climb out of output via "..". It only strips
+		// characters; unlike descriptive mode it does not truncate, so
+		// classic mode still gets full, uid-based directory names.
+		outputDir = filepath.Join(output,
+			sanitizePathSegment(info.Collection),
+			sanitizePathSegment(info.PatientID),
+			sanitizePathSegment(info.StudyInstanceUID),
+			sanitizePathSegment(info.SeriesInstanceUID),
+		)
 	}
 
 	// Check if directory exists without lock first
@@ -1126,12 +1137,23 @@ func extractAndVerifyZip(zipPath string, destDir string, expectedSize int64, md5
 			writer = io.MultiWriter(targetFile, hasher)
 		}
 
-		written, err := io.Copy(writer, fileReader)
+		// Cap how much we'll actually decompress for this entry. The zip
+		// directory's UncompressedSize64 is attacker-controlled metadata,
+		// not a guarantee: Go's DEFLATE reader will happily emit far more
+		// bytes than it declares, so an unbounded io.Copy here is a
+		// decompression-bomb vector (disk/memory exhaustion) regardless of
+		// what the header claims. Allow generous slack over the declared
+		// size for legitimate encoder rounding, but stop runaway entries.
+		entryLimit := int64(file.UncompressedSize64) + 1<<20
+		written, err := io.Copy(writer, io.LimitReader(fileReader, entryLimit+1))
 		_ = fileReader.Close()
 		_ = targetFile.Close()
 
 		if err != nil {
 			return fmt.Errorf("failed to extract file %s: %v", file.Name, err)
+		}
+		if written > entryLimit {
+			return fmt.Errorf("zip entry %s decompressed beyond its declared size (possible decompression bomb): declared %d bytes", file.Name, file.UncompressedSize64)
 		}
 
 		// Verify MD5 if available

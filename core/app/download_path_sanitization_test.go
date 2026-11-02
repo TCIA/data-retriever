@@ -78,3 +78,44 @@ func TestGetOutput_DescriptiveModeProducesSanitizedPath(t *testing.T) {
 		}
 	}
 }
+
+func TestGetOutput_ClassicModeRejectsPathTraversal(t *testing.T) {
+	baseDir := t.TempDir()
+	info := &FileInfo{
+		// These fields are taken verbatim from spreadsheet-sourced
+		// direct/DRS manifests, which are never TCIA-API controlled, so a
+		// crafted manifest can put arbitrary values here.
+		Collection:        "../../../../etc",
+		PatientID:         "..",
+		StudyInstanceUID:  "../../tmp/evil",
+		SeriesInstanceUID: "1.3.6.1.4.1.14519.5.2.1.7085.2036.150542968706930261866940519950",
+	}
+	options := &Options{DirectoryMode: "classic"}
+
+	outputDir := info.getOutput(baseDir, options)
+
+	rel, err := filepath.Rel(baseDir, outputDir)
+	if err != nil {
+		t.Fatalf("failed to compute relative output path: %v", err)
+	}
+	if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) || filepath.IsAbs(rel) {
+		t.Fatalf("classic-mode output dir escaped base directory: %s (rel=%s)", outputDir, rel)
+	}
+}
+
+func TestGetOutput_ClassicModePreservesFullUIDsForLegitimateValues(t *testing.T) {
+	baseDir := t.TempDir()
+	info := &FileInfo{
+		Collection:        "TCGA-LUAD",
+		PatientID:         "TCGA-05-4244",
+		StudyInstanceUID:  "1.2.3.4.56789",
+		SeriesInstanceUID: "1.3.6.1.4.1.14519.5.2.1.7085.2036.150542968706930261866940519950",
+	}
+	options := &Options{DirectoryMode: "classic"}
+
+	outputDir := info.getOutput(baseDir, options)
+	want := filepath.Join(baseDir, info.Collection, info.PatientID, info.StudyInstanceUID, info.SeriesInstanceUID)
+	if outputDir != want {
+		t.Fatalf("classic mode changed a legitimate path: got %s, want %s", outputDir, want)
+	}
+}
