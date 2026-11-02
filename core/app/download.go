@@ -957,7 +957,7 @@ func (info *FileInfo) NeedsDownload(output string, force bool, noDecompress bool
 		return true
 	}
 	if info.DRSURI != "" || info.DownloadURL != "" && !strings.HasPrefix(info.DownloadURL, "s3://") && info.S5cmdManifestPath == "" {
-		return !directFileVerified(filepath.Join(info.DcimFiles(output, options), info.FileName), info)
+		return !directFileVerified(filepath.Join(info.DcimFiles(output, options), info.FileName), info, output)
 	}
 	//logger.Warnf("running needs download: %s", output)
 

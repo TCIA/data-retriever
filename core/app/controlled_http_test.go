@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -301,6 +302,54 @@ func TestDirectManifestIntegrityAndExistingFile(t *testing.T) {
 	}
 	if !info.NeedsDownload(root, false, false, options) {
 		t.Fatal("equal-size corrupt direct file was skipped")
+	}
+}
+
+func TestDirectIntegrityCacheSkipsRehashWhenUnchanged(t *testing.T) {
+	root := t.TempDir()
+	payload := []byte("payload")
+	md5sum, sha256sum := md5.Sum(payload), sha256.Sum256(payload)
+	info := &FileInfo{
+		SeriesInstanceUID: "series-1",
+		DownloadURL:       "https://example.invalid/file.bin",
+		FileName:          "file.bin",
+		FileSize:          strconv.Itoa(len(payload)),
+		MD5:               hex.EncodeToString(md5sum[:]),
+		SHA256:            hex.EncodeToString(sha256sum[:]),
+	}
+	options := &Options{}
+	path := filepath.Join(info.DcimFiles(root, options), info.FileName)
+	if err := os.WriteFile(path, payload, 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	if info.NeedsDownload(root, false, false, options) {
+		t.Fatal("verified direct file should be skipped")
+	}
+
+	cachePath := directIntegrityCachePath(root, info.SeriesInstanceUID)
+	if _, err := os.Stat(cachePath); err != nil {
+		t.Fatalf("expected a verification cache entry to be written: %v", err)
+	}
+
+	// Poison the cache with a checksum that doesn't match the manifest's
+	// expected value, but leave size/mtime alone. If a cache hit were
+	// trusted without comparing against the manifest's current expected
+	// checksums, this corrupted-looking file would wrongly be skipped.
+	stat, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := saveDirectIntegrityCache(cachePath, directIntegrityCacheEntry{
+		Size:      stat.Size(),
+		ModUnixNs: stat.ModTime().UnixNano(),
+		MD5:       strings.Repeat("0", 32),
+		SHA256:    info.SHA256,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if info.NeedsDownload(root, false, false, options) {
+		t.Fatal("a cache entry whose checksum disagrees with the manifest must not be trusted")
 	}
 }
 
