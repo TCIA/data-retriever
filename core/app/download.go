@@ -699,6 +699,24 @@ func streamFilesFromSeriesIDs(ctx context.Context, prefixFiles []*FileInfo, seri
 		return 0, out
 	}
 
+	// Initialize completion status for every series before any goroutine
+	// below can send on out. Downstream workers start downloading the
+	// moment a file arrives on out — including prefixFiles, sent before any
+	// TCIA batch below even starts fetching — so initializing this file only
+	// after all TCIA metadata batches finish (as this used to do) could
+	// truncate away the status of series that had already finished
+	// downloading in the meantime. Series UIDs are already fully known
+	// here (seriesIDs and prefixFiles), so the status table doesn't need to
+	// wait on fetched metadata.
+	statusSeeds := make([]*FileInfo, 0, total)
+	statusSeeds = append(statusSeeds, prefixFiles...)
+	for _, uid := range seriesIDs {
+		statusSeeds = append(statusSeeds, &FileInfo{SeriesInstanceUID: uid})
+	}
+	if err := InitCompletionStatus(options.Output, statusSeeds); err != nil {
+		logger.Errorf("Failed to init completion status: %v", err)
+	}
+
 	batches := make([][]string, 0, (tciaTotal+tciaBatchSize-1)/tciaBatchSize)
 	for i := 0; i < tciaTotal; i += tciaBatchSize {
 		end := i + tciaBatchSize
@@ -803,9 +821,6 @@ func streamFilesFromSeriesIDs(ctx context.Context, prefixFiles []*FileInfo, seri
 			logger.Errorf("Failed to save combined CSV: %v", err)
 		} else {
 			callbacks.emitStdout(fmt.Sprintf("Saved metadata for %d files to %s\n", len(allFiles), csvPath))
-		}
-		if err := InitCompletionStatus(options.Output, allFiles); err != nil {
-			logger.Errorf("Failed to init completion status: %v", err)
 		}
 	}()
 
