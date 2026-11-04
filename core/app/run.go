@@ -289,17 +289,16 @@ type existingSeriesDisposition struct {
 	countAsDownloaded bool
 }
 
-// resolveExistingSeriesDisposition reports a series that was left alone
-// because it already exists on disk with the expected size — whether that
-// was found via the --skip-existing/resume check (which ignores --force)
-// or the plain already-exists check (which respects --force). There is no
-// separate "skipped" category: a series that's already present is reported
-// the same as one downloaded this run.
+// resolveExistingSeriesDisposition reports a completed skip when an existing
+// item passes the current prechecks and needs no payload transfer. This applies
+// both to --skip-existing (which ignores --force) and the normal existence check
+// (which respects --force). S3 sync jobs bypass these checks and retain their
+// separate Synced accounting.
 func resolveExistingSeriesDisposition() existingSeriesDisposition {
 	return existingSeriesDisposition{
-		status:            seriesStatusSucceeded,
-		completionSkipped: false,
-		countAsDownloaded: true,
+		status:            seriesStatusSkipped,
+		completionSkipped: true,
+		countAsDownloaded: false,
 	}
 }
 
