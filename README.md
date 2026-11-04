@@ -45,7 +45,7 @@ For spreadsheet manifests, DRS identifier columns can use `drs_uri`, `file_id`, 
 - **Multiple manifest formats** — `.tcia`, `.s5cmd`, `.csv`, `.tsv`, `.xlsx`, `.json`, `.jsonld`
 - **Parallel downloads** with configurable worker count and per-host connection limits
 - **Real-time progress** — per-series status (queued → downloading → complete), bytes transferred 
-- **Pause & resume** — pause an in-progress run and resume from where it left off using skip-existing logic, with resumed existing series counted as completed
+- **Pause & resume** — pause an in-progress run and resume from where it left off using skip-existing logic, with resumed existing series counted as `Skipped` and completed
 - **Multiple concurrent runs** — queue several manifests simultaneously, each shown in its own card
 - **CRDC / Gen3 authentication** — load a JSON credentials file for restricted datasets, with an in-app prompt if credentials are needed mid-run
 - **Directory modes** — `classic` or `descriptive` naming
@@ -165,7 +165,7 @@ Launch with `--cli` (or `-cli`) to skip the GUI entirely:
 | `--processes` | `-p` | `8` | Parallel download workers |
 | `--max-connections` | | `8` | Max connections per host |
 | `--max-retries` | | `3` | Retry attempts per series |
-| `--skip-existing` | | off | Reuse already-downloaded series and count them as completed (resume-friendly) |
+| `--skip-existing` | | off | Reuse already-downloaded series and count them as `Skipped` and completed (resume-friendly) |
 | `--force` | `-f` | off | Re-download even if files exist |
 | `--auth` | | — | Path to Gen3/CRDC JSON credentials |
 | `--directory-mode` | | `descriptive` | `classic` or `descriptive` |
@@ -188,6 +188,11 @@ Launch with `--cli` (or `-cli`) to skip the GUI entirely:
 | `--debug` | | off | Verbose debug output |
 | `--version` | `-v` | | Print version info |
 | `--help` | `-h` | | Show help |
+
+An item accepted by the existing-file checks is counted as **Skipped**, both in
+normal runs and with `--skip-existing`. It still counts toward completed progress.
+**Synced** identifies S3 synchronization jobs, which can transfer missing files.
+**Downloaded** counts newly transferred non-sync items.
 
 ### Croissant Input Behavior
 
