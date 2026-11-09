@@ -212,7 +212,7 @@ func runCLI() {
 		appLogger.Fatal(progressErr)
 	}
 	options.ConsoleLogWriter = progress.Writer(os.Stdout)
-	summary, err := app.Run(ctx, options, progress.Wrap(callbacks))
+	summary, err := runAppRecovered(ctx, options, progress.Wrap(callbacks))
 	progressErr = err
 	if ctx.Err() != nil {
 		progressErr = ctx.Err()

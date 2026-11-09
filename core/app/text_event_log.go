@@ -74,6 +74,13 @@ func NewTextEventLogger(filePath string, runStart time.Time, interval time.Durat
 }
 
 func (l *TextEventLogger) snapshotLoop() {
+	// Close(), the only caller of l.stopCh, blocks on <-l.doneCh — so doneCh
+	// must close exactly once no matter how this loop exits, including a
+	// recovered panic below, or Close() (and whatever is waiting on it)
+	// would hang forever instead of the process merely crashing.
+	defer close(l.doneCh)
+	defer recoverPanic("event log snapshot loop", nil)
+
 	next := l.runStart.Add(l.interval)
 	for {
 		wait := time.Until(next)
@@ -92,7 +99,6 @@ func (l *TextEventLogger) snapshotLoop() {
 				default:
 				}
 			}
-			close(l.doneCh)
 			return
 		}
 	}

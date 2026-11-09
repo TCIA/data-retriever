@@ -24,6 +24,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -415,56 +416,72 @@ func FetchMetadataForSeriesUIDs(ctx context.Context, seriesIDs []string, httpCli
 			defer wg.Done()
 
 			for seriesID := range idChan {
-				// Check cache first unless refresh is requested
-				cachePath := getMetadataCachePath(options.Output, seriesID)
+				// Recovered per series ID, inside the loop, rather than once
+				// for the whole worker: a panic fetching or caching one
+				// series must not silently stop this worker from ever
+				// consuming the rest of idChan (the other series would then
+				// never get fetched, with nothing but a hung wg.Wait() to
+				// show for it), and left unrecovered at all it would crash
+				// the entire process.
+				func(seriesID string) {
+					defer func() {
+						if r := recover(); r != nil {
+							logger.Errorf("[Meta Worker %d] panic fetching metadata for %s: %v\n%s", workerID, seriesID, r, debug.Stack())
+							metaStats.updateProgress("failed", seriesID)
+						}
+					}()
 
-				if !options.RefreshMetadata {
-					// Try to load from cache
-					if cachedInfo, err := loadMetadataFromCache(cachePath); err == nil {
-						logger.Debugf("[Meta Worker %d] Loaded metadata from cache for: %s", workerID, seriesID)
-						mu.Lock()
-						results = append(results, cachedInfo)
-						mu.Unlock()
-						metaStats.updateProgress("cached", seriesID)
-						continue
+					// Check cache first unless refresh is requested
+					cachePath := getMetadataCachePath(options.Output, seriesID)
+
+					if !options.RefreshMetadata {
+						// Try to load from cache
+						if cachedInfo, err := loadMetadataFromCache(cachePath); err == nil {
+							logger.Debugf("[Meta Worker %d] Loaded metadata from cache for: %s", workerID, seriesID)
+							mu.Lock()
+							results = append(results, cachedInfo)
+							mu.Unlock()
+							metaStats.updateProgress("cached", seriesID)
+							return
+						}
+						// Cache miss or error, fetch from API
+						logger.Debugf("[Meta Worker %d] Cache miss, fetching metadata for: %s", workerID, seriesID)
+					} else {
+						logger.Debugf("[Meta Worker %d] Force refresh, fetching metadata for: %s", workerID, seriesID)
 					}
-					// Cache miss or error, fetch from API
-					logger.Debugf("[Meta Worker %d] Cache miss, fetching metadata for: %s", workerID, seriesID)
-				} else {
-					logger.Debugf("[Meta Worker %d] Force refresh, fetching metadata for: %s", workerID, seriesID)
-				}
 
-				files, err := fetchSeriesMetadataWithRetry(ctx, seriesID, httpClient, options, workerID)
-				if err != nil {
-					logger.Errorf("[Meta Worker %d] Metadata fetch failed for %s: %v", workerID, seriesID, err)
-					metaStats.updateProgress("failed", seriesID)
-					continue
-				}
+					files, err := fetchSeriesMetadataWithRetry(ctx, seriesID, httpClient, options, workerID)
+					if err != nil {
+						logger.Errorf("[Meta Worker %d] Metadata fetch failed for %s: %v", workerID, seriesID, err)
+						metaStats.updateProgress("failed", seriesID)
+						return
+					}
 
-				// Save to cache
-				for _, file := range files {
-					if file.SeriesInstanceUID != "" {
-						if err := saveMetadataToCache(
-							file,
-							getMetadataCachePath(options.Output, file.SeriesInstanceUID),
-						); err != nil {
-							logger.Warnf(
-								"[Meta Worker %d] Failed to cache metadata for %s: %v",
-								workerID,
-								file.SeriesInstanceUID,
-								err,
-							)
+					// Save to cache
+					for _, file := range files {
+						if file.SeriesInstanceUID != "" {
+							if err := saveMetadataToCache(
+								file,
+								getMetadataCachePath(options.Output, file.SeriesInstanceUID),
+							); err != nil {
+								logger.Warnf(
+									"[Meta Worker %d] Failed to cache metadata for %s: %v",
+									workerID,
+									file.SeriesInstanceUID,
+									err,
+								)
+							}
 						}
 					}
-				}
 
-				// Thread-safe append to results
-				mu.Lock()
-				results = append(results, files...)
-				mu.Unlock()
+					// Thread-safe append to results
+					mu.Lock()
+					results = append(results, files...)
+					mu.Unlock()
 
-				// Mark as successfully fetched
-				metaStats.updateProgress("fetched", seriesID)
+					// Mark as successfully fetched
+					metaStats.updateProgress("fetched", seriesID)
+				}(seriesID)
 			}
 		}(i + 1)
 	}
@@ -728,6 +745,12 @@ func streamFilesFromSeriesIDs(ctx context.Context, prefixFiles []*FileInfo, seri
 
 	go func() {
 		defer close(out)
+		// Without this, a panic anywhere below (including inside a
+		// per-batch goroutine's own recovery, or in the prefixFiles loop
+		// before any batch even starts) would crash the whole process
+		// instead of just abandoning this one streaming run; close(out)
+		// above still runs first so consumers don't hang on the channel.
+		defer recoverPanic("TCIA metadata streaming", nil)
 
 		allFiles := make([]*FileInfo, 0, total)
 		for _, f := range prefixFiles {
@@ -754,6 +777,19 @@ func streamFilesFromSeriesIDs(ctx context.Context, prefixFiles []*FileInfo, seri
 			go func(idx int, ids []string) {
 				defer wg.Done()
 				defer func() { <-sem }()
+				defer func() {
+					if r := recover(); r != nil {
+						logger.Errorf("panic fetching metadata batch %d/%d: %v\n%s", idx+1, len(batches), r, debug.Stack())
+						for _, uid := range ids {
+							callbacks.emitSeries(newSeriesEvent(
+								&FileInfo{SeriesInstanceUID: uid},
+								seriesStatusFailed,
+								"Internal error fetching metadata for this series (recovered)",
+								100,
+							))
+						}
+					}
+				}()
 
 				// Without a per-batch deadline, an unresponsive TCIA API
 				// leaves this goroutine blocked in fetchTCIABatch forever —
@@ -782,9 +818,11 @@ func streamFilesFromSeriesIDs(ctx context.Context, prefixFiles []*FileInfo, seri
 					}
 				}
 
-				mu.Lock()
-				allFiles = append(allFiles, batchFiles...)
-				mu.Unlock()
+				func() {
+					mu.Lock()
+					defer mu.Unlock()
+					allFiles = append(allFiles, batchFiles...)
+				}()
 
 				if callbacks.Progress == nil {
 					callbacks.emitStdout(fmt.Sprintf("Fetched metadata batch %d/%d\n", idx+1, len(batches)))
@@ -1599,6 +1637,15 @@ func (info *FileInfo) downloadFromS3(
 		for i := 0; i < numWorkers; i++ {
 			go func() {
 				defer wg.Done()
+				defer func() {
+					if r := recover(); r != nil {
+						logger.Errorf("panic in S3 sync worker: %v\n%s", r, debug.Stack())
+						select {
+						case errCh <- fmt.Errorf("internal error during sync (recovered): %v", r):
+						default:
+						}
+					}
+				}()
 				for obj := range workCh {
 					localPath := filepath.Join(targetDir, filepath.Base(obj.key))
 
@@ -1671,16 +1718,34 @@ func (info *FileInfo) downloadFromS3(
 		}
 
 		go func() {
+			// workCh must always end up closed, panic or not: an unclosed
+			// channel here would leave every worker above blocked forever
+			// on `for obj := range workCh`, and since those workers' own
+			// recover (above) only fires on a panic within a worker itself,
+			// nothing else would ever unblock them.
+			defer close(workCh)
+			defer func() {
+				if r := recover(); r != nil {
+					logger.Errorf("panic queuing S3 sync objects: %v\n%s", r, debug.Stack())
+				}
+			}()
 			for _, obj := range objects {
 				workCh <- obj
 			}
-			close(workCh)
 		}()
 
 		done := make(chan struct{})
 		go func() {
+			// Same reasoning as above: close(done) must happen even if
+			// wg.Wait() itself somehow panicked, or the select below would
+			// wait forever with no worker left to report an error.
+			defer close(done)
+			defer func() {
+				if r := recover(); r != nil {
+					logger.Errorf("panic waiting for S3 sync workers: %v\n%s", r, debug.Stack())
+				}
+			}()
 			wg.Wait()
-			close(done)
 		}()
 
 		select {

@@ -12,6 +12,7 @@ import (
 	"os/user"
 	"path/filepath"
 	stdRuntime "runtime"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -449,7 +450,37 @@ func (b *App) RunCLIFetch(
 	return fmt.Sprintf("started batch %d", id), nil
 }
 
+// runAppRecovered calls app.Run with panic recovery, converting a panic into
+// an ordinary error so every existing caller's normal error-handling path
+// (emitting "cli-error", writing the completion report, logging the run as
+// finished) runs exactly as it would for a transfer error — instead of a
+// panic skipping all of that and, for a caller with no recover of its own
+// above it on the same goroutine, crashing the whole process.
+func runAppRecovered(ctx context.Context, options *app.Options, callbacks app.Callbacks) (summary *app.Summary, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			app.Logger.Errorf("panic during download run: %v\n%s", r, debug.Stack())
+			err = fmt.Errorf("internal error (recovered): %v", r)
+		}
+	}()
+	return app.Run(ctx, options, callbacks)
+}
+
 func (b *App) runBatch(batch *DownloadBatch) {
+	// go b.runBatch(batch) above starts a goroutine with no recover above
+	// it in the caller; runAppRecovered below only covers app.Run's own
+	// call stack, so this is the backstop for a panic anywhere else in this
+	// function (e.g. while building options or wiring callbacks) that would
+	// otherwise crash the whole desktop app instead of just this manifest.
+	defer func() {
+		if r := recover(); r != nil {
+			app.Logger.Errorf("panic in download batch %d: %v\n%s", batch.ID, r, debug.Stack())
+			wailsRuntime.EventsEmit(b.ctx, "cli-error", map[string]interface{}{
+				"runId": fmt.Sprintf("%d", batch.ID),
+				"error": fmt.Sprintf("Internal error (recovered): %v. Check the application log for details.", r),
+			})
+		}
+	}()
 	defer func() {
 		// Remove this batch from the map when done — but only if it's
 		// still the one registered under this ID. ResumeManifest reuses
@@ -593,8 +624,14 @@ func (b *App) runBatch(batch *DownloadBatch) {
 		},
 	}
 
-	// Run the CLI download (blocking inside goroutine)
-	summary, err := app.Run(batch.Ctx, options, callbacks)
+	// Run the CLI download (blocking inside goroutine). Wrapped so a panic
+	// anywhere in app.Run's own call stack becomes an ordinary error instead
+	// of crashing the whole desktop app: runBatch already runs on its own
+	// goroutine with no recover above it, so an unrecovered panic here would
+	// take down every other concurrently running manifest too, not just this
+	// one. (Goroutines app.Run spawns internally recover on their own; this
+	// only covers panics within this call's own stack.)
+	summary, err := runAppRecovered(batch.Ctx, options, callbacks)
 	if eventLog != nil {
 		eventLog.LogRunFinished(summary, err)
 	}

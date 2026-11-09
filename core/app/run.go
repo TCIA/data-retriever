@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -635,6 +636,7 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 		wg.Add(1)
 		go func(ctx WorkerContext) {
 			defer wg.Done()
+			defer recoverPanic(fmt.Sprintf("download worker %d", ctx.WorkerID), nil)
 			ctx.processFiles(inputChan)
 		}(wc)
 	}
@@ -746,6 +748,7 @@ func runTCIAStreamingDownload(ctx context.Context, client *http.Client, options 
 		wg.Add(1)
 		go func(wc WorkerContext) {
 			defer wg.Done()
+			defer recoverPanic(fmt.Sprintf("download worker %d", wc.WorkerID), nil)
 			wc.processFiles(inputChan)
 		}(wc)
 	}
@@ -860,9 +863,30 @@ func (wc *WorkerContext) processFiles(input <-chan *FileInfo) {
 				}
 				acquired = true
 			}
-			wc.handleFile(fileInfo)
+			wc.handleFileRecovered(fileInfo)
 		}
 	}
+}
+
+// handleFileRecovered runs handleFile with panic recovery scoped to a
+// single file. A panic processing one series must not take the rest of
+// this worker's queue down with it — let alone, unrecovered, the entire
+// process — so this recovers, logs the stack trace, and reports the series
+// as failed exactly like an ordinary download error would, then lets the
+// worker continue on to its next file.
+func (wc *WorkerContext) handleFileRecovered(fileInfo *FileInfo) {
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Errorf("[Worker %d] panic processing %s: %v\n%s", wc.WorkerID, fileInfo.SeriesInstanceUID, r, debug.Stack())
+			atomic.AddInt32(&wc.Stats.Failed, 1)
+			updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
+			wc.emitSeriesEvent(fileInfo, seriesStatusFailed, fmt.Sprintf("Internal error processing this series (recovered): %v", r), 100)
+			if err := AppendCompletionStatus(wc.Options.Output, fileInfo.SeriesInstanceUID, fmt.Errorf("panic: %v", r), false); err != nil {
+				Logger.Warnf("Failed to record completion status for %s after panic: %v", fileInfo.SeriesInstanceUID, err)
+			}
+		}
+	}()
+	wc.handleFile(fileInfo)
 }
 
 func (wc *WorkerContext) emitSeriesEvent(fileInfo *FileInfo, status, message string, progress float64) {

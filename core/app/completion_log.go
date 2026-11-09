@@ -68,6 +68,7 @@ func postSeriesCompletionLog(file *FileInfo) {
 	}
 
 	go func() {
+		defer recoverPanic("completion log POST", nil)
 		payload, err := json.Marshal(evt)
 		if err != nil {
 			Logger.Debugf("completion log: marshal failed: %s", err)

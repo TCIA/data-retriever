@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -145,7 +146,7 @@ func execute(ctx context.Context, args []string, stdout, stderr io.Writer, versi
 	progress, _ := app.NewConsoleProgress(stderr, opts.ProgressMode)
 	opts.ConsoleLogWriter = progress.Writer(stdout)
 	manifestReceived := false
-	summary, runErr := run(ctx, opts, progress.Wrap(app.Callbacks{
+	summary, runErr := runRecovered(run, ctx, opts, progress.Wrap(app.Callbacks{
 		Stdout:   func(s string) { fmt.Fprint(stdout, s) },
 		Stderr:   func(s string) { fmt.Fprint(stderr, s) },
 		Manifest: func(app.ManifestPayload) { manifestReceived = true },
@@ -175,6 +176,24 @@ func execute(ctx context.Context, args []string, stdout, stderr io.Writer, versi
 		return finish(1, "failed", "items_failed", "Download completed with failed items.")
 	}
 	return finish(0, "success", "", "")
+}
+
+// runRecovered calls run (app.Run in production; a test double otherwise)
+// with panic recovery. This is the single entry point into the whole
+// transfer pipeline for the headless tdr binary and the Python wrapper
+// built on it — with no caller of Main providing its own recover, an
+// unrecovered panic here would crash the process with a raw Go stack dump,
+// skip report-json entirely (so a wrapper or script sees nothing but a
+// nonzero exit, not why), and never reach the exit-code/report logic below
+// that an ordinary transfer error already goes through cleanly.
+func runRecovered(run runFunc, ctx context.Context, opts *app.Options, callbacks app.Callbacks) (summary *app.Summary, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			app.Logger.Errorf("panic during download run: %v\n%s", r, debug.Stack())
+			err = fmt.Errorf("internal error (recovered): %v", r)
+		}
+	}()
+	return run(ctx, opts, callbacks)
 }
 
 func sameFile(a, b string) bool {
