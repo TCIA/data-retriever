@@ -574,7 +574,7 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (result *Su
 		return nil, fmt.Errorf("failed to decode input file: %w", err)
 	}
 	enrichDownloadMetadata(ctx, files, options.Input, options.metadataResolver)
-	options.references.observeFiles(files)
+	defer options.references.observeFiles(files)
 	if err := WriteAllMetadataToCSV(files, filepath.Join(options.Output, "metadata", "metadata.csv")); err != nil {
 		return nil, fmt.Errorf("failed to write download metadata: %w", err)
 	}

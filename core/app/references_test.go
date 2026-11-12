@@ -39,7 +39,7 @@ func TestReferencesIncludeExcludedDatasetsAndSeparateTransferResults(t *testing.
 			http.Error(w, "unexpected", 500)
 			return
 		}
-		fmt.Fprintf(w, "@misc{remote_key, doi = {%s}, title = {Dataset}}", doi)
+		_, _ = fmt.Fprintf(w, "@misc{remote_key, doi = {%s}, title = {Dataset}}", doi)
 	}))
 	defer srv.Close()
 	root := t.TempDir()
@@ -90,7 +90,7 @@ func TestReferencesResolveOnlyUniqueVisibleWordPressIdentity(t *testing.T) {
 		case "/wp/analysis-results/":
 			_, _ = w.Write([]byte(`{"total_pages":1,"results":[]}`))
 		default:
-			http.Error(w, "DOI service unavailable", 503)
+			http.Error(w, "DOI service unavailable", http.StatusServiceUnavailable)
 		}
 	}))
 	defer srv.Close()
