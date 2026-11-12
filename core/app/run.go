@@ -552,18 +552,8 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode input file: %w", err)
 	}
-	enrichDownloadMetadata(ctx, files, options.Input, options.metadataResolver)
 	if err := WriteAllMetadataToCSV(files, filepath.Join(options.Output, "metadata", "metadata.csv")); err != nil {
 		return nil, fmt.Errorf("failed to write download metadata: %w", err)
-	}
-	missingLicenses := 0
-	for _, file := range files {
-		if file != nil && file.LicenseName == "" && file.LicenseURI == "" && file.LicenseShortName == "" {
-			missingLicenses++
-		}
-	}
-	if missingLicenses > 0 {
-		callbacks.emitStderr(fmt.Sprintf("License metadata unavailable for %d download items; consult the dataset page.\n", missingLicenses))
 	}
 
 	if spaceErr := checkDiskSpace(options.Output, files); spaceErr != nil {
@@ -675,6 +665,7 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 	close(inputChan)
 	wg.Wait()
 
+	finalizeLicenseMetadata(ctx, files, options, callbacks)
 	if err := MergeCompletionStatus(options.Output); err != nil {
 		Logger.Errorf("Failed to merge completion status: %v", err)
 	}

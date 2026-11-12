@@ -327,7 +327,8 @@ licenses is not applied to every component. IDC/NBIA license values take
 precedence; conflicting component URLs are recorded in `LicenseConflict`.
 
 For direct/DRS downloads with missing terms, the retriever makes a bounded,
-best-effort lookup in TCIA's WordPress download records. Matching uses an explicit
+best-effort lookup in TCIA's WordPress download records during finalization,
+after payload transfer. Matching uses an explicit
 `WordPressDownloadID`/`download_id`, an original `ManifestURL`, or a unique original
 manifest filename, in that order. A renamed file without identifying metadata or
 an ambiguous filename may remain unresolved. A filename match is identified as
