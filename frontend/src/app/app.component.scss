@@ -1337,18 +1337,20 @@
 }
 
 .croissant-review {
-  border: 1px solid rgba(128, 128, 128, 0.35);
-  border-radius: 8px;
-  padding: 12px;
-  max-height: 260px;
-  overflow: auto;
+  margin-top: 20px;
 }
 
 .croissant-review-heading {
   display: flex;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
+  overflow-wrap: anywhere;
 }
+
+.croissant-review a { color: #2467a8; text-underline-offset: 3px; }
+.croissant-review a:hover { text-decoration: underline; }
+.croissant-review input[type='checkbox'] { accent-color: #2467a8; flex-shrink: 0; }
 
 .croissant-review-help,
 .croissant-review-status,
@@ -1377,13 +1379,16 @@
 }
 
 .croissant-item {
-  padding: 5px 0 5px 22px;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.3);
 }
 
 .croissant-item-copy {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  flex: 1;
+  gap: 6px;
 }
 
 .croissant-item-copy strong {
@@ -1391,7 +1396,20 @@
 }
 
 .croissant-item--unsupported {
-  opacity: 0.6;
+  color: #666;
+}
+
+.croissant-item-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 8px 14px; flex-wrap: wrap; }
+.croissant-item-heading label { font-weight: 600; overflow-wrap: anywhere; min-width: 0; flex: 1 1 200px; cursor: pointer; }
+.croissant-data-size { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.croissant-item-details { display: flex; flex-wrap: wrap; gap: 3px 14px; font-size: 12px; color: #666; }
+.croissant-item-details span { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.croissant-item-license { font-size: 12px; overflow-wrap: anywhere; }
+.croissant-item-note, .croissant-size-note { font-size: 12px; color: #666; }
+.croissant-selection-summary { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin-top: 16px; font-variant-numeric: tabular-nums; }
+@media (prefers-color-scheme: dark) {
+  .croissant-review a { color: #8bc5ff; }
+  .croissant-item-details, .croissant-item-note, .croissant-size-note, .croissant-item--unsupported { color: #b0b0b0; }
 }
 
 .advanced-settings-modal:has(.license-scroll) {

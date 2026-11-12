@@ -318,6 +318,21 @@ tail -f progress.log
 
 ---
 
+## Reviewing Croissant downloads
+
+The desktop review shows each download's title, data categories/types, file
+types, license, and estimated payload size, plus a DOI/dataset link for details.
+Long metadata lists wrap. Source images remain optional and off by default.
+Public WordPress download metadata can fill missing display details; previewing
+does not fetch nested manifests or payloads, and embedded details work offline.
+
+Manifest CSV/FileObject sizes are never shown as payload size. Missing sizes are
+explicit, and a selected total with incomplete coverage includes `+ unknown size`.
+WordPress totals are used for an external recordset only when its declared row
+count matches the download's corresponding count, or it references the original
+published manifest URL. Inventory-only or separately retrieved packages are
+disabled with an explanation.
+
 ## Download licenses and dataset provenance
 
 `metadata/metadata.csv` preserves license names/URLs and dataset DOI/citation
