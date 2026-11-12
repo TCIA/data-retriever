@@ -135,6 +135,18 @@ func applyLicenseMetadata(file *FileInfo, name, uri, source string) {
 	name, uri = strings.TrimSpace(name), strings.TrimSpace(uri)
 	// Keep source-system terms intact, including when only its short name is known.
 	if file.LicenseURI != "" || file.LicenseName != "" || file.LicenseShortName != "" {
+		knownName := file.LicenseName
+		if knownName == "" {
+			knownName = file.LicenseShortName
+		}
+		if file.LicenseURI == "" && name != "" && normalize(knownName) == normalize(name) && uri != "" {
+			file.LicenseURI = uri
+			if file.LicenseSource == "" {
+				file.LicenseSource = source + " (URI)"
+			} else {
+				file.LicenseSource += "; URI from " + source
+			}
+		}
 		if uri != "" && file.LicenseURI != "" && canonicalCroissantURL(uri) != canonicalCroissantURL(file.LicenseURI) {
 			file.LicenseConflict = source + ": " + uri
 		}
@@ -151,7 +163,7 @@ func enrichDownloadMetadata(ctx context.Context, files []*FileInfo, manifestPath
 		return
 	}
 	for _, file := range files {
-		if file == nil || (file.LicenseName != "" || file.LicenseURI != "" || file.LicenseShortName != "") {
+		if file == nil || file.LicenseURI != "" {
 			continue
 		}
 		// IDC/NBIA own their per-series licenses; do not replace them with a

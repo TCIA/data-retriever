@@ -327,6 +327,13 @@ func applySpreadsheetMetadata(file *FileInfo, columns map[string]int, record []s
 	file.LicenseName = value("LicenseName", "license_label")
 	file.LicenseURI = value("LicenseURI", "license_url", "license_uri")
 	file.LicenseShortName = value("license_short_name")
+	if license := value("license"); license != "" {
+		if strings.HasPrefix(strings.ToLower(license), "https://") || strings.HasPrefix(strings.ToLower(license), "http://") {
+			setCroissantStringIfEmpty(&file.LicenseURI, license)
+		} else if file.LicenseName == "" && file.LicenseShortName == "" {
+			file.LicenseName = license
+		}
+	}
 	file.SourceDOI = value("source_DOI")
 	file.DatasetDOI = value("DatasetDOI", "dataset_doi", "doi")
 	file.DatasetCitation = value("DatasetCitation", "citeAs")
