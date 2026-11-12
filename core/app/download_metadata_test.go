@@ -106,7 +106,7 @@ func TestWordPressLicenseMatching(t *testing.T) {
 func TestIncompleteWordPressCatalogDoesNotMatch(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Query().Get("page") == "2" {
-			http.Error(w, "unavailable", 503)
+			http.Error(w, "unavailable", http.StatusServiceUnavailable)
 			return
 		}
 		_, _ = w.Write([]byte(`{"total_pages":2,"results":[{"id":42,"download_url":"https://example.org/manifest.csv"}]}`))
@@ -169,7 +169,7 @@ func TestWordPressPaginationIsConcurrentBoundedAndOrdered(t *testing.T) {
 			}
 			time.Sleep(20 * time.Millisecond)
 		}
-		fmt.Fprintf(w, `{"total_pages":9,"results":[{"id":%d}]}`, page)
+		_, _ = fmt.Fprintf(w, `{"total_pages":9,"results":[{"id":%d}]}`, page)
 	}))
 	defer srv.Close()
 	rows, err := fetchWordPressRecords(context.Background(), srv.Client(), srv.URL, "downloads")
@@ -183,5 +183,38 @@ func TestWordPressPaginationIsConcurrentBoundedAndOrdered(t *testing.T) {
 		if metadataText(row, "id") != strconv.Itoa(i+1) {
 			t.Fatal("page order changed")
 		}
+	}
+}
+
+func TestLicenseLookupDoesNotDelayPayloadAndRetainsCompletionStatus(t *testing.T) {
+	var started atomic.Bool
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/file.bin" {
+			started.Store(true)
+			_, _ = w.Write([]byte("payload"))
+			return
+		}
+		if !started.Load() {
+			t.Error("remote license lookup happened before payload transfer")
+		}
+		_, _ = w.Write([]byte(`{"total_pages":1,"results":[{"id":42,"data_license":{"label":"CC BY 4.0","url":"https://creativecommons.org/licenses/by/4.0/"}}]}`))
+	}))
+	defer srv.Close()
+	root := t.TempDir()
+	input := filepath.Join(root, "manifest.csv")
+	if err := os.WriteFile(input, []byte("imageUrl,filename,download_id\n"+srv.URL+"/file.bin,file.bin,42\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	options := &Options{Input: input, Output: root, Concurrent: 1, NoDecompress: true, metadataResolver: &downloadMetadataResolver{client: srv.Client(), baseURL: srv.URL}}
+	summary, err := Run(context.Background(), options, Callbacks{})
+	if err != nil || summary.Downloaded != 1 {
+		t.Fatalf("download failed: %+v %v", summary, err)
+	}
+	metadata, err := os.ReadFile(filepath.Join(root, "metadata", "metadata.csv"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(metadata), "CC BY 4.0") || !strings.Contains(string(metadata), "completion_status") || !strings.Contains(string(metadata), StatusSuccess) {
+		t.Fatalf("license/status missing after finalization: %s", metadata)
 	}
 }
