@@ -51,6 +51,9 @@ type croissantDatasetInfo struct {
 	DatasetID   string
 	DatasetName string
 	Collection  string
+	DOI         string
+	URL         string
+	Citation    string
 }
 
 type croissantDownloadRow struct {
@@ -70,6 +73,7 @@ type croissantDownloadRow struct {
 	Group                string
 	ContentSize          string
 	License              string
+	LicenseName          string
 }
 
 // InspectCroissantManifest parses a local Croissant document without fetching
@@ -177,6 +181,9 @@ func decodeCroissant(ctx context.Context, filePath string, client *http.Client, 
 				warnCroissant(callbacks, "skipping row %q: nested manifest did not produce any download jobs", croissantRowLabel(row))
 				skipped++
 				continue
+			}
+			for _, file := range nestedFiles {
+				applyCroissantFileMetadata(file, dataset, row)
 			}
 			files = append(files, nestedFiles...)
 		default:
@@ -320,6 +327,9 @@ func croissantDatasetFromDoc(doc map[string]interface{}) croissantDatasetInfo {
 		DatasetID:   datasetID,
 		DatasetName: name,
 		Collection:  collection,
+		DOI:         normalizeDatasetDOI(datasetID),
+		URL:         metadataText(doc, "url"),
+		Citation:    metadataText(doc, "citeAs"),
 	}
 }
 
@@ -614,6 +624,10 @@ func applyCroissantRecordData(row *croissantDownloadRow, data map[string]interfa
 			row.DownstreamSystem = text
 		case "downloadrequirements":
 			row.DownloadRequirements = text
+		case "license", "licenseurl", "licenseuri":
+			row.License = text
+		case "licenselabel", "licensename":
+			row.LicenseName = text
 		case "name":
 			if row.Name == "" {
 				row.Name = text
@@ -702,7 +716,38 @@ func croissantRowToFileInfo(dataset croissantDatasetInfo, row croissantDownloadR
 		fileInfo.DownloadURL = downloadURL
 	}
 
+	applyCroissantFileMetadata(fileInfo, dataset, row)
 	return fileInfo
+}
+
+func normalizeDatasetDOI(value string) string {
+	value = strings.TrimSpace(value)
+	for _, prefix := range []string{"https://doi.org/", "http://doi.org/", "http://dx.doi.org/", "https://dx.doi.org/", "doi:"} {
+		if strings.HasPrefix(strings.ToLower(value), prefix) {
+			value = strings.TrimSpace(value[len(prefix):])
+			break
+		}
+	}
+	if strings.HasPrefix(value, "10.") && strings.Contains(value, "/") && !strings.ContainsAny(value, " \t\n\r?#") {
+		return strings.ToLower(value)
+	}
+	return ""
+}
+
+func applyCroissantFileMetadata(file *FileInfo, dataset croissantDatasetInfo, row croissantDownloadRow) {
+	if file == nil {
+		return
+	}
+	applyLicenseMetadata(file, row.LicenseName, row.License, "Croissant download component")
+	file.WordPressDownloadID = row.DownloadID
+	file.ManifestURL = row.DownloadURL
+	// Source-image components belong to their source dataset, not necessarily
+	// the Analysis Result that wraps them. Keep the source system's DOI intact.
+	if croissantRowGroup(row) == CroissantGroupPrimary {
+		setCroissantStringIfEmpty(&file.DatasetDOI, dataset.DOI)
+		setCroissantStringIfEmpty(&file.DatasetCitation, dataset.Citation)
+		setCroissantStringIfEmpty(&file.DataDescriptionURI, dataset.URL)
+	}
 }
 
 func dedupeCroissantFiles(files []*FileInfo) []*FileInfo {
@@ -963,6 +1008,7 @@ func mergeCroissantRow(dst *croissantDownloadRow, src croissantDownloadRow) {
 	setCroissantStringIfEmpty(&dst.Group, src.Group)
 	setCroissantStringIfEmpty(&dst.ContentSize, src.ContentSize)
 	setCroissantStringIfEmpty(&dst.License, src.License)
+	setCroissantStringIfEmpty(&dst.LicenseName, src.LicenseName)
 }
 
 func setCroissantStringIfEmpty(dst *string, src string) {

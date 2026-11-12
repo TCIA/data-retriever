@@ -134,7 +134,9 @@ func decodeSpreadsheet(filePath string) ([]*FileInfo, error) {
 	studyDateIndex := -1
 	studyDescIndex := -1
 	sizeIndex, md5Index, sha256Index := -1, -1, -1
+	metadataColumns := make(map[string]int)
 	for i, col := range header {
+		metadataColumns[normalize(col)] = i
 		switch normalize(col) {
 		case "drsuri", "fileid", "access", "guid", "fileguid", "drsguid":
 			drsURIIndex = i
@@ -248,6 +250,21 @@ func decodeSpreadsheet(filePath string) ([]*FileInfo, error) {
 		}
 	}
 
+	// Preserve descriptive metadata independently of the retrieval route. CSV,
+	// TSV and XLSX all use this path; missing/ragged cells remain empty.
+	fileIndex := 0
+	for _, record := range records[1:] {
+		routeIndex := imageURLIndex
+		if drsURIIndex >= 0 {
+			routeIndex = drsURIIndex
+		}
+		if routeIndex < 0 || routeIndex >= len(record) {
+			continue
+		}
+		file := fileInfos[fileIndex]
+		fileIndex++
+		applySpreadsheetMetadata(file, metadataColumns, record)
+	}
 	return fileInfos, nil
 }
 
@@ -296,4 +313,86 @@ func getSeriesInstanceUIDsFromSpreadsheet(filePath string) ([]string, error) {
 	}
 
 	return seriesUIDs, nil
+}
+
+func applySpreadsheetMetadata(file *FileInfo, columns map[string]int, record []string) {
+	value := func(names ...string) string {
+		for _, name := range names {
+			if index, ok := columns[normalize(name)]; ok && index < len(record) && strings.TrimSpace(record[index]) != "" {
+				return strings.TrimSpace(record[index])
+			}
+		}
+		return ""
+	}
+	file.LicenseName = value("LicenseName", "license_label")
+	file.LicenseURI = value("LicenseURI", "license_url", "license_uri")
+	file.LicenseShortName = value("license_short_name")
+	file.SourceDOI = value("source_DOI")
+	file.DatasetDOI = value("DatasetDOI", "dataset_doi", "doi")
+	file.DatasetCitation = value("DatasetCitation", "citeAs")
+	file.DataDescriptionURI = value("DataDescriptionURI", "dataset_url")
+	file.WordPressDownloadID = value("WordPressDownloadID", "download_id", "wordpress_download_id")
+	file.ManifestURL = value("ManifestURL", "manifest_url")
+	if file.LicenseName != "" || file.LicenseURI != "" || file.LicenseShortName != "" {
+		file.LicenseSource = "Manifest row"
+	}
+}
+
+// seriesManifestMetadata also handles UID-only spreadsheets, whose payload
+// metadata comes from IDC/NBIA rather than decodeSpreadsheet.
+func seriesManifestMetadata(path string) map[string]*FileInfo {
+	decoder, err := getSpreadsheetDecoder(path)
+	if err != nil {
+		return nil
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return nil
+	}
+	defer f.Close()
+	rows, err := decoder.Decode(f)
+	if err != nil || len(rows) == 0 {
+		return nil
+	}
+	columns := make(map[string]int)
+	for i, col := range rows[0] {
+		columns[normalize(col)] = i
+	}
+	index, ok := columns["seriesinstanceuid"]
+	if !ok {
+		index, ok = columns["seriesuid"]
+	}
+	if !ok {
+		return nil
+	}
+	result := make(map[string]*FileInfo)
+	for _, row := range rows[1:] {
+		if index >= len(row) || strings.TrimSpace(row[index]) == "" {
+			continue
+		}
+		file := &FileInfo{}
+		applySpreadsheetMetadata(file, columns, row)
+		result[strings.TrimSpace(row[index])] = file
+	}
+	return result
+}
+
+func applySeriesManifestMetadata(file *FileInfo, metadata map[string]*FileInfo) {
+	if file == nil {
+		return
+	}
+	row := metadata[file.SeriesInstanceUID]
+	if row == nil {
+		return
+	}
+	applyLicenseMetadata(file, row.LicenseName, row.LicenseURI, "Manifest row")
+	if file.LicenseName == "" && file.LicenseURI == "" {
+		setCroissantStringIfEmpty(&file.LicenseShortName, row.LicenseShortName)
+	}
+	setCroissantStringIfEmpty(&file.SourceDOI, row.SourceDOI)
+	setCroissantStringIfEmpty(&file.DatasetDOI, row.DatasetDOI)
+	setCroissantStringIfEmpty(&file.DatasetCitation, row.DatasetCitation)
+	setCroissantStringIfEmpty(&file.DataDescriptionURI, row.DataDescriptionURI)
+	setCroissantStringIfEmpty(&file.WordPressDownloadID, row.WordPressDownloadID)
+	setCroissantStringIfEmpty(&file.ManifestURL, row.ManifestURL)
 }

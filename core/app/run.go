@@ -469,6 +469,9 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 	if err := os.MkdirAll(options.Output, os.ModePerm); err != nil {
 		return nil, fmt.Errorf("failed to create output directory: %w", err)
 	}
+	if options.metadataResolver == nil {
+		options.metadataResolver = &downloadMetadataResolver{client: client}
+	}
 
 	if err := createMetadataDir(options.Output); err != nil {
 		return nil, fmt.Errorf("failed to create metadata directory: %w", err)
@@ -548,6 +551,19 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 	files, _, err := decodeInputFile(ctx, options.Input, client, options, callbacks, s5cmdMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode input file: %w", err)
+	}
+	enrichDownloadMetadata(ctx, files, options.Input, options.metadataResolver)
+	if err := WriteAllMetadataToCSV(files, filepath.Join(options.Output, "metadata", "metadata.csv")); err != nil {
+		return nil, fmt.Errorf("failed to write download metadata: %w", err)
+	}
+	missingLicenses := 0
+	for _, file := range files {
+		if file != nil && file.LicenseName == "" && file.LicenseURI == "" && file.LicenseShortName == "" {
+			missingLicenses++
+		}
+	}
+	if missingLicenses > 0 {
+		callbacks.emitStderr(fmt.Sprintf("License metadata unavailable for %d download items; consult the dataset page.\n", missingLicenses))
 	}
 
 	if spaceErr := checkDiskSpace(options.Output, files); spaceErr != nil {
@@ -1230,6 +1246,10 @@ func decodeInputFileInternal(ctx context.Context, filePath string, client *http.
 		s5Files, _, tciaUIDs, splitErr := decodeSpreadsheetSplit(filePath, options.Output, s5cmdMap, callbacks, options)
 		if splitErr == nil {
 			files := combineWithTCIABatch(ctx, s5Files, tciaUIDs, client, options, callbacks)
+			metadata := seriesManifestMetadata(filePath)
+			for _, file := range files {
+				applySeriesManifestMetadata(file, metadata)
+			}
 			if emitManifest {
 				emitManifestMetadata(callbacks, filePath, files)
 			}
