@@ -1407,7 +1407,7 @@
 .croissant-item-license { font-size: 12px; overflow-wrap: anywhere; }
 .croissant-item-note, .croissant-size-note { font-size: 12px; color: #666; }
 .croissant-selection-summary { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin-top: 16px; font-variant-numeric: tabular-nums; }
-@media (prefers-color-scheme: dark) {
+.app-container.dark-mode {
   .croissant-review a { color: #8bc5ff; }
   .croissant-item-details, .croissant-item-note, .croissant-size-note, .croissant-item--unsupported { color: #b0b0b0; }
 }
