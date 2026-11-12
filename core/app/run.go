@@ -434,7 +434,7 @@ func alwaysEmitSeriesEvent(evt SeriesEvent) bool {
 }
 
 // Run executes the shared download workflow.
-func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, error) {
+func Run(ctx context.Context, options *Options, callbacks Callbacks) (result *Summary, runErr error) {
 	if options == nil {
 		return nil, errors.New("options cannot be nil")
 	}
@@ -476,6 +476,27 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 	if err := createMetadataDir(options.Output); err != nil {
 		return nil, fmt.Errorf("failed to create metadata directory: %w", err)
 	}
+	references := newCitationRun(options, client)
+	options.references = references
+	originalSeriesCallback := callbacks.Series
+	callbacks.Series = func(event SeriesEvent) {
+		references.recordEvent(event)
+		if originalSeriesCallback != nil {
+			originalSeriesCallback(event)
+		}
+	}
+	defer func() {
+		callbacks.emitStdout("Preparing dataset references...\n")
+		referenceErr := runErr
+		if referenceErr == nil && result != nil && result.Failed > 0 {
+			referenceErr = fmt.Errorf("download failures")
+		}
+		if err := references.write(ctx, options.Output, referenceErr); err != nil {
+			callbacks.emitStderr(fmt.Sprintf("Could not save dataset references: %v\n", err))
+		} else {
+			callbacks.emitStdout(fmt.Sprintf("Saved dataset references to %s\n", referenceDirectory(options.Output, options.Input)))
+		}
+	}()
 
 	// Load the s5cmd series map
 	s5cmdMap, err := loadS5cmdSeriesMapFromCSVs(options.Output)
@@ -553,6 +574,7 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 		return nil, fmt.Errorf("failed to decode input file: %w", err)
 	}
 	enrichDownloadMetadata(ctx, files, options.Input, options.metadataResolver)
+	options.references.observeFiles(files)
 	if err := WriteAllMetadataToCSV(files, filepath.Join(options.Output, "metadata", "metadata.csv")); err != nil {
 		return nil, fmt.Errorf("failed to write download metadata: %w", err)
 	}
@@ -793,6 +815,7 @@ feedLoop:
 			if !ok {
 				break feedLoop
 			}
+			options.references.observeFiles([]*FileInfo{f})
 			allFiles = append(allFiles, f)
 			if f != nil && f.SeriesInstanceUID != "" {
 				if _, already := seen[f.SeriesInstanceUID]; !already {

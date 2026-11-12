@@ -318,6 +318,30 @@ tail -f progress.log
 
 ---
 
+## Dataset reference exports
+
+Every download run writes `references.txt`, `references.bib`, and a structured
+`references.json` report under `metadata/references/<manifest-name>-<path-hash>/`.
+The log prints the location. Separate directories preserve reports for different
+manifests sharing a destination, including files with the same basename. A retry
+updates that manifest's report instead of appending duplicate citations.
+
+The exports include all datasets named in a Croissant manifest, including
+excluded source datasets. Explicit selection is recorded separately from transfer
+success/failure. When a manifest names source datasets without assigning them to
+particular download components, the report states that the individual selection
+is unresolved. This does not imply those data were downloaded or used in research.
+
+Supplied citation text is preserved, including distinct supplied versions sharing
+a DOI. DOI variants are normalized and deduplicated. Missing dataset identities
+can be matched against unique visible WordPress records using download ID, URL,
+or dataset name. DOI content negotiation supplies missing citation text and
+BibTeX; unresolved references remain explicit and never block downloads. Lookup
+is bounded to 25 seconds per run and skipped on cancellation. BibTeX comes from
+the DOI service's current metadata; supplied version-specific text remains in
+`references.txt` and `references.json`. Cite the datasets and versions actually
+used in your research.
+
 ## Reviewing Croissant downloads
 
 The desktop review shows each download's title, data categories/types, file

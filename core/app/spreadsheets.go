@@ -336,6 +336,7 @@ func applySpreadsheetMetadata(file *FileInfo, columns map[string]int, record []s
 	}
 	file.SourceDOI = value("source_DOI")
 	file.DatasetDOI = value("DatasetDOI", "dataset_doi", "doi")
+	file.AnalysisResultID = value("analysis_result_id")
 	file.DatasetCitation = value("DatasetCitation", "citeAs")
 	file.DataDescriptionURI = value("DataDescriptionURI", "dataset_url")
 	file.WordPressDownloadID = value("WordPressDownloadID", "download_id", "wordpress_download_id")
@@ -398,6 +399,7 @@ func applySeriesManifestMetadata(file *FileInfo, metadata map[string]*FileInfo) 
 	}
 	setCroissantStringIfEmpty(&file.SourceDOI, row.SourceDOI)
 	setCroissantStringIfEmpty(&file.DatasetDOI, row.DatasetDOI)
+	setCroissantStringIfEmpty(&file.AnalysisResultID, row.AnalysisResultID)
 	setCroissantStringIfEmpty(&file.DatasetCitation, row.DatasetCitation)
 	setCroissantStringIfEmpty(&file.DataDescriptionURI, row.DataDescriptionURI)
 	setCroissantStringIfEmpty(&file.WordPressDownloadID, row.WordPressDownloadID)
