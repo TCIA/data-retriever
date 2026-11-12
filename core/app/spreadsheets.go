@@ -357,7 +357,7 @@ func seriesManifestMetadata(path string) map[string]*FileInfo {
 	if err != nil {
 		return nil
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	rows, err := decoder.Decode(f)
 	if err != nil || len(rows) == 0 {
 		return nil

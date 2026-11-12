@@ -214,3 +214,31 @@ func enrichDownloadMetadata(ctx context.Context, files []*FileInfo, manifestPath
 		file.WordPressDownloadID = metadataText(record, "id")
 	}
 }
+
+// Enrich after workers finish, before completion status is merged into the CSV.
+// Remote metadata must not hold up payload starts or cancellation.
+func finalizeLicenseMetadata(ctx context.Context, files []*FileInfo, options *Options, callbacks Callbacks) {
+	needsLookup := false
+	for _, file := range files {
+		if file != nil && file.LicenseURI == "" && file.downloadSource() != "IDC" && file.downloadSource() != "nbia" {
+			needsLookup = true
+			break
+		}
+	}
+	if needsLookup && ctx.Err() == nil {
+		callbacks.emitStdout("Completing download license metadata...\n")
+		enrichDownloadMetadata(ctx, files, options.Input, options.metadataResolver)
+		if err := WriteAllMetadataToCSV(files, filepath.Join(options.Output, "metadata", "metadata.csv")); err != nil {
+			callbacks.emitStderr(fmt.Sprintf("Could not save enriched download metadata: %v\n", err))
+		}
+	}
+	missing := 0
+	for _, file := range files {
+		if file != nil && file.LicenseURI == "" && file.LicenseName == "" && file.LicenseShortName == "" {
+			missing++
+		}
+	}
+	if missing > 0 {
+		callbacks.emitStderr(fmt.Sprintf("License metadata unavailable for %d download items; consult the dataset page.\n", missing))
+	}
+}
