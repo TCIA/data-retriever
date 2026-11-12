@@ -22,6 +22,7 @@ import {
   OpenLogLocation,
 } from '../../wailsjs/go/main/App';
 import { app, main } from '../../wailsjs/go/models';
+import { croissantSelectionSummary } from './models/croissant-review';
 import { DownloadStatusService } from './services/download-status.service';
 import { RunState, RunOptions } from './models/run-state.model';
 import { EventsOn, BrowserOpenURL, WindowSetBackgroundColour } from '../../wailsjs/runtime/runtime';
@@ -684,5 +685,18 @@ export class AppComponent implements OnInit, OnDestroy {
 
   croissantItemLabel(item: app.CroissantDownloadOption): string {
     return item.name || item.fileName || item.id;
+  }
+
+  get croissantSummary(): { count: number; size: string } {
+    return croissantSelectionSummary(this.croissantPlan?.items ?? [], this.croissantSelectedIDs);
+  }
+
+  openMetadataLink(event: Event, url: string) {
+    event.preventDefault();
+    if (/^https?:\/\//i.test(url)) BrowserOpenURL(url);
+  }
+
+  metadataLink(url: string): string | null {
+    return /^https?:\/\//i.test(url) ? url : null;
   }
 }
