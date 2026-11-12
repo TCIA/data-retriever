@@ -125,3 +125,28 @@ func TestSeriesManifestTermsKeepProviderLicense(t *testing.T) {
 		t.Fatalf("wrong source precedence: %+v", file)
 	}
 }
+
+func TestGenericLicenseColumnAndCompatibleURIFill(t *testing.T) {
+	for _, license := range []string{"https://creativecommons.org/licenses/by/4.0/", "CC BY 4.0"} {
+		path := filepath.Join(t.TempDir(), "manifest.csv")
+		if err := os.WriteFile(path, []byte("imageUrl,license\nhttps://example.org/file,"+license+"\n"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		files, err := decodeSpreadsheet(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if files[0].LicenseURI != license && files[0].LicenseName != license {
+			t.Fatal("generic license discarded")
+		}
+	}
+	file := &FileInfo{LicenseName: "CC BY 4.0", LicenseSource: "Manifest row"}
+	applyLicenseMetadata(file, "NIH Controlled Data Access Policy", "https://example.org/controlled", "WordPress")
+	if file.LicenseURI != "" {
+		t.Fatal("unrelated license URI attached to existing label")
+	}
+	applyLicenseMetadata(file, "CC BY 4.0", "https://creativecommons.org/licenses/by/4.0/", "WordPress")
+	if file.LicenseName != "CC BY 4.0" || file.LicenseURI == "" {
+		t.Fatal("compatible missing URI was not filled")
+	}
+}
