@@ -318,6 +318,24 @@ tail -f progress.log
 
 ---
 
+## Download licenses and dataset provenance
+
+`metadata/metadata.csv` preserves license names/URLs and dataset DOI/citation
+columns supplied in CSV, TSV, XLSX, or Croissant manifests. Croissant component
+terms follow the files expanded from that component. A dataset-wide list of
+licenses is not applied to every component. IDC/NBIA license values take
+precedence; conflicting component URLs are recorded in `LicenseConflict`.
+
+For direct/DRS downloads with missing terms, the retriever makes a bounded,
+best-effort lookup in TCIA's WordPress download records during finalization,
+after payload transfer. Matching uses an explicit
+`WordPressDownloadID`/`download_id`, an original `ManifestURL`, or a unique original
+manifest filename, in that order. A renamed file without identifying metadata or
+an ambiguous filename may remain unresolved. A filename match is identified as
+such in `LicenseSource`; it is not a verification of the manifest's contents.
+Unavailable metadata does not prevent downloading. `DatasetDOI` identifies the
+manifest's dataset separately from IDC's `source_DOI`.
+
 ## License
 
 This project is licensed under the [Apache License 2.0](LICENSE).

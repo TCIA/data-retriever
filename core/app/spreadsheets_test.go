@@ -136,6 +136,7 @@ func TestRunDirectSpreadsheetWritesMergedMetadata(t *testing.T) {
 	))
 	outputDir := t.TempDir()
 	options := &Options{
+		metadataResolver:      &downloadMetadataResolver{client: srv.Client(), baseURL: srv.URL},
 		Input:                 manifestPath,
 		Output:                outputDir,
 		Concurrent:            1,

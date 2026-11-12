@@ -752,8 +752,10 @@ func streamFilesFromSeriesIDs(ctx context.Context, prefixFiles []*FileInfo, seri
 		// above still runs first so consumers don't hang on the channel.
 		defer recoverPanic("TCIA metadata streaming", nil)
 
+		manifestMetadata := seriesManifestMetadata(options.Input)
 		allFiles := make([]*FileInfo, 0, total)
 		for _, f := range prefixFiles {
+			applySeriesManifestMetadata(f, manifestMetadata)
 			select {
 			case <-ctx.Done():
 				return
@@ -799,6 +801,9 @@ func streamFilesFromSeriesIDs(ctx context.Context, prefixFiles []*FileInfo, seri
 				batchCtx, cancel := context.WithTimeout(ctx, tciaBatchTimeout)
 				batchFiles := fetchTCIABatch(batchCtx, ids, httpClient)
 				cancel()
+				for _, file := range batchFiles {
+					applySeriesManifestMetadata(file, manifestMetadata)
+				}
 
 				if batchFiles == nil {
 					logger.Warnf("Metadata batch %d/%d returned no results (TCIA API unresponsive or request failed); marking %d series in this batch as failed", idx+1, len(batches), len(ids))
@@ -948,6 +953,12 @@ type FileInfo struct {
 	AWSBucket                           string `csv:"aws_bucket" json:"aws_bucket,omitempty"`
 	CRDCSeriesUUID                      string `csv:"crdc_series_uuid" json:"crdc_series_uuid,omitempty"`
 	SourceDOI                           string `csv:"source_DOI" json:"source_DOI,omitempty"`
+	DatasetDOI                          string `csv:"DatasetDOI" json:"dataset_doi,omitempty"`
+	DatasetCitation                     string `csv:"DatasetCitation" json:"dataset_citation,omitempty"`
+	WordPressDownloadID                 string `csv:"WordPressDownloadID" json:"wordpress_download_id,omitempty"`
+	ManifestURL                         string `csv:"ManifestURL" json:"manifest_url,omitempty"`
+	LicenseSource                       string `csv:"LicenseSource" json:"license_source,omitempty"`
+	LicenseConflict                     string `csv:"LicenseConflict" json:"license_conflict,omitempty"`
 	MD5                                 string `csv:"md5" json:"md5,omitempty"`
 	SHA256                              string `csv:"sha256" json:"sha256,omitempty"`
 	DownloadURL                         string

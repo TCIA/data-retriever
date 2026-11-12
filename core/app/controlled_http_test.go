@@ -300,6 +300,12 @@ func TestDirectManifestIntegrityAndExistingFile(t *testing.T) {
 	if err := os.WriteFile(path, []byte("corrupt"), 0600); err != nil {
 		t.Fatal(err)
 	}
+	// Filesystems differ in mtime precision. Advance it explicitly so this
+	// test checks checksum revalidation rather than rapid-write timestamps.
+	changedTime := time.Now().Add(time.Second)
+	if err := os.Chtimes(path, changedTime, changedTime); err != nil {
+		t.Fatal(err)
+	}
 	if !info.NeedsDownload(root, false, false, options) {
 		t.Fatal("equal-size corrupt direct file was skipped")
 	}
