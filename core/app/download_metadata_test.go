@@ -3,12 +3,16 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 )
 
 func TestSpreadsheetPreservesDownloadTerms(t *testing.T) {
@@ -148,5 +152,36 @@ func TestGenericLicenseColumnAndCompatibleURIFill(t *testing.T) {
 	applyLicenseMetadata(file, "CC BY 4.0", "https://creativecommons.org/licenses/by/4.0/", "WordPress")
 	if file.LicenseName != "CC BY 4.0" || file.LicenseURI == "" {
 		t.Fatal("compatible missing URI was not filled")
+	}
+}
+
+func TestWordPressPaginationIsConcurrentBoundedAndOrdered(t *testing.T) {
+	var active, maxActive atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+		if page > 1 {
+			n := active.Add(1)
+			defer active.Add(-1)
+			for previous := maxActive.Load(); n > previous; previous = maxActive.Load() {
+				if maxActive.CompareAndSwap(previous, n) {
+					break
+				}
+			}
+			time.Sleep(20 * time.Millisecond)
+		}
+		fmt.Fprintf(w, `{"total_pages":9,"results":[{"id":%d}]}`, page)
+	}))
+	defer srv.Close()
+	rows, err := fetchWordPressRecords(context.Background(), srv.Client(), srv.URL, "downloads")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 9 || maxActive.Load() < 2 || maxActive.Load() > 4 {
+		t.Fatalf("bad pagination: rows=%d max_concurrent=%d", len(rows), maxActive.Load())
+	}
+	for i, row := range rows {
+		if metadataText(row, "id") != strconv.Itoa(i+1) {
+			t.Fatal("page order changed")
+		}
 	}
 }

@@ -54,15 +54,14 @@ func fetchWordPressRecords(ctx context.Context, client *http.Client, base, endpo
 	if base == "" {
 		base = wordPressAPI
 	}
-	var records []map[string]interface{}
-	for page := 1; page <= 100; page++ {
+	fetchPage := func(page int) ([]map[string]interface{}, int, error) {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/%s/?per_page=100&page=%d&v=1", base, endpoint, page), nil)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		resp, err := client.Do(req)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		var result struct {
 			TotalPages int                      `json:"total_pages"`
@@ -71,26 +70,58 @@ func fetchWordPressRecords(ctx context.Context, client *http.Client, base, endpo
 		body, readErr := io.ReadAll(io.LimitReader(resp.Body, (8<<20)+1))
 		_ = resp.Body.Close()
 		if readErr != nil {
-			return nil, readErr
+			return nil, 0, readErr
 		}
 		if resp.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("WordPress metadata HTTP %d", resp.StatusCode)
+			return nil, 0, fmt.Errorf("WordPress metadata HTTP %d", resp.StatusCode)
 		}
 		if len(body) > 8<<20 {
-			return nil, fmt.Errorf("WordPress metadata response exceeds 8 MiB")
+			return nil, 0, fmt.Errorf("WordPress metadata response exceeds 8 MiB")
 		}
 		if err := json.Unmarshal(body, &result); err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		if result.TotalPages < 1 || result.TotalPages > 100 {
-			return nil, fmt.Errorf("invalid WordPress pagination")
+			return nil, 0, fmt.Errorf("invalid WordPress pagination")
 		}
-		records = append(records, result.Results...)
-		if page >= result.TotalPages {
-			return records, nil
-		}
+		return result.Results, result.TotalPages, nil
 	}
-	return nil, fmt.Errorf("WordPress pagination limit exceeded")
+	first, totalPages, err := fetchPage(1)
+	if err != nil {
+		return nil, err
+	}
+	pages := make([][]map[string]interface{}, totalPages)
+	pages[0] = first
+	errors := make([]error, totalPages)
+	sem := make(chan struct{}, 4)
+	var wg sync.WaitGroup
+	for page := 2; page <= totalPages; page++ {
+		wg.Add(1)
+		go func(page int) {
+			defer wg.Done()
+			select {
+			case sem <- struct{}{}:
+			case <-ctx.Done():
+				errors[page-1] = ctx.Err()
+				return
+			}
+			defer func() { <-sem }()
+			var count int
+			pages[page-1], count, errors[page-1] = fetchPage(page)
+			if errors[page-1] == nil && count != totalPages {
+				errors[page-1] = fmt.Errorf("WordPress pagination changed during lookup")
+			}
+		}(page)
+	}
+	wg.Wait()
+	var records []map[string]interface{}
+	for i, page := range pages {
+		if errors[i] != nil {
+			return nil, errors[i]
+		}
+		records = append(records, page...)
+	}
+	return records, nil
 }
 
 func metadataText(record map[string]interface{}, keys ...string) string {
