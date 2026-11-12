@@ -32,6 +32,7 @@ var ErrShowHelp = errors.New("show help")
 // Options captures command line parameters shared between CLI and GUI.
 type Options struct {
 	metadataResolver      *downloadMetadataResolver
+	references            *citationRun
 	Input                 string
 	Output                string
 	Proxy                 string
