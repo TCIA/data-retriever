@@ -386,7 +386,7 @@ func (b *App) OpenOutputDirectoryDialog(inputFile string) (string, error) {
 // InspectCroissantManifest returns the local document's logical download
 // components without fetching nested manifests or starting a transfer.
 func (b *App) InspectCroissantManifest(manifestPath string) (app.CroissantDownloadPlan, error) {
-	return app.InspectCroissantManifest(manifestPath)
+	return app.InspectCroissantManifestWithMetadata(b.ctx, manifestPath)
 }
 
 // RunCLIFetch runs the CLI tool asynchronously with the given manifest and output directory and advanced options.

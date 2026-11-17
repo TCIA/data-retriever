@@ -12,6 +12,14 @@ export namespace app {
 	    downstreamSystem: string;
 	    contentSize: string;
 	    license: string;
+	    licenseName: string;
+	    dataCategories: string;
+	    dataTypes: string;
+	    fileTypes: string;
+	    dataSize: string;
+	    dataSizeBytes: number;
+	    dataSizeKnown: boolean;
+	    unsupportedReason: string;
 	    selectedByDefault: boolean;
 	    supported: boolean;
 	
@@ -32,12 +40,21 @@ export namespace app {
 	        this.downstreamSystem = source["downstreamSystem"];
 	        this.contentSize = source["contentSize"];
 	        this.license = source["license"];
+	        this.licenseName = source["licenseName"];
+	        this.dataCategories = source["dataCategories"];
+	        this.dataTypes = source["dataTypes"];
+	        this.fileTypes = source["fileTypes"];
+	        this.dataSize = source["dataSize"];
+	        this.dataSizeBytes = source["dataSizeBytes"];
+	        this.dataSizeKnown = source["dataSizeKnown"];
+	        this.unsupportedReason = source["unsupportedReason"];
 	        this.selectedByDefault = source["selectedByDefault"];
 	        this.supported = source["supported"];
 	    }
 	}
 	export class CroissantDownloadPlan {
 	    datasetName: string;
+	    datasetUrl: string;
 	    items: CroissantDownloadOption[];
 	
 	    static createFrom(source: any = {}) {
@@ -47,6 +64,7 @@ export namespace app {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.datasetName = source["datasetName"];
+	        this.datasetUrl = source["datasetUrl"];
 	        this.items = this.convertValues(source["items"], CroissantDownloadOption);
 	    }
 	

@@ -27,23 +27,32 @@ const (
 // Croissant document. Manifest components may expand into many payload files
 // after the user confirms the plan.
 type CroissantDownloadOption struct {
-	ID                string `json:"id"`
-	Group             string `json:"group"`
-	Name              string `json:"name"`
-	FileName          string `json:"fileName"`
-	DownloadURL       string `json:"downloadUrl"`
-	Role              string `json:"role"`
-	AccessMechanism   string `json:"accessMechanism"`
-	AccessLevel       string `json:"accessLevel"`
-	DownstreamSystem  string `json:"downstreamSystem"`
-	ContentSize       string `json:"contentSize"`
-	License           string `json:"license"`
-	SelectedByDefault bool   `json:"selectedByDefault"`
-	Supported         bool   `json:"supported"`
+	ID                string  `json:"id"`
+	Group             string  `json:"group"`
+	Name              string  `json:"name"`
+	FileName          string  `json:"fileName"`
+	DownloadURL       string  `json:"downloadUrl"`
+	Role              string  `json:"role"`
+	AccessMechanism   string  `json:"accessMechanism"`
+	AccessLevel       string  `json:"accessLevel"`
+	DownstreamSystem  string  `json:"downstreamSystem"`
+	ContentSize       string  `json:"contentSize"`
+	License           string  `json:"license"`
+	LicenseName       string  `json:"licenseName"`
+	DataCategories    string  `json:"dataCategories"`
+	DataTypes         string  `json:"dataTypes"`
+	FileTypes         string  `json:"fileTypes"`
+	DataSize          string  `json:"dataSize"`
+	DataSizeBytes     float64 `json:"dataSizeBytes"`
+	DataSizeKnown     bool    `json:"dataSizeKnown"`
+	UnsupportedReason string  `json:"unsupportedReason"`
+	SelectedByDefault bool    `json:"selectedByDefault"`
+	Supported         bool    `json:"supported"`
 }
 
 type CroissantDownloadPlan struct {
 	DatasetName string                    `json:"datasetName"`
+	DatasetURL  string                    `json:"datasetUrl"`
 	Items       []CroissantDownloadOption `json:"items"`
 }
 
@@ -74,6 +83,13 @@ type croissantDownloadRow struct {
 	ContentSize          string
 	License              string
 	LicenseName          string
+	DataCategories       string
+	DataTypes            string
+	FileTypes            string
+	PayloadSize          string
+	PayloadSizeUnit      string
+	RetrievalKey         string
+	RecordCount          string
 }
 
 // InspectCroissantManifest parses a local Croissant document without fetching
@@ -85,13 +101,16 @@ func InspectCroissantManifest(filePath string) (CroissantDownloadPlan, error) {
 	}
 	dataset := croissantDatasetFromDoc(doc)
 	rows := extractCroissantRows(doc)
+	return croissantPlan(dataset, rows), nil
+}
+
+func croissantPlan(dataset croissantDatasetInfo, rows []croissantDownloadRow) CroissantDownloadPlan {
 	items := make([]CroissantDownloadOption, 0, len(rows))
 	for _, row := range rows {
 		role := resolveCroissantArtifactRole(row)
-		supported := role != croissantRoleTransferPackage && strings.TrimSpace(row.DownloadURL) != ""
-		if role == croissantRoleManifest && !isCroissantDataRetrieverRow(row) {
-			supported = false
-		}
+		reason := croissantUnsupportedReason(row)
+		supported := reason == ""
+		size, sizeBytes, sizeKnown := croissantPayloadSize(row)
 		items = append(items, CroissantDownloadOption{
 			ID:                croissantRowSelectionID(row),
 			Group:             croissantRowGroup(row),
@@ -104,11 +123,23 @@ func InspectCroissantManifest(filePath string) (CroissantDownloadPlan, error) {
 			DownstreamSystem:  strings.TrimSpace(row.DownstreamSystem),
 			ContentSize:       strings.TrimSpace(row.ContentSize),
 			License:           strings.TrimSpace(row.License),
+			LicenseName:       row.LicenseName,
+			DataCategories:    row.DataCategories,
+			DataTypes:         row.DataTypes,
+			FileTypes:         row.FileTypes,
+			DataSize:          size,
+			DataSizeBytes:     sizeBytes,
+			DataSizeKnown:     sizeKnown,
+			UnsupportedReason: reason,
 			SelectedByDefault: supported && croissantRowGroup(row) != CroissantGroupIsBasedOn,
 			Supported:         supported,
 		})
 	}
-	return CroissantDownloadPlan{DatasetName: dataset.DatasetName, Items: items}, nil
+	link := safeMetadataURL(dataset.URL)
+	if dataset.DOI != "" {
+		link = "https://doi.org/" + dataset.DOI
+	}
+	return CroissantDownloadPlan{DatasetName: dataset.DatasetName, DatasetURL: link, Items: items}
 }
 
 func readCroissantDocument(filePath string) (map[string]interface{}, error) {
@@ -150,6 +181,11 @@ func decodeCroissant(ctx context.Context, filePath string, client *http.Client, 
 
 	for _, row := range rows {
 		if !croissantRowSelected(row, options) {
+			continue
+		}
+		if reason := croissantUnsupportedReason(row); reason != "" {
+			warnCroissant(callbacks, "skipping row %q: %s", croissantRowLabel(row), reason)
+			skipped++
 			continue
 		}
 		row.DownloadURL = strings.TrimSpace(row.DownloadURL)
@@ -397,6 +433,7 @@ func extractCroissantRows(doc map[string]interface{}) []croissantDownloadRow {
 			RowID: strings.TrimSpace(croissantString(recordSet["@id"])),
 			Name:  strings.TrimSpace(croissantString(recordSet["name"])),
 		}
+		applyCroissantObjectMetadata(&baseRow, recordSet)
 
 		dataRows := croissantSlice(recordSet["data"])
 		if len(dataRows) == 0 {
@@ -476,6 +513,7 @@ func croissantDownloadRowFromObject(object map[string]interface{}, group string)
 	if group == CroissantGroupIsBasedOn {
 		row.RowID = row.FileObjectID
 	}
+	applyCroissantObjectMetadata(&row, object)
 	for _, rawProperty := range croissantSlice(object["additionalProperty"]) {
 		property := croissantMap(rawProperty)
 		if property == nil {
@@ -628,6 +666,24 @@ func applyCroissantRecordData(row *croissantDownloadRow, data map[string]interfa
 			row.License = text
 		case "licenselabel", "licensename":
 			row.LicenseName = text
+		case "downloadtitle", "title":
+			row.Name = text
+		case "downloadtypes", "downloadtype", "datacategories", "datacategory":
+			row.DataCategories = text
+		case "datatypes", "datatype":
+			row.DataTypes = text
+		case "filetypes", "filetype":
+			row.FileTypes = text
+		case "downloadsize", "payloadsize":
+			row.PayloadSize = text
+		case "downloadsizeunit", "payloadsizeunit":
+			row.PayloadSizeUnit = text
+		case "retrievalkeyfield":
+			row.RetrievalKey = text
+		case "csvrecordcount":
+			row.RecordCount = text
+		case "tciawordpressdownloadid", "tciadownloadid", "wordpressdownloadid":
+			row.DownloadID = text
 		case "name":
 			if row.Name == "" {
 				row.Name = text
@@ -867,6 +923,8 @@ func croissantString(value interface{}) string {
 	switch typed := value.(type) {
 	case string:
 		return typed
+	case int, int64:
+		return fmt.Sprint(typed)
 	case float64:
 		if typed == float64(int64(typed)) {
 			return fmt.Sprintf("%d", int64(typed))
@@ -1009,6 +1067,13 @@ func mergeCroissantRow(dst *croissantDownloadRow, src croissantDownloadRow) {
 	setCroissantStringIfEmpty(&dst.ContentSize, src.ContentSize)
 	setCroissantStringIfEmpty(&dst.License, src.License)
 	setCroissantStringIfEmpty(&dst.LicenseName, src.LicenseName)
+	setCroissantStringIfEmpty(&dst.DataCategories, src.DataCategories)
+	setCroissantStringIfEmpty(&dst.DataTypes, src.DataTypes)
+	setCroissantStringIfEmpty(&dst.FileTypes, src.FileTypes)
+	setCroissantStringIfEmpty(&dst.PayloadSize, src.PayloadSize)
+	setCroissantStringIfEmpty(&dst.PayloadSizeUnit, src.PayloadSizeUnit)
+	setCroissantStringIfEmpty(&dst.RetrievalKey, src.RetrievalKey)
+	setCroissantStringIfEmpty(&dst.RecordCount, src.RecordCount)
 }
 
 func setCroissantStringIfEmpty(dst *string, src string) {
