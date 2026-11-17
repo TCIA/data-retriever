@@ -102,7 +102,7 @@ func TestReportOutcomes(t *testing.T) {
 		code              int
 		status, errorCode string
 	}{
-		{"success", &app.Summary{Total: 3, Downloaded: 1, Skipped: 1, Synced: 1}, nil, true, 0, "success", ""},
+		{"success", &app.Summary{Total: 3, Downloaded: 3}, nil, true, 0, "success", ""},
 		{"partial failure", &app.Summary{Total: 2, Downloaded: 1, Failed: 1}, nil, true, 1, "failed", "items_failed"},
 		{"error", nil, errors.New("secret credential https://storage.test/?signature=secret"), false, 1, "failed", "transfer_failed"},
 		{"empty", &app.Summary{}, nil, true, 1, "failed", "empty_manifest"},
@@ -126,7 +126,7 @@ func TestReportOutcomes(t *testing.T) {
 				return tc.summary, tc.err
 			})
 			report, raw := readReport(t, path)
-			if code != tc.code || report.Status != tc.status || report.ErrorCode != tc.errorCode || report.SchemaVersion != 1 || report.Version != "1.2.3" {
+			if code != tc.code || report.Status != tc.status || report.ErrorCode != tc.errorCode || report.SchemaVersion != 2 || report.Version != "1.2.3" {
 				t.Fatalf("code=%d report=%+v", code, report)
 			}
 			if !filepath.IsAbs(report.OutputDirectory) {
@@ -135,7 +135,7 @@ func TestReportOutcomes(t *testing.T) {
 			if strings.Contains(string(raw)+out.String(), "secret") {
 				t.Fatal("raw error leaked into diagnostics or report")
 			}
-			if tc.summary != nil && (report.Total != tc.summary.Total || report.Downloaded != tc.summary.Downloaded || report.Failed != tc.summary.Failed || report.Skipped != tc.summary.Skipped || report.Synced != tc.summary.Synced) {
+			if tc.summary != nil && (report.Total != tc.summary.Total || report.Downloaded != tc.summary.Downloaded || report.Failed != tc.summary.Failed) {
 				t.Fatalf("counts changed: %+v", report)
 			}
 		})

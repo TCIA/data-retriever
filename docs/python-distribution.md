@@ -69,18 +69,16 @@ it uses the bundled metadata fallback. Install a newer wheel to update it.
 
 Exit codes: 0 success/help/version; 1 transfer or report failure; 2 invalid
 arguments or missing policy acceptance; 130 cancellation. Partial item failures
-return nonzero. JSON completion reports use schema version 1:
+return nonzero. JSON completion reports use schema version 2:
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "status": "success",
   "version": "0.0.0.dev0",
   "output_directory": "/absolute/path/images",
   "total": 1,
   "downloaded": 1,
-  "synced": 0,
-  "skipped": 0,
   "failed": 0,
   "elapsed_seconds": 1.2
 }

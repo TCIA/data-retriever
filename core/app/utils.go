@@ -192,14 +192,12 @@ func InitCompletionStatus(outDir string, files []*FileInfo) error {
     return nil
 }
 
-func AppendCompletionStatus(outDir string, seriesUID string, dlErr error, skipped bool) error {
+func AppendCompletionStatus(outDir string, seriesUID string, dlErr error) error {
     statusMu.Lock()
     defer statusMu.Unlock()
 
     var status string
     switch {
-    case skipped:
-        status = StatusSkipped
     case dlErr == nil:
         status = StatusSuccess
     default:

@@ -22,8 +22,6 @@ type ProgressUpdate struct {
 	Kind       string
 	Total      int32
 	Downloaded int32
-	Synced     int32
-	Skipped    int32
 	Failed     int32
 	Fetched    int32
 	Cached     int32
@@ -152,8 +150,6 @@ func (p *ConsoleProgress) Update(update ProgressUpdate) {
 		// Workers may arrive at this lock in a different order from their
 		// atomic counter reads. Never display counters going backwards.
 		p.items.Downloaded = max(p.items.Downloaded, update.Downloaded)
-		p.items.Synced = max(p.items.Synced, update.Synced)
-		p.items.Skipped = max(p.items.Skipped, update.Skipped)
 		p.items.Failed = max(p.items.Failed, update.Failed)
 	case "series":
 		evt := update.Series
@@ -183,14 +179,14 @@ func (p *ConsoleProgress) Finish(summary *Summary, err error) {
 		return
 	}
 	if summary != nil {
-		p.items = ProgressUpdate{Total: summary.Total, Downloaded: summary.Downloaded, Synced: summary.Synced, Skipped: summary.Skipped, Failed: summary.Failed}
+		p.items = ProgressUpdate{Total: summary.Total, Downloaded: summary.Downloaded, Failed: summary.Failed}
 	}
 	status := "Run complete"
 	if errors.Is(err, context.Canceled) {
 		status = "Run cancelled"
 	} else if err != nil || p.items.Failed > 0 || p.items.Total == 0 {
 		status = "Run failed"
-	} else if p.items.Downloaded+p.items.Synced+p.items.Skipped < p.items.Total {
+	} else if p.items.Downloaded < p.items.Total {
 		status = "Run incomplete"
 	}
 	p.stage = "items"
@@ -230,12 +226,12 @@ func (p *ConsoleProgress) snapshotLocked(final bool, status string) string {
 		return fmt.Sprintf("Metadata processed: %s | Fetched: %d | Cached: %d | Failed: %d", completedText(m.Fetched+m.Cached+m.Failed, m.Total, true), m.Fetched, m.Cached, m.Failed)
 	}
 	m := p.items
-	completed := m.Downloaded + m.Synced + m.Skipped + m.Failed
+	completed := m.Downloaded + m.Failed
 	prefix := ""
 	if final {
 		prefix = status + " | "
 	}
-	line := fmt.Sprintf("%sItems completed: %s | Downloaded: %d | Synced: %d | Skipped: %d | Failed: %d", prefix, completedText(completed, m.Total, !final || status == "Run complete"), m.Downloaded, m.Synced, m.Skipped, m.Failed)
+	line := fmt.Sprintf("%sItems completed: %s | Downloaded: %d | Failed: %d", prefix, completedText(completed, m.Total, !final || status == "Run complete"), m.Downloaded, m.Failed)
 	if final {
 		return line
 	}
@@ -283,9 +279,9 @@ func (p *ConsoleProgress) compactSnapshotLocked(final bool, status string) strin
 		m = p.metadata
 		return fmt.Sprintf("Metadata %d/%d | Fetched %d Cached %d Failed %d", m.Fetched+m.Cached+m.Failed, m.Total, m.Fetched, m.Cached, m.Failed)
 	}
-	done := m.Downloaded + m.Synced + m.Skipped + m.Failed
+	done := m.Downloaded + m.Failed
 	if final {
-		return fmt.Sprintf("%s | Items %d/%d | Downloaded %d Synced %d Skipped %d Failed %d", status, done, m.Total, m.Downloaded, m.Synced, m.Skipped, m.Failed)
+		return fmt.Sprintf("%s | Items %d/%d | Downloaded %d Failed %d", status, done, m.Total, m.Downloaded, m.Failed)
 	}
 	base := "Items " + completedText(done, m.Total, true)
 	keys := make([]string, 0, len(p.active))

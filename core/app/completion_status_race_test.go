@@ -71,7 +71,7 @@ func TestStreamFilesFromSeriesIDsInitializesCompletionStatusBeforeDownloadsCanSt
 	// Before the slow TCIA batch above has returned, record this file as
 	// successfully downloaded — mirroring what a download worker does the
 	// instant a file streams through.
-	if err := AppendCompletionStatus(outDir, prefix.SeriesInstanceUID, nil, false); err != nil {
+	if err := AppendCompletionStatus(outDir, prefix.SeriesInstanceUID, nil); err != nil {
 		t.Fatalf("AppendCompletionStatus: %v", err)
 	}
 

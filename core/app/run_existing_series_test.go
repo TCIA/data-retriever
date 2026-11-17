@@ -9,7 +9,7 @@ import (
 )
 
 // Both the --skip-existing/resume check and the plain already-exists check
-// hit applyExistingSeriesDisposition when a series' file is already present
+// hit markExistingSeriesDownloaded when a series' file is already present
 // and correct. There is no separate "skipped" category — both report
 // "downloaded" the same as a series that actually transferred this run.
 
@@ -41,11 +41,8 @@ func TestApplyExistingSeriesDispositionResumeCountsAsDownloaded(t *testing.T) {
 		},
 	}
 
-	wc.applyExistingSeriesDisposition(fileInfo, resolveExistingSeriesDisposition(), "resume")
+	wc.markExistingSeriesDownloaded(fileInfo, "resume")
 
-	if wc.Stats.Skipped != 0 {
-		t.Fatalf("Skipped = %d, want 0", wc.Stats.Skipped)
-	}
 	if wc.Stats.Downloaded != 1 {
 		t.Fatalf("Downloaded = %d, want 1", wc.Stats.Downloaded)
 	}
@@ -90,11 +87,8 @@ func TestApplyExistingSeriesDispositionSkipCountsAsDownloaded(t *testing.T) {
 		},
 	}
 
-	wc.applyExistingSeriesDisposition(fileInfo, resolveExistingSeriesDisposition(), "skip")
+	wc.markExistingSeriesDownloaded(fileInfo, "skip")
 
-	if wc.Stats.Skipped != 0 {
-		t.Fatalf("Skipped = %d, want 0", wc.Stats.Skipped)
-	}
 	if wc.Stats.Downloaded != 1 {
 		t.Fatalf("Downloaded = %d, want 1", wc.Stats.Downloaded)
 	}

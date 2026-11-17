@@ -196,7 +196,7 @@ BINARY_SHA256="$(hash_file "$BIN")"
 GIT_COMMIT="$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)"
 CSV="$OUTPUT_BASE/bench_results_v2.csv"
 LOG_BASE="$OUTPUT_BASE/logs"
-EXPECTED_HEADER='timestamp_utc,run_label,manifest,manifest_sha256,binary_sha256,git_commit,http_version_requested,http_protocol_actual,run_index,elapsed_seconds,disk_mb,disk_mb_per_second,download_elapsed_seconds,download_mb_per_second,files,total_items,downloaded,synced,skipped,failed,exit_code,benchmark_status,log_path'
+EXPECTED_HEADER='timestamp_utc,run_label,manifest,manifest_sha256,binary_sha256,git_commit,http_version_requested,http_protocol_actual,run_index,elapsed_seconds,disk_mb,disk_mb_per_second,download_elapsed_seconds,download_mb_per_second,files,total_items,downloaded,failed,exit_code,benchmark_status,log_path'
 
 mkdir -p "$OUTPUT_BASE" "$LOG_BASE"
 if [[ -f "$CSV" ]]; then
@@ -263,24 +263,19 @@ for manifest in "${MANIFESTS[@]}"; do
 
       total_items="$(summary_value "Total items" "$run_log")"
       downloaded="$(summary_value "Downloaded" "$run_log")"
-      synced="$(summary_value "Synced" "$run_log")"
-      skipped="$(summary_value "Skipped" "$run_log")"
       failed="$(summary_value "Failed" "$run_log")"
       total_items=${total_items:-unknown}
       downloaded=${downloaded:-unknown}
-      synced=${synced:-unknown}
-      skipped=${skipped:-unknown}
       failed=${failed:-unknown}
 
       status="success"
       if [[ $code -ne 0 ]]; then
         status="process_error"
-      elif [[ "$total_items" == "unknown" || "$downloaded" == "unknown" || \
-              "$synced" == "unknown" || "$skipped" == "unknown" || "$failed" == "unknown" ]]; then
+      elif [[ "$total_items" == "unknown" || "$downloaded" == "unknown" || "$failed" == "unknown" ]]; then
         status="incomplete_summary"
       elif [[ "$failed" -gt 0 ]]; then
         status="download_failures"
-      elif [[ $((downloaded + synced + skipped + failed)) -ne "$total_items" ]]; then
+      elif [[ $((downloaded + failed)) -ne "$total_items" ]]; then
         status="inconsistent_summary"
       fi
 
@@ -308,8 +303,6 @@ for manifest in "${MANIFESTS[@]}"; do
         csv_field "$file_count"; printf ','
         csv_field "$total_items"; printf ','
         csv_field "$downloaded"; printf ','
-        csv_field "$synced"; printf ','
-        csv_field "$skipped"; printf ','
         csv_field "$failed"; printf ','
         csv_field "$code"; printf ','
         csv_field "$status"; printf ','

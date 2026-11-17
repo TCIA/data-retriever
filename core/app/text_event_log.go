@@ -160,7 +160,7 @@ func (l *TextEventLogger) HandleSeries(evt SeriesEvent) {
 	level := "INFO"
 	if evt.Status == "failed" {
 		level = "ERROR"
-	} else if evt.Status == "cancelled" || evt.Status == "skipped" {
+	} else if evt.Status == "cancelled" {
 		level = "WARN"
 	}
 
@@ -253,8 +253,6 @@ func (l *TextEventLogger) LogRunFinished(summary *Summary, err error) {
 		fields := map[string]string{
 			"total":      strconv.FormatInt(int64(summary.Total), 10),
 			"downloaded": strconv.FormatInt(int64(summary.Downloaded), 10),
-			"synced":     strconv.FormatInt(int64(summary.Synced), 10),
-			"skipped":    strconv.FormatInt(int64(summary.Skipped), 10),
 			"failed":     strconv.FormatInt(int64(summary.Failed), 10),
 			"elapsed":    summary.Elapsed.Round(time.Second).String(),
 		}
@@ -292,7 +290,6 @@ func (l *TextEventLogger) writeSnapshot(reason string) {
 	active := 0
 	succeeded := 0
 	failed := 0
-	skipped := 0
 	cancelled := 0
 
 	for _, status := range l.statuses {
@@ -302,9 +299,6 @@ func (l *TextEventLogger) writeSnapshot(reason string) {
 			completed++
 		case "failed":
 			failed++
-			completed++
-		case "skipped":
-			skipped++
 			completed++
 		case "cancelled":
 			cancelled++
@@ -325,7 +319,6 @@ func (l *TextEventLogger) writeSnapshot(reason string) {
 		"active":       strconv.Itoa(active),
 		"succeeded":    strconv.Itoa(succeeded),
 		"failed":       strconv.Itoa(failed),
-		"skipped":      strconv.Itoa(skipped),
 		"cancelled":    strconv.Itoa(cancelled),
 		"progress_pct": fmt.Sprintf("%.1f", progress),
 		"reason":       reason,

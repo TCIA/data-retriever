@@ -57,11 +57,11 @@ def executable() -> Path:
 def _completion(path: Path, returncode: int) -> dict[str, Any]:
     try:
         report = json.loads(path.read_text(encoding="utf-8"))
-        if not isinstance(report, dict) or report.get("schema_version") != 1:
+        if not isinstance(report, dict) or report.get("schema_version") != 2:
             raise ValueError()
         if report.get("status") not in {"success", "failed", "cancelled"}:
             raise ValueError()
-        counts = ("total", "downloaded", "synced", "skipped", "failed")
+        counts = ("total", "downloaded", "failed")
         if any(type(report.get(k)) is not int or report[k] < 0 for k in counts):
             raise ValueError()
         if returncode == 0 and (report["status"] != "success" or report["failed"]):

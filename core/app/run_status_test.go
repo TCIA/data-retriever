@@ -21,7 +21,6 @@ func TestResolvePhaseWithDetailedStatuses(t *testing.T) {
 		{name: "downloading", status: seriesStatusDownloading, want: seriesPhaseDownload},
 		{name: "decompressing", status: seriesStatusDecompressing, want: seriesPhaseDecompress},
 		{name: "succeeded", status: seriesStatusSucceeded, want: seriesPhaseComplete},
-		{name: "skipped", status: seriesStatusSkipped, want: seriesPhaseComplete},
 		{name: "failed", status: seriesStatusFailed, want: seriesPhaseFailure},
 		{name: "cancelled", status: seriesStatusCancelled, want: seriesPhaseFailure},
 		{name: "unknown", status: "mystery", want: ""},
@@ -76,7 +75,6 @@ func TestSeriesEventGateAllowAlwaysEmitStatuses(t *testing.T) {
 		seriesStatusSucceeded,
 		seriesStatusFailed,
 		seriesStatusCancelled,
-		seriesStatusSkipped,
 	}
 
 	for _, status := range alwaysEmitStatuses {

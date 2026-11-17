@@ -653,11 +653,9 @@ func (b *App) runBatch(batch *DownloadBatch) {
 	summaryText := ""
 	if summary != nil {
 		summaryText = fmt.Sprintf(
-			"Download Summary: total %d, downloaded %d, synced %d, skipped %d, failed %d, elapsed %s",
+			"Download Summary: total %d, downloaded %d, failed %d, elapsed %s",
 			summary.Total,
 			summary.Downloaded,
-			summary.Synced,
-			summary.Skipped,
 			summary.Failed,
 			summary.Elapsed.String(),
 		)

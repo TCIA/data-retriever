@@ -10,8 +10,8 @@ import tcia_data_retriever as tdr
 
 
 def summary(**changes):
-    result = dict(schema_version=1, status="success", total=1, downloaded=1,
-                  synced=0, skipped=0, failed=0)
+    result = dict(schema_version=2, status="success", total=1, downloaded=1,
+                  failed=0)
     result.update(changes)
     return result
 
@@ -26,7 +26,7 @@ class WrapperTests(unittest.TestCase):
     def test_bad_reports_and_inconsistent_success_fail_closed(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "report.json"
-            for value in [None, [], {}, summary(schema_version=2), summary(failed=1),
+            for value in [None, [], {}, summary(schema_version=1), summary(failed=1),
                           summary(total=True), summary(status="cancelled")]:
                 if value is not None:
                     path.write_text(json.dumps(value))

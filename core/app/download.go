@@ -34,7 +34,6 @@ import (
 
 const (
 	StatusSuccess = "success"
-	StatusSkipped = "skipped"
 
 	tciaBatchSize         = 50 // series IDs per metadata request
 	tciaConcurrentBatches = 3  // max concurrent metadata requests
@@ -804,7 +803,7 @@ func streamFilesFromSeriesIDs(ctx context.Context, prefixFiles []*FileInfo, seri
 					logger.Warnf("Metadata batch %d/%d returned no results (TCIA API unresponsive or request failed); marking %d series in this batch as failed", idx+1, len(batches), len(ids))
 					// Emitting nothing here would silently drop these UIDs:
 					// the run's reported total (known upfront) would never
-					// match completed+failed+skipped, and there'd be no
+					// match downloaded+failed, and there'd be no
 					// record a series was ever supposed to exist. Emit an
 					// explicit failure per UID instead, so the counts stay
 					// consistent and the series shows up as retryable.
@@ -1362,7 +1361,7 @@ func (info *FileInfo) DownloadWithRetry(ctx context.Context, output string, http
 	var retryAfter time.Duration
 
 	recordStatus := func(dlErr error) {
-		if statusErr := AppendCompletionStatus(output, info.SeriesInstanceUID, dlErr, false); statusErr != nil {
+		if statusErr := AppendCompletionStatus(output, info.SeriesInstanceUID, dlErr); statusErr != nil {
 			logger.Warnf("Failed to record completion status for %s: %v", info.SeriesInstanceUID, statusErr)
 		}
 	}

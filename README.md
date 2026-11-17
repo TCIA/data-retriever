@@ -118,7 +118,7 @@ Click **Fetch Files** to start. The dialog closes and a new download card appear
 
 Each manifest gets its own card showing:
 - Overall progress bar and series count
-- Per-series rows with status icons (queued, downloading, decompressing, complete, failed, skipped)
+- Per-series rows with status icons (queued, downloading, decompressing, complete, failed)
 - Bytes downloaded and elapsed time
 - Pause / Resume and Cancel buttons
 - An **Open Folder** button when the run finishes

@@ -21,8 +21,6 @@ import (
 type Summary struct {
 	Total      int32
 	Downloaded int32
-	Synced     int32
-	Skipped    int32
 	Failed     int32
 	Elapsed    time.Duration
 }
@@ -126,7 +124,6 @@ const (
 	seriesStatusSucceeded         = "succeeded"
 	seriesStatusFailed            = "failed"
 	seriesStatusCancelled         = "cancelled"
-	seriesStatusSkipped           = "skipped"
 
 	downloadHeartbeatInterval = 5 * time.Second
 )
@@ -266,7 +263,7 @@ func resolvePhase(status string) string {
 		return seriesPhaseDownload
 	case seriesStatusDecompressing:
 		return seriesPhaseDecompress
-	case seriesStatusSucceeded, seriesStatusSkipped:
+	case seriesStatusSucceeded:
 		return seriesPhaseComplete
 	case seriesStatusFailed, seriesStatusCancelled:
 		return seriesPhaseFailure
@@ -288,32 +285,10 @@ func clampProgress(value float64) float64 {
 	return value
 }
 
-type existingSeriesDisposition struct {
-	status            string
-	completionSkipped bool
-	countAsDownloaded bool
-}
-
-// resolveExistingSeriesDisposition reports a series that was left alone
-// because it already exists on disk with the expected size — whether that
-// was found via the --skip-existing/resume check (which ignores --force)
-// or the plain already-exists check (which respects --force). There is no
-// separate "skipped" category: a series that's already present is reported
-// the same as one downloaded this run.
-func resolveExistingSeriesDisposition() existingSeriesDisposition {
-	return existingSeriesDisposition{
-		status:            seriesStatusSucceeded,
-		completionSkipped: false,
-		countAsDownloaded: true,
-	}
-}
-
 // DownloadStats tracks download statistics across workers.
 type DownloadStats struct {
 	Total          int32
 	Downloaded     int32
-	Synced         int32
-	Skipped        int32
 	Failed         int32
 	StartTime      time.Time
 	LastUpdate     time.Time
@@ -405,7 +380,7 @@ func isInterimSeriesStatus(status string) bool {
 
 func isTerminalSeriesStatus(status string) bool {
 	switch status {
-	case seriesStatusSucceeded, seriesStatusFailed, seriesStatusCancelled, seriesStatusSkipped:
+	case seriesStatusSucceeded, seriesStatusFailed, seriesStatusCancelled:
 		return true
 	default:
 		return false
@@ -647,9 +622,8 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 			callbacks.emitStderr("\nDownload cancelled by user\n")
 			close(inputChan)
 			wg.Wait()
-			stats.Failed += int32(len(files)) - stats.Downloaded - stats.Skipped - stats.Failed
+			stats.Failed += int32(len(files)) - stats.Downloaded - stats.Failed
 			summary.Downloaded = stats.Downloaded
-			summary.Skipped = stats.Skipped
 			summary.Failed = stats.Failed
 			summary.Elapsed = time.Since(stats.StartTime)
 			return summary, ctx.Err()
@@ -669,21 +643,17 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (*Summary, 
 	}
 
 	summary.Downloaded = stats.Downloaded
-	summary.Synced = stats.Synced
-	summary.Skipped = stats.Skipped
 	summary.Failed = stats.Failed
 	summary.Elapsed = time.Since(stats.StartTime)
 
 	callbacks.emitStdout("\n=== Download Summary ===\n")
 	callbacks.emitStdout(fmt.Sprintf("Total items: %d\n", summary.Total))
 	callbacks.emitStdout(fmt.Sprintf("Downloaded: %d\n", summary.Downloaded))
-	callbacks.emitStdout(fmt.Sprintf("Synced: %d\n", summary.Synced))
-	callbacks.emitStdout(fmt.Sprintf("Skipped: %d\n", summary.Skipped))
 	callbacks.emitStdout(fmt.Sprintf("Failed: %d\n", summary.Failed))
 	callbacks.emitStdout(fmt.Sprintf("Total time: %s\n", summary.Elapsed.Round(time.Second)))
 
 	if summary.Total > 0 && summary.Elapsed > 0 {
-		rate := float64(summary.Downloaded+summary.Synced+summary.Skipped) / summary.Elapsed.Seconds()
+		rate := float64(summary.Downloaded) / summary.Elapsed.Seconds()
 		callbacks.emitStdout(fmt.Sprintf("Average rate: %.1f items/second\n", rate))
 	}
 
@@ -767,9 +737,8 @@ feedLoop:
 			}()
 			close(inputChan)
 			wg.Wait()
-			stats.Failed += queued - stats.Downloaded - stats.Skipped - stats.Failed
+			stats.Failed += queued - stats.Downloaded - stats.Failed
 			summary.Downloaded = stats.Downloaded
-			summary.Skipped = stats.Skipped
 			summary.Failed = stats.Failed
 			summary.Elapsed = time.Since(stats.StartTime)
 			return summary, ctx.Err()
@@ -800,20 +769,16 @@ feedLoop:
 		callbacks.emitStderr("\n")
 	}
 	summary.Downloaded = stats.Downloaded
-	summary.Synced = stats.Synced
-	summary.Skipped = stats.Skipped
 	summary.Failed = stats.Failed
 	summary.Elapsed = time.Since(stats.StartTime)
 
 	callbacks.emitStdout("\n=== Download Summary ===\n")
 	callbacks.emitStdout(fmt.Sprintf("Total items: %d\n", summary.Total))
 	callbacks.emitStdout(fmt.Sprintf("Downloaded: %d\n", summary.Downloaded))
-	callbacks.emitStdout(fmt.Sprintf("Synced: %d\n", summary.Synced))
-	callbacks.emitStdout(fmt.Sprintf("Skipped: %d\n", summary.Skipped))
 	callbacks.emitStdout(fmt.Sprintf("Failed: %d\n", summary.Failed))
 	callbacks.emitStdout(fmt.Sprintf("Total time: %s\n", summary.Elapsed.Round(time.Second)))
 	if summary.Total > 0 && summary.Elapsed > 0 {
-		rate := float64(summary.Downloaded+summary.Synced+summary.Skipped) / summary.Elapsed.Seconds()
+		rate := float64(summary.Downloaded) / summary.Elapsed.Seconds()
 		callbacks.emitStdout(fmt.Sprintf("Average rate: %.1f items/second\n", rate))
 	}
 	if summary.Failed > 0 {
@@ -881,7 +846,7 @@ func (wc *WorkerContext) handleFileRecovered(fileInfo *FileInfo) {
 			atomic.AddInt32(&wc.Stats.Failed, 1)
 			updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
 			wc.emitSeriesEvent(fileInfo, seriesStatusFailed, fmt.Sprintf("Internal error processing this series (recovered): %v", r), 100)
-			if err := AppendCompletionStatus(wc.Options.Output, fileInfo.SeriesInstanceUID, fmt.Errorf("panic: %v", r), false); err != nil {
+			if err := AppendCompletionStatus(wc.Options.Output, fileInfo.SeriesInstanceUID, fmt.Errorf("panic: %v", r)); err != nil {
 				Logger.Warnf("Failed to record completion status for %s after panic: %v", fileInfo.SeriesInstanceUID, err)
 			}
 		}
@@ -903,16 +868,17 @@ func (wc *WorkerContext) emitSeries(evt SeriesEvent) {
 	wc.Callbacks.emitSeries(evt)
 }
 
-func (wc *WorkerContext) applyExistingSeriesDisposition(fileInfo *FileInfo, disposition existingSeriesDisposition, message string) {
-	if disposition.countAsDownloaded {
-		atomic.AddInt32(&wc.Stats.Downloaded, 1)
-	} else {
-		atomic.AddInt32(&wc.Stats.Skipped, 1)
-	}
+// markExistingSeriesDownloaded reports a series that was left alone because
+// it already exists on disk with the expected size — whether that was found
+// via the --skip-existing/resume check (which ignores --force) or the plain
+// already-exists check (which respects --force). It is reported the same as
+// one downloaded this run.
+func (wc *WorkerContext) markExistingSeriesDownloaded(fileInfo *FileInfo, message string) {
+	atomic.AddInt32(&wc.Stats.Downloaded, 1)
 
 	updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
-	wc.emitSeriesEvent(fileInfo, disposition.status, message, 100)
-	if err := AppendCompletionStatus(wc.Options.Output, fileInfo.SeriesInstanceUID, nil, disposition.completionSkipped); err != nil {
+	wc.emitSeriesEvent(fileInfo, seriesStatusSucceeded, message, 100)
+	if err := AppendCompletionStatus(wc.Options.Output, fileInfo.SeriesInstanceUID, nil); err != nil {
 		Logger.Warnf("Failed to record completion status for %s: %v", fileInfo.SeriesInstanceUID, err)
 	}
 }
@@ -938,9 +904,8 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 	if !fileInfo.IsSyncJob {
 		if wc.Options.SkipExisting && !fileInfo.NeedsDownload(wc.Options.Output, false, wc.Options.NoDecompress, wc.Options) {
 			Logger.Debugf("[Worker %d] Resume hit existing %s", wc.WorkerID, fileInfo.SeriesInstanceUID)
-			wc.applyExistingSeriesDisposition(
+			wc.markExistingSeriesDownloaded(
 				fileInfo,
-				resolveExistingSeriesDisposition(),
 				fmt.Sprintf("Series already present (resume complete): %s", displayName),
 			)
 			return
@@ -948,9 +913,8 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 
 		if !fileInfo.NeedsDownload(wc.Options.Output, wc.Options.Force, wc.Options.NoDecompress, wc.Options) {
 			Logger.Debugf("[Worker %d] Skip %s (already exists with correct size/checksum)", wc.WorkerID, fileInfo.SeriesInstanceUID)
-			wc.applyExistingSeriesDisposition(
+			wc.markExistingSeriesDownloaded(
 				fileInfo,
-				resolveExistingSeriesDisposition(),
 				fmt.Sprintf("Series already present with expected size: %s", displayName),
 			)
 			return
@@ -1107,11 +1071,7 @@ func (wc *WorkerContext) handleFile(fileInfo *FileInfo) {
 		return
 	}
 
-	if fileInfo.IsSyncJob {
-		atomic.AddInt32(&wc.Stats.Synced, 1)
-	} else {
-		atomic.AddInt32(&wc.Stats.Downloaded, 1)
-	}
+	atomic.AddInt32(&wc.Stats.Downloaded, 1)
 
 	updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
 	wc.emitSeriesEvent(fileInfo, seriesStatusSucceeded, fmt.Sprintf("Download completed: %s", displayName), 100)
@@ -1135,11 +1095,7 @@ func (wc *WorkerContext) handleMetadataOnly(fileInfo *FileInfo, isSpreadsheetInp
 		atomic.AddInt32(&wc.Stats.Failed, 1)
 		wc.emitSeriesEvent(fileInfo, seriesStatusFailed, err.Error(), 100)
 	} else {
-		if fileInfo.IsSyncJob {
-			atomic.AddInt32(&wc.Stats.Synced, 1)
-		} else {
-			atomic.AddInt32(&wc.Stats.Downloaded, 1)
-		}
+		atomic.AddInt32(&wc.Stats.Downloaded, 1)
 		wc.emitSeriesEvent(fileInfo, seriesStatusSucceeded, fmt.Sprintf("Metadata saved: %s", displayName), 100)
 	}
 	updateProgress(wc.Stats, fileInfo.SeriesInstanceUID, wc.Options.Debug, wc.Callbacks)
@@ -1150,8 +1106,6 @@ func updateProgress(stats *DownloadStats, currentSeriesID string, debugMode bool
 		callbacks.Progress(ProgressUpdate{
 			Kind: "items", Total: stats.Total,
 			Downloaded: atomic.LoadInt32(&stats.Downloaded),
-			Synced:     atomic.LoadInt32(&stats.Synced),
-			Skipped:    atomic.LoadInt32(&stats.Skipped),
 			Failed:     atomic.LoadInt32(&stats.Failed),
 		})
 		return
@@ -1165,7 +1119,7 @@ func updateProgress(stats *DownloadStats, currentSeriesID string, debugMode bool
 	}
 	stats.LastUpdate = now
 
-	processed := atomic.LoadInt32(&stats.Downloaded) + atomic.LoadInt32(&stats.Synced) + atomic.LoadInt32(&stats.Skipped) + atomic.LoadInt32(&stats.Failed)
+	processed := atomic.LoadInt32(&stats.Downloaded) + atomic.LoadInt32(&stats.Failed)
 	percentage := float64(processed)
 	if stats.Total > 0 {
 		percentage = percentage / float64(stats.Total) * 100
@@ -1173,8 +1127,8 @@ func updateProgress(stats *DownloadStats, currentSeriesID string, debugMode bool
 
 	elapsed := time.Since(stats.StartTime)
 	var eta string
-	if downloadedAndSynced := atomic.LoadInt32(&stats.Downloaded) + atomic.LoadInt32(&stats.Synced); downloadedAndSynced > 0 && elapsed > 0 {
-		rate := float64(downloadedAndSynced) / elapsed.Seconds()
+	if downloaded := atomic.LoadInt32(&stats.Downloaded); downloaded > 0 && elapsed > 0 {
+		rate := float64(downloaded) / elapsed.Seconds()
 		remainingFiles := float64(stats.Total - processed)
 		if remainingFiles > 0 && rate > 0 {
 			remainingTime := remainingFiles / rate
@@ -1188,9 +1142,9 @@ func updateProgress(stats *DownloadStats, currentSeriesID string, debugMode bool
 		displayID = displayID[:30] + "..."
 	}
 
-	callbacks.emitStderr(fmt.Sprintf("\r\033[K[%d/%d] %.1f%% | Downloaded: %d | Synced: %d | Skipped: %d | Failed: %d%s | Current: %s",
+	callbacks.emitStderr(fmt.Sprintf("\r\033[K[%d/%d] %.1f%% | Downloaded: %d | Failed: %d%s | Current: %s",
 		processed, stats.Total, percentage,
-		stats.Downloaded, stats.Synced, stats.Skipped, stats.Failed,
+		stats.Downloaded, stats.Failed,
 		eta, displayID))
 }
 

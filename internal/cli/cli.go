@@ -29,8 +29,6 @@ type Report struct {
 	OutputDirectory string  `json:"output_directory"`
 	Total           int32   `json:"total"`
 	Downloaded      int32   `json:"downloaded"`
-	Synced          int32   `json:"synced"`
-	Skipped         int32   `json:"skipped"`
 	Failed          int32   `json:"failed"`
 	ElapsedSeconds  float64 `json:"elapsed_seconds"`
 }
@@ -52,7 +50,7 @@ func execute(ctx context.Context, args []string, stdout, stderr io.Writer, versi
 		fmt.Fprint(stdout, opts.HelpText())
 		return 0
 	}
-	report := Report{SchemaVersion: 1, Version: version, Status: "failed"}
+	report := Report{SchemaVersion: 2, Version: version, Status: "failed"}
 	if len(revision) > 0 {
 		report.GitCommit = revision[0]
 	}
@@ -161,7 +159,7 @@ func execute(ctx context.Context, args []string, stdout, stderr io.Writer, versi
 	report.ElapsedSeconds = time.Since(start).Seconds()
 	if summary != nil {
 		report.Total, report.Downloaded = summary.Total, summary.Downloaded
-		report.Synced, report.Skipped, report.Failed = summary.Synced, summary.Skipped, summary.Failed
+		report.Failed = summary.Failed
 	}
 	if errors.Is(runErr, context.Canceled) || ctx.Err() != nil {
 		return finish(130, "cancelled", "cancelled", "Download cancelled.")

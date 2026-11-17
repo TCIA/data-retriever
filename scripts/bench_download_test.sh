@@ -27,14 +27,10 @@ echo "=== Download Summary ==="
 echo "Total items: 2"
 if [[ "$(basename "$input")" == fail.csv ]]; then
   echo "Downloaded: 1"
-  echo "Synced: 0"
-  echo "Skipped: 0"
   echo "Failed: 1"
   echo "Total time: 3s"
 else
   echo "Downloaded: 2"
-  echo "Synced: 0"
-  echo "Skipped: 0"
   echo "Failed: 0"
   echo "Total time: 2s"
   if [[ "$version" == "2" ]]; then
