@@ -48,10 +48,11 @@ func TestIdleTimeoutReader_CancelsAfterNoBytes(t *testing.T) {
 
 	const idleTimeout = 20 * time.Millisecond
 	stalled := &ctxAwareReader{ctx: ctx}
+	// Construction arms the timer; include it in the measured interval.
+	start := time.Now()
 	it := newIdleTimeoutReader(stalled, idleTimeout, cancel)
 	defer it.Stop()
 
-	start := time.Now()
 	_, err := it.Read(make([]byte, 1024))
 	elapsed := time.Since(start)
 

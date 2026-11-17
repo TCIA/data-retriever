@@ -41,7 +41,7 @@ jobs:
             goarch: amd64
             platform: macosx_11_0_x86_64
             binary: tdr
-          - runner: macos-14
+          - runner: macos-15
             goos: darwin
             goarch: arm64
             platform: macosx_11_0_arm64
