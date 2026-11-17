@@ -358,12 +358,19 @@ func croissantDatasetFromDoc(doc map[string]interface{}) croissantDatasetInfo {
 	if datasetID == "" {
 		datasetID = name
 	}
+	datasetDOI := normalizeDatasetDOI(datasetID)
+	if datasetDOI == "" {
+		datasetDOI = normalizeDatasetDOI(metadataText(doc, "identifier"))
+	}
+	if datasetDOI == "" {
+		datasetDOI = normalizeDatasetDOI(metadataText(doc, "url"))
+	}
 
 	return croissantDatasetInfo{
 		DatasetID:   datasetID,
 		DatasetName: name,
 		Collection:  collection,
-		DOI:         normalizeDatasetDOI(datasetID),
+		DOI:         datasetDOI,
 		URL:         metadataText(doc, "url"),
 		Citation:    metadataText(doc, "citeAs"),
 	}
