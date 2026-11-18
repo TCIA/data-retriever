@@ -262,7 +262,7 @@ for manifest in "${MANIFESTS[@]}"; do
       fi
 
       total_items="$(summary_value "Total items" "$run_log")"
-      downloaded="$(summary_value "Downloaded" "$run_log")"
+      downloaded="$(summary_value "Completed" "$run_log")"
       failed="$(summary_value "Failed" "$run_log")"
       total_items=${total_items:-unknown}
       downloaded=${downloaded:-unknown}

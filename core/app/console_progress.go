@@ -231,7 +231,7 @@ func (p *ConsoleProgress) snapshotLocked(final bool, status string) string {
 	if final {
 		prefix = status + " | "
 	}
-	line := fmt.Sprintf("%sItems completed: %s | Downloaded: %d | Failed: %d", prefix, completedText(completed, m.Total, !final || status == "Run complete"), m.Downloaded, m.Failed)
+	line := fmt.Sprintf("%sItems completed: %s | Completed: %d | Failed: %d", prefix, completedText(completed, m.Total, !final || status == "Run complete"), m.Downloaded, m.Failed)
 	if final {
 		return line
 	}
@@ -281,7 +281,7 @@ func (p *ConsoleProgress) compactSnapshotLocked(final bool, status string) strin
 	}
 	done := m.Downloaded + m.Failed
 	if final {
-		return fmt.Sprintf("%s | Items %d/%d | Downloaded %d Failed %d", status, done, m.Total, m.Downloaded, m.Failed)
+		return fmt.Sprintf("%s | Items %d/%d | Completed %d Failed %d", status, done, m.Total, m.Downloaded, m.Failed)
 	}
 	base := "Items " + completedText(done, m.Total, true)
 	keys := make([]string, 0, len(p.active))

@@ -26,11 +26,11 @@ printf 'payload\n' > "$output/data/file.bin"
 echo "=== Download Summary ==="
 echo "Total items: 2"
 if [[ "$(basename "$input")" == fail.csv ]]; then
-  echo "Downloaded: 1"
+  echo "Completed: 1"
   echo "Failed: 1"
   echo "Total time: 3s"
 else
-  echo "Downloaded: 2"
+  echo "Completed: 2"
   echo "Failed: 0"
   echo "Total time: 2s"
   if [[ "$version" == "2" ]]; then

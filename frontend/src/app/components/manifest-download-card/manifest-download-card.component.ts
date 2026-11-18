@@ -178,9 +178,9 @@ export class ManifestDownloadCardComponent implements OnInit, OnChanges, OnDestr
   }
 
   get completedSeriesFraction(): string {
-    const downloaded = this.run?.overview?.completed ?? 0;
+    const completed = this.run?.overview?.completed ?? 0;
     const total = this.run?.overview?.total ?? 0;
-    return `${downloaded} / ${total} downloaded`;
+    return `${completed} / ${total} completed`;
   }
 
   get transferStatusText(): string {

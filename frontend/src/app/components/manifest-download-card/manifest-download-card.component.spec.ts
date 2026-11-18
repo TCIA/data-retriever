@@ -117,7 +117,7 @@ describe('ManifestDownloadCardComponent', () => {
       },
     });
 
-    expect(component.completedSeriesFraction).toBe('3 / 5 downloaded');
+    expect(component.completedSeriesFraction).toBe('3 / 5 completed');
   });
 
   it('shows Paused label when run is paused even if status is done', () => {

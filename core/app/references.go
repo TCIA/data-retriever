@@ -254,7 +254,7 @@ func (r *citationRun) recordEvent(event SeriesEvent) {
 		return
 	}
 	switch event.Status {
-	case seriesStatusSucceeded, seriesStatusFailed, seriesStatusCancelled, seriesStatusSkipped:
+	case seriesStatusSucceeded, seriesStatusFailed, seriesStatusCancelled:
 		r.Lock()
 		r.terminal[event.SeriesInstanceUID] = event.Status
 		r.Unlock()

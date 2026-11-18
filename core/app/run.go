@@ -677,7 +677,7 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (result *Su
 
 	callbacks.emitStdout("\n=== Download Summary ===\n")
 	callbacks.emitStdout(fmt.Sprintf("Total items: %d\n", summary.Total))
-	callbacks.emitStdout(fmt.Sprintf("Downloaded: %d\n", summary.Downloaded))
+	callbacks.emitStdout(fmt.Sprintf("Completed: %d\n", summary.Downloaded))
 	callbacks.emitStdout(fmt.Sprintf("Failed: %d\n", summary.Failed))
 	callbacks.emitStdout(fmt.Sprintf("Total time: %s\n", summary.Elapsed.Round(time.Second)))
 
@@ -804,7 +804,7 @@ feedLoop:
 
 	callbacks.emitStdout("\n=== Download Summary ===\n")
 	callbacks.emitStdout(fmt.Sprintf("Total items: %d\n", summary.Total))
-	callbacks.emitStdout(fmt.Sprintf("Downloaded: %d\n", summary.Downloaded))
+	callbacks.emitStdout(fmt.Sprintf("Completed: %d\n", summary.Downloaded))
 	callbacks.emitStdout(fmt.Sprintf("Failed: %d\n", summary.Failed))
 	callbacks.emitStdout(fmt.Sprintf("Total time: %s\n", summary.Elapsed.Round(time.Second)))
 	if summary.Total > 0 && summary.Elapsed > 0 {
@@ -1172,7 +1172,7 @@ func updateProgress(stats *DownloadStats, currentSeriesID string, debugMode bool
 		displayID = displayID[:30] + "..."
 	}
 
-	callbacks.emitStderr(fmt.Sprintf("\r\033[K[%d/%d] %.1f%% | Downloaded: %d | Failed: %d%s | Current: %s",
+	callbacks.emitStderr(fmt.Sprintf("\r\033[K[%d/%d] %.1f%% | Completed: %d | Failed: %d%s | Current: %s",
 		processed, stats.Total, percentage,
 		stats.Downloaded, stats.Failed,
 		eta, displayID))
