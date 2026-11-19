@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync/atomic"
+	"time"
 	"testing"
 )
 
@@ -116,6 +117,55 @@ func TestReferencesResolveOnlyUniqueVisibleWordPressIdentity(t *testing.T) {
 	}
 }
 
+func TestReferencesCatalogAndCitationAreCachedAcrossRuns(t *testing.T) {
+	var wpRequests, citeRequests atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		switch req.URL.Path {
+		case "/wp/collections/":
+			wpRequests.Add(1)
+			_, _ = w.Write([]byte(`{"total_pages":1,"results":[{"collection_short_title":"Study","collection_doi":"10.1234/cached"}]}`))
+		case "/wp/analysis-results/":
+			wpRequests.Add(1)
+			_, _ = w.Write([]byte(`{"total_pages":1,"results":[]}`))
+		case "/cite/10.1234/cached":
+			citeRequests.Add(1)
+			if req.Header.Get("Accept") == "application/x-bibtex" {
+				_, _ = w.Write([]byte(`@misc{cached,doi={10.1234/cached},title={Cached dataset}}`))
+				return
+			}
+			_, _ = w.Write([]byte(`Author. Cached dataset.`))
+		default:
+			http.Error(w, "unexpected request", 500)
+		}
+	}))
+	defer srv.Close()
+	root := t.TempDir()
+
+	// Two separate downloads of the same dataset within the cache window
+	// (e.g. the user re-running or retrying a manifest) should not repeat
+	// the full WordPress catalog fetch or the per-DOI crosscite lookup.
+	for i, name := range []string{"first.csv", "second.csv"} {
+		input := filepath.Join(root, name)
+		r := newCitationRun(&Options{Input: input}, srv.Client())
+		r.wordpressBase = srv.URL + "/wp"
+		r.crossciteBase = srv.URL + "/cite/"
+		r.add("Study", "", "", "", "Selected", "", "")
+		if err := r.write(context.Background(), root, nil); err != nil {
+			t.Fatal(err)
+		}
+		entries := readReferenceReport(t, root, input)
+		if len(entries) != 1 || entries[0].DOI != "10.1234/cached" || entries[0].BibTeX == "" {
+			t.Fatalf("run %d: expected resolved DOI and BibTeX, got %+v", i, entries)
+		}
+	}
+	if wpRequests.Load() != 2 {
+		t.Fatalf("expected the WordPress catalog to be fetched once (2 endpoints) and reused on the second run, got %d requests", wpRequests.Load())
+	}
+	if citeRequests.Load() != 2 {
+		t.Fatalf("expected one crosscite citation request and one BibTeX request on the first run only, got %d requests", citeRequests.Load())
+	}
+}
+
 func TestReferencesCancellationAndManifestIsolation(t *testing.T) {
 	var requests atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -197,5 +247,28 @@ func TestReferencesKeepAnalysisResultAndSourceDOIsDistinct(t *testing.T) {
 	r.observeFiles([]*FileInfo{{Collection: "Source collection", SourceDOI: "10.1234/source", DatasetDOI: "10.1234/derived", AnalysisResultID: "Derived analysis", SeriesInstanceUID: "one"}})
 	if len(r.entries) != 2 || r.entries["doi:10.1234/derived"].Name != "Derived analysis" || r.entries["doi:10.1234/source"].Name != "Source collection" {
 		t.Fatalf("source and derived citation identities mixed: %+v", r.entries)
+	}
+}
+
+func TestReferenceCitationTimeoutScalesWithUniqueDOIs(t *testing.T) {
+	cases := []struct {
+		dois int
+		want time.Duration
+	}{
+		{0, 30 * time.Second},
+		{3, 30 * time.Second},
+		{4, 30 * time.Second},
+		{5, 50 * time.Second},
+		{8, 50 * time.Second},
+		{100, 3 * time.Minute}, // capped
+	}
+	for _, c := range cases {
+		entries := make([]*datasetReference, 0, c.dois)
+		for i := 0; i < c.dois; i++ {
+			entries = append(entries, &datasetReference{DOI: fmt.Sprintf("10.1234/d%d", i)})
+		}
+		if got := referenceCitationTimeout(entries); got != c.want {
+			t.Errorf("dois=%d: got %s, want %s", c.dois, got, c.want)
+		}
 	}
 }

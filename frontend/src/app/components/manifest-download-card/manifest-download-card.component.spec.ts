@@ -197,6 +197,50 @@ describe('ManifestDownloadCardComponent', () => {
     expect(component.statusLabel).toBe('Downloading');
   });
 
+  it('shows Finalizing while all series succeeded but the run has not signaled done', () => {
+    const component = createComponent();
+    component.run = createRunState({
+      status: 'running',
+      isPaused: false,
+      overview: {
+        total: 2,
+        queued: 0,
+        active: 0,
+        completed: 2,
+        failed: 0,
+        cancelled: 0,
+        progressPercent: 99,
+      },
+    });
+
+    expect(component.isFinalizing).toBeTrue();
+    expect(component.isFullyDone).toBeFalse();
+    expect(component.statusLabel).toBe('Finalizing');
+    expect(component.showTransferSpinner).toBeTrue();
+  });
+
+  it('shows Completed and stops the spinner once the run actually signals done', () => {
+    const component = createComponent();
+    component.run = createRunState({
+      status: 'done',
+      isPaused: false,
+      overview: {
+        total: 2,
+        queued: 0,
+        active: 0,
+        completed: 2,
+        failed: 0,
+        cancelled: 0,
+        progressPercent: 100,
+      },
+    });
+
+    expect(component.isFinalizing).toBeFalse();
+    expect(component.isFullyDone).toBeTrue();
+    expect(component.statusLabel).toBe('Completed');
+    expect(component.showTransferSpinner).toBeFalse();
+  });
+
   it('shows copy feedback text after a successful copy state', () => {
     const component = createComponent();
 

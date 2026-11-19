@@ -144,13 +144,30 @@ export class ManifestDownloadCardComponent implements OnInit, OnChanges, OnDestr
     return ['done', 'error', 'cancelled'].includes(this.run?.status ?? '');
   }
 
+  /**
+   * Every series has reached a terminal per-series outcome, but the backend
+   * run hasn't signaled completion yet — it's still writing dataset
+   * references (WordPress/DOI citation lookups), which can take a while.
+   * Without this, the card looked identical to a frozen 99% download.
+   */
+  get isFinalizing(): boolean {
+    return this.isCompleted && !this.isTerminal;
+  }
+
+  /** True completion: every series finished AND the backend run itself
+   *  has signaled done, as opposed to isCompleted alone which can be true
+   *  while the run is still finalizing dataset references in the background. */
+  get isFullyDone(): boolean {
+    return this.isCompleted && this.isTerminal;
+  }
+
   /** Ring/icon color for the current state: red on error, grey while paused,
    *  amber when finished but some series failed (finished ≠ fully complete),
    *  green on a clean finish, blue while actively downloading. */
   get ringAccent(): string {
     if (this.run?.status === 'error') return 'var(--ring-error)';
     if (this.isPaused) return 'var(--ring-paused)';
-    if (this.isCompleted) {
+    if (this.isFullyDone) {
       return this.hasFailedSeries ? 'var(--ring-warn)' : 'var(--ring-complete)';
     }
     return '#2196f3';
@@ -174,6 +191,7 @@ export class ManifestDownloadCardComponent implements OnInit, OnChanges, OnDestr
 
   get showTransferSpinner(): boolean {
     if (this.isPaused || this.isTerminal) return false;
+    if (this.isFinalizing) return true;
     return (this.run?.overview?.active ?? 0) > 0;
   }
 
@@ -186,6 +204,9 @@ export class ManifestDownloadCardComponent implements OnInit, OnChanges, OnDestr
   get transferStatusText(): string {
     if (this.isPaused || this.isTerminal) {
       return '';
+    }
+    if (this.isFinalizing) {
+      return 'Finalizing dataset references…';
     }
     if ((this.run?.overview?.active ?? 0) <= 0) {
       return '';
@@ -325,6 +346,7 @@ export class ManifestDownloadCardComponent implements OnInit, OnChanges, OnDestr
 
     const active = this.run?.overview?.active ?? 0;
     if (active > 0) return 'Downloading';
+    if (this.isFinalizing) return 'Finalizing';
 
     if (this.isCompleted) return this.hasFailedSeries ? 'Check error log and/or click to retry' : 'Completed';
     return 'Queued';

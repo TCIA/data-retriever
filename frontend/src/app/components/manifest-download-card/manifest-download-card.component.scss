@@ -82,7 +82,8 @@
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.06);
 
-  &.downloading {
+  &.downloading,
+  &.finalizing {
     color: #2196f3;
     background: rgba(33, 150, 243, 0.14);
   }
@@ -443,6 +444,15 @@
   color: var(--ring-warn);
 }
 
+.button-spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(33, 150, 243, 0.25);
+  border-top-color: #2196f3;
+  animation: spin 0.8s linear infinite;
+}
+
 .play-pause-btn:not(.is-complete):hover {
   transform: translate(-50%, -50%) scale(1.1);
   background: rgba(0, 0, 0, 0.06);
@@ -558,7 +568,8 @@
   color: #e0e0e0;
 }
 
-:host-context(.dark-mode) .card-status.downloading {
+:host-context(.dark-mode) .card-status.downloading,
+:host-context(.dark-mode) .card-status.finalizing {
   color: #64b5f6;
 }
 

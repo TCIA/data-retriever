@@ -592,6 +592,15 @@ func (b *App) runBatch(batch *DownloadBatch) {
 			if eventLog != nil {
 				eventLog.HandleStdout(line)
 			}
+			// Milestone stdout lines (e.g. "Preparing dataset references...")
+			// are otherwise invisible in the GUI — they only ever reached the
+			// text log file — leaving long post-download steps looking frozen.
+			for _, l := range strings.Split(strings.TrimRight(line, "\n"), "\n") {
+				if l == "" {
+					continue
+				}
+				wailsRuntime.EventsEmit(b.ctx, "manifest-log", map[string]interface{}{"runId": runIDStr, "line": l})
+			}
 		},
 		Stderr: func(line string) {
 			if eventLog != nil {

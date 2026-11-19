@@ -298,12 +298,25 @@ func (r *citationRun) write(ctx context.Context, output string, runErr error) er
 	if len(entries) == 0 {
 		entries = append(entries, &datasetReference{Name: "Unidentified dataset(s)", Selection: []string{"Selection unavailable"}, Resolution: "Unresolved"})
 	}
-	// Cancellation still produces useful local references immediately.
+	// Cancellation still produces useful local references immediately. A
+	// cached catalog/citation (see referenceCatalogCache, referenceCitationCache)
+	// resolves instantly regardless of budget.
+	//
+	// Identity resolution is one fixed-size catalog fetch (the same TCIA-wide
+	// catalog however many datasets this manifest references), so a flat
+	// budget is enough. Citation resolution instead does one crosscite.org
+	// round trip per *unique DOI*, concurrency-limited to 4 at a time — a
+	// manifest referencing many source datasets (e.g. isBasedOn chains) can
+	// have far more unique DOIs than a fixed budget accounts for, so its
+	// budget scales with how many lookup batches that actually requires.
 	if ctx.Err() == nil {
-		lookupCtx, cancel := context.WithTimeout(ctx, 25*time.Second)
-		resolveReferenceIdentities(lookupCtx, r.client, r.wordpressBase, entries)
-		resolveReferenceCitations(lookupCtx, r.client, r.crossciteBase, entries)
-		cancel()
+		idCtx, idCancel := context.WithTimeout(ctx, 30*time.Second)
+		resolveReferenceIdentities(idCtx, r.client, r.wordpressBase, entries)
+		idCancel()
+
+		citeCtx, citeCancel := context.WithTimeout(ctx, referenceCitationTimeout(entries))
+		resolveReferenceCitations(citeCtx, r.client, r.crossciteBase, entries)
+		citeCancel()
 	}
 	merged := make(map[string]*datasetReference)
 	for _, entry := range entries {

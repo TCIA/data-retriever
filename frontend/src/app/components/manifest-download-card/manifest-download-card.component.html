@@ -21,11 +21,12 @@
           [class.is-complete]="isCompleted"
           (click)="onTogglePause($event)"
           [disabled]="isCompleted"
-          [title]="isCompleted ? (hasFailedSeries ? 'Check error log and/or click to retry' : 'Download complete') : (isPaused ? 'Resume download' : 'Pause download')"
-          [attr.aria-label]="isCompleted ? (hasFailedSeries ? 'Check error log and/or click to retry' : 'Download complete') : 'Toggle pause'"
+          [title]="isFinalizing ? 'Finalizing dataset references…' : isCompleted ? (hasFailedSeries ? 'Check error log and/or click to retry' : 'Download complete') : (isPaused ? 'Resume download' : 'Pause download')"
+          [attr.aria-label]="isFinalizing ? 'Finalizing dataset references' : isCompleted ? (hasFailedSeries ? 'Check error log and/or click to retry' : 'Download complete') : 'Toggle pause'"
         >
-          <span class="material-symbols-outlined" *ngIf="isCompleted && !hasFailedSeries">check</span>
-          <span class="material-symbols-outlined warn-icon" *ngIf="isCompleted && hasFailedSeries">priority_high</span>
+          <span class="button-spinner" *ngIf="isFinalizing" aria-hidden="true"></span>
+          <span class="material-symbols-outlined" *ngIf="isFullyDone && !hasFailedSeries">check</span>
+          <span class="material-symbols-outlined warn-icon" *ngIf="isFullyDone && hasFailedSeries">priority_high</span>
           <span class="material-icons-outlined" *ngIf="!isCompleted">{{ isPaused ? 'play_arrow' : 'pause' }}</span>
         </button>
         <div class="ring-inner"></div>
@@ -42,8 +43,9 @@
           <div class="card-status"
             [class.downloading]="statusLabel === 'Downloading'"
             [class.paused]="isPaused"
-            [class.completed]="isCompleted && !hasFailedSeries"
-            [class.warn]="isCompleted && hasFailedSeries"
+            [class.finalizing]="isFinalizing"
+            [class.completed]="isFullyDone && !hasFailedSeries"
+            [class.warn]="isFullyDone && hasFailedSeries"
             [class.error]="run.status === 'error'">
             {{ statusLabel }}
           </div>
