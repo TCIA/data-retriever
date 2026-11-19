@@ -423,14 +423,12 @@
           "name": "External CSV model",
           "value": "The complete record inventory is stored in a route-specific CSV FileObject. Each Croissant Field identifies its CSV column through a DataSource."
         }
-      ]
+      ],
+      "prov:wasGeneratedBy": {
+        "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant.jsonld#metadata-generation"
+      }
     }
   ],
-  "prov:wasGeneratedBy": {
-    "@type": "prov:Activity",
-    "name": "TCIA Croissant recordset draft generation",
-    "description": "Deterministic projection from explicit TCIA query-skill artifacts and official manifest inputs."
-  },
   "additionalProperty": [
     {
       "@type": "sc:PropertyValue",
@@ -460,6 +458,62 @@
       "contentSize": "1497579 B",
       "sha256": "e424bf74370020a34d88adc2b1f632dc10a4416d646383305e8a97d7bb916396",
       "license": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  ],
+  "keywords": [
+    "HNSCC-mIF-mIHC-comparison",
+    "Collection",
+    "Head and Neck",
+    "Head-Neck",
+    "Human"
+  ],
+  "publisher": {
+    "@type": "sc:Organization",
+    "name": "The Cancer Imaging Archive",
+    "url": "https://www.cancerimagingarchive.net/"
+  },
+  "subjectOf": [
+    {
+      "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant.jsonld",
+      "@type": [
+        "sc:CreativeWork",
+        "prov:Entity"
+      ],
+      "name": "HNSCC-mIF-mIHC-comparison Croissant metadata",
+      "url": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant.jsonld",
+      "encodingFormat": "application/ld+json",
+      "prov:wasDerivedFrom": [
+        {
+          "@type": [
+            "sc:CreativeWork",
+            "prov:Entity"
+          ],
+          "@id": "https://github.com/kirbyju/tcia-query-skill/releases/tag/tcia-metadata-v2-latest",
+          "name": "TCIA query-skill snapshot PathDB projection",
+          "url": "https://github.com/kirbyju/tcia-query-skill/releases/tag/tcia-metadata-v2-latest",
+          "sha256": "cd23b5b89659563614b03bb4f2b5e100c6f13fa623a43ec91df18a53e38b9ba1",
+          "description": "Snapshot timestamp: 2026-08-13T12:04:53.537235+00:00."
+        },
+        {
+          "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/",
+          "@type": "prov:Entity",
+          "description": "TCIA WordPress metadata record represented in the supplied source snapshot; not a fresh page retrieval."
+        }
+      ],
+      "prov:wasGeneratedBy": {
+        "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant.jsonld#metadata-generation",
+        "@type": "prov:Activity",
+        "name": "TCIA Croissant metadata generation",
+        "description": "Projection of supplied TCIA metadata and inventory sources into Croissant. This activity does not describe acquisition or annotation of the original research data.",
+        "prov:used": [
+          {
+            "@id": "https://github.com/kirbyju/tcia-query-skill/releases/tag/tcia-metadata-v2-latest"
+          },
+          {
+            "@id": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/"
+          }
+        ]
+      }
     }
   ]
 }

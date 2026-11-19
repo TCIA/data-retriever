@@ -57,7 +57,9 @@ func applyCroissantObjectMetadata(row *croissantDownloadRow, object map[string]i
 		key := strings.TrimPrefix(compactCroissantKey(metadataText(property, "name")), "tcia")
 		applyCroissantRecordData(row, map[string]interface{}{key: property["value"]})
 	}
-	if key := croissantMap(object["key"]); row.RetrievalKey == "" && key != nil {
+	// In inline access summaries, key identifies a download row, not a record
+	// in the nested payload inventory. Infer payload keys only for external data.
+	if key := croissantMap(object["key"]); len(croissantSlice(object["data"])) == 0 && row.RetrievalKey == "" && key != nil {
 		id := metadataText(key, "@id")
 		if slash := strings.LastIndex(id, "/"); slash >= 0 && croissantFieldHasExternalSource(object["field"], id) {
 			row.RetrievalKey = id[slash+1:]

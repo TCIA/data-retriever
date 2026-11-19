@@ -219,6 +219,7 @@ func decodeCroissant(ctx context.Context, filePath string, client *http.Client, 
 				continue
 			}
 			for _, file := range nestedFiles {
+				setCroissantNestedFileIdentity(file)
 				applyCroissantFileMetadata(file, dataset, row)
 			}
 			files = append(files, nestedFiles...)
@@ -811,6 +812,28 @@ func applyCroissantFileMetadata(file *FileInfo, dataset croissantDatasetInfo, ro
 		setCroissantStringIfEmpty(&file.DatasetCitation, dataset.Citation)
 		setCroissantStringIfEmpty(&file.DataDescriptionURI, dataset.URL)
 	}
+}
+
+// Spreadsheet HTTP/DRS rows use the filename stem as a synthetic series ID.
+// Distinct files can share that stem, so give nested file jobs a stable identity
+// from the full locator before deduplication, output paths and completion state.
+// NBIA and IDC/S3 jobs retain their authoritative DICOM SeriesInstanceUIDs.
+func setCroissantNestedFileIdentity(file *FileInfo) {
+	if file == nil || file.S5cmdManifestPath != "" || strings.HasPrefix(file.DownloadURL, "s3://") {
+		return
+	}
+	locator := strings.TrimSpace(file.DRSURI)
+	if locator == "" {
+		parsed, err := url.Parse(strings.TrimSpace(file.DownloadURL))
+		if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+			return
+		}
+		locator = parsed.String()
+	}
+	file.SeriesInstanceUID = stableCroissantHashID("nested-file", locator)
+	// Descriptive output paths omit a UID-only segment. Keep a file label so
+	// same-named files also get separate UID-suffixed directories in that mode.
+	setCroissantStringIfEmpty(&file.SeriesDescription, file.FileName)
 }
 
 func dedupeCroissantFiles(files []*FileInfo) []*FileInfo {
