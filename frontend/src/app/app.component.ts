@@ -133,6 +133,7 @@ export class AppComponent implements OnInit, OnDestroy {
           this.lastAutoSetOutputPath = this.outputDirPath;
         }
         this.openManifestModal();
+        if (this.isCroissantManifest(filePath)) void this.loadCroissantPlan();
       });
     });
 
@@ -164,6 +165,7 @@ export class AppComponent implements OnInit, OnDestroy {
             this.lastAutoSetOutputPath = this.outputDirPath;
           }
           this.openManifestModal();
+          if (this.isCroissantManifest(pendingPath)) void this.loadCroissantPlan();
         });
       }
     } catch (err) {
@@ -413,23 +415,25 @@ export class AppComponent implements OnInit, OnDestroy {
     OpenInputFileDialog()
       .then((filePath: string) => {
         if (!filePath) return;
-        this.inputFilePath = filePath;
-        this.resetCroissantPlan();
-        const baseName = this.baseNameOf(filePath);
-        if (!this.isMac) {
-          if (!this.outputDirPath || this.outputDirPath === this.lastAutoSetOutputPath) {
-            this.outputDirPath = `${this.defaultDownloadDir}/${baseName}`;
-            this.lastAutoSetOutputPath = this.outputDirPath;
+        this.ngZone.run(() => {
+          this.inputFilePath = filePath;
+          this.resetCroissantPlan();
+          const baseName = this.baseNameOf(filePath);
+          if (!this.isMac) {
+            if (!this.outputDirPath || this.outputDirPath === this.lastAutoSetOutputPath) {
+              this.outputDirPath = `${this.defaultDownloadDir}/${baseName}`;
+              this.lastAutoSetOutputPath = this.outputDirPath;
+            }
+          } else {
+            if (this.outputDirPath) {
+              const parts = this.outputDirPath.split('/');
+              parts[parts.length - 1] = baseName;
+              this.outputDirPath = parts.join('/');
+              this.lastAutoSetOutputPath = this.outputDirPath;
+            }
           }
-        } else {
-          if (this.outputDirPath) {
-            const parts = this.outputDirPath.split('/');
-            parts[parts.length - 1] = baseName;
-            this.outputDirPath = parts.join('/');
-            this.lastAutoSetOutputPath = this.outputDirPath;
-          }
-        }
-        if (this.isCroissantManifest(filePath)) void this.loadCroissantPlan();
+          if (this.isCroissantManifest(filePath)) void this.loadCroissantPlan();
+        });
       })
       .catch(err => console.error('Error selecting input file:', err));
   }
@@ -631,14 +635,19 @@ export class AppComponent implements OnInit, OnDestroy {
     this.croissantPlanLoading = true;
     try {
       const plan = await InspectCroissantManifest(this.inputFilePath);
-      this.croissantPlan = plan;
-      for (const item of plan.items ?? []) {
-        if (item.supported && item.selectedByDefault) this.croissantSelectedIDs.add(item.id);
-      }
+      // Wails-bound calls can resolve outside Angular's zone, so the
+      // continuation must re-enter it explicitly or the view never
+      // repaints between the loading state and this final one.
+      this.ngZone.run(() => {
+        this.croissantPlan = plan;
+        for (const item of plan.items ?? []) {
+          if (item.supported && item.selectedByDefault) this.croissantSelectedIDs.add(item.id);
+        }
+      });
     } catch (err) {
-      this.croissantPlanError = String(err);
+      this.ngZone.run(() => { this.croissantPlanError = String(err); });
     } finally {
-      this.croissantPlanLoading = false;
+      this.ngZone.run(() => { this.croissantPlanLoading = false; });
     }
   }
 

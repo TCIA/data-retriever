@@ -222,7 +222,6 @@
 
   <!-- Manifest & Destination Modal -->
   <div class="advanced-settings-overlay" *ngIf="showManifestModal"
-       (click)="closeManifestModal()"
        role="dialog" aria-modal="true" aria-label="Manifest & Destination">
     <div class="advanced-settings-modal" (click)="$event.stopPropagation()">
       <div class="advanced-settings-header">
@@ -252,7 +251,10 @@
             </button>
           </div>
         </div>
-        <div *ngIf="croissantPlanLoading" class="croissant-review-status">Reading Croissant download components…</div>
+        <div *ngIf="croissantPlanLoading" class="croissant-review-status">
+          <span class="croissant-review-spinner" aria-hidden="true"></span>
+          <span>Reading Croissant download components…</span>
+        </div>
         <div *ngIf="croissantPlanError" class="croissant-review-error">{{ croissantPlanError }}</div>
         <div *ngIf="croissantPlan" class="croissant-review">
           <div class="croissant-review-heading">

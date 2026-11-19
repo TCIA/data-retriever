@@ -1359,6 +1359,22 @@
   font-size: 12px;
 }
 
+.croissant-review-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.croissant-review-spinner {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(33, 150, 243, 0.25);
+  border-top-color: #2196f3;
+  animation: init-spin 0.8s linear infinite;
+}
+
 .croissant-review-error {
   color: #c62828;
 }
