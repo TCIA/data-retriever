@@ -59,10 +59,28 @@ func applyCroissantObjectMetadata(row *croissantDownloadRow, object map[string]i
 	}
 	if key := croissantMap(object["key"]); row.RetrievalKey == "" && key != nil {
 		id := metadataText(key, "@id")
-		if slash := strings.LastIndex(id, "/"); slash >= 0 {
+		if slash := strings.LastIndex(id, "/"); slash >= 0 && croissantFieldHasExternalSource(object["field"], id) {
 			row.RetrievalKey = id[slash+1:]
 		}
 	}
+}
+
+// croissantFieldHasExternalSource reports whether fieldID names a Field backed
+// by an external CSV column (source.fileObject), the genuine per-row
+// retrieval-key case. Record sets that embed their own data inline (TCIA's
+// single-row manifest entries) reuse a field named e.g. "download_id" as
+// their record key purely for Croissant's own row identity, not to describe
+// how the underlying payload is retrieved, so that case must not match here.
+func croissantFieldHasExternalSource(rawFields interface{}, fieldID string) bool {
+	for _, raw := range croissantSlice(rawFields) {
+		field := croissantMap(raw)
+		if field == nil || metadataText(field, "@id") != fieldID {
+			continue
+		}
+		source := croissantMap(field["source"])
+		return source != nil && croissantMap(source["fileObject"]) != nil
+	}
+	return false
 }
 
 func croissantUnsupportedReason(row croissantDownloadRow) string {
