@@ -470,6 +470,9 @@ func Run(ctx context.Context, options *Options, callbacks Callbacks) (result *Su
 			callbacks.emitStderr(fmt.Sprintf("Could not save dataset references: %v\n", err))
 		} else {
 			callbacks.emitStdout(fmt.Sprintf("Saved dataset references to %s\n", referenceDirectory(options.Output, options.Input)))
+			for _, warning := range references.warnings {
+				callbacks.emitStderr(warning + "\n")
+			}
 		}
 	}()
 

@@ -75,6 +75,7 @@ type Options struct {
 	AuthGate               *AuthGate
 	CLI                    bool
 	AcceptDataPolicy       bool
+	DOIResolverURL         string
 	ReportJSON             string
 	ProgressMode           string
 	CroissantList          bool
@@ -174,6 +175,7 @@ func parseOptions(args []string, promptReader io.Reader, interactive bool) (*Opt
 	opt.opt.BoolVar(&opt.Prompt, "prompt", false, opt.opt.Alias("w"), opt.opt.Description("input password for control data"))
 	opt.opt.StringVar(&opt.Password, "passwd", "", opt.opt.Description("set password for control data in command line"))
 	opt.opt.StringVar(&opt.TokenUrl, "token-url", TokenUrl, opt.opt.Description("the api url of login token"))
+	opt.opt.StringVar(&opt.DOIResolverURL, "doi-resolver-url", DefaultDOIResolverURL, opt.opt.Description("snapshot REST endpoint for resolving missing dataset DOIs"))
 	opt.opt.StringVar(&opt.MetaUrl, "meta-url", MetaUrl, opt.opt.Description("the api url get meta data"))
 	opt.opt.StringVar(&opt.ImageUrl, "image-url", ImageUrl, opt.opt.Description("the api url to download image data"))
 	opt.opt.BoolVar(&opt.Force, "force", false, opt.opt.Alias("f"), opt.opt.Description("force re-download even if files exist"))

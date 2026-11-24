@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync/atomic"
-	"time"
 	"testing"
+	"time"
 )
 
 func readReferenceReport(t *testing.T, output, input string) []*datasetReference {
@@ -33,11 +33,14 @@ func readReferenceReport(t *testing.T, output, input string) []*datasetReference
 func TestReferencesIncludeExcludedDatasetsAndSeparateTransferResults(t *testing.T) {
 	var requests atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if strings.HasPrefix(req.URL.Path, "/wp/") {
+			_, _ = w.Write([]byte(`{"total_pages":1,"results":[]}`))
+			return
+		}
 		requests.Add(1)
 		doi := strings.TrimPrefix(req.URL.Path, "/cite/")
 		if req.Header.Get("Accept") != "application/x-bibtex" {
-			t.Error("supplied citation text should be retained")
-			http.Error(w, "unexpected", 500)
+			_, _ = fmt.Fprintf(w, "Current DOI citation (Version 3). https://doi.org/%s", doi)
 			return
 		}
 		_, _ = fmt.Fprintf(w, "@misc{remote_key, doi = {%s}, title = {Dataset}}", doi)
@@ -50,6 +53,7 @@ func TestReferencesIncludeExcludedDatasetsAndSeparateTransferResults(t *testing.
 		t.Fatal(err)
 	}
 	r := newCitationRun(&Options{Input: input}, srv.Client())
+	r.resolverURL = srv.URL + "/v2/files/resolve-dois"
 	r.crossciteBase = srv.URL + "/cite/"
 	r.observeFiles([]*FileInfo{{Collection: "Derived", DatasetDOI: "10.1234/derived", SeriesInstanceUID: "one"}, {Collection: "Derived", DatasetDOI: "https://doi.org/10.1234/DERIVED", SeriesInstanceUID: "two"}})
 	r.recordEvent(SeriesEvent{SeriesInstanceUID: "one", Status: seriesStatusSucceeded})
@@ -71,7 +75,7 @@ func TestReferencesIncludeExcludedDatasetsAndSeparateTransferResults(t *testing.
 	}
 	text, _ := os.ReadFile(filepath.Join(referenceDirectory(root, input), "references.txt"))
 	bib, _ := os.ReadFile(filepath.Join(referenceDirectory(root, input), "references.bib"))
-	if !strings.Contains(string(text), "Exact supplied citation, Version 2.") || !strings.Contains(string(text), "Exact source citation.") || strings.Count(string(bib), "@misc{") != 2 || requests.Load() != 2 {
+	if !strings.Contains(string(text), "Exact supplied citation, Version 2.") || !strings.Contains(string(text), "Exact source citation.") || strings.Count(string(bib), "@misc{") != 2 || requests.Load() != 4 {
 		t.Fatalf("bad export or redundant lookup: %s\n%s; requests %d", text, bib, requests.Load())
 	}
 	// A retry replaces this manifest's report rather than appending duplicates.
@@ -83,33 +87,33 @@ func TestReferencesIncludeExcludedDatasetsAndSeparateTransferResults(t *testing.
 	}
 }
 
-func TestReferencesResolveOnlyUniqueVisibleWordPressIdentity(t *testing.T) {
+func TestReferencesResolveOnlyUniqueSnapshotIdentity(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		switch req.URL.Path {
-		case "/wp/collections/":
-			_, _ = w.Write([]byte(`{"total_pages":1,"results":[{"collection_short_title":"Study","collection_doi":"10.1234/study","collection_downloads":[{"id":42}],"citations":[{"type":"Data Citation","doi":"10.1234/study","html":"An &amp; B. <strong>Study</strong> (Version 3)."}]},{"collection_short_title":"Duplicate","collection_doi":"10.1234/one"},{"collection_short_title":"Duplicate","collection_doi":"10.1234/two"},{"collection_short_title":"Hidden","collection_doi":"10.1234/hidden","hide_from_browse_table":true}]}`))
-		case "/wp/analysis-results/":
-			_, _ = w.Write([]byte(`{"total_pages":1,"results":[]}`))
+		case "/v2/datasets/Study":
+			_, _ = w.Write([]byte(`{"datasets":[{"short_title":"Study","doi":"10.1234/study","tcia_page":"https://example.org/study"}]}`))
+		case "/v2/datasets/Duplicate":
+			_, _ = w.Write([]byte(`{"datasets":[{"doi":"10.1234/one"},{"doi":"10.1234/two"}]}`))
+		case "/v2/datasets/Hidden":
+			http.NotFound(w, req)
 		default:
-			http.Error(w, "DOI service unavailable", http.StatusServiceUnavailable)
+			http.Error(w, "DOI service unavailable", 503)
 		}
 	}))
 	defer srv.Close()
 	root := t.TempDir()
 	input := filepath.Join(root, "input.csv")
-	r := newCitationRun(&Options{Input: input}, srv.Client())
-	r.wordpressBase = srv.URL + "/wp"
+	r := newCitationRun(&Options{Input: input, DOIResolverURL: srv.URL + "/v2/files/resolve-dois"}, srv.Client())
 	r.crossciteBase = srv.URL + "/cite/"
-	r.add("Study", "", "", "", "Selected", "", "42")
-	r.add("Duplicate", "", "", "", "Selected", "", "")
-	r.add("Hidden", "", "", "", "Referenced", "", "")
+	for _, name := range []string{"Study", "Duplicate", "Hidden"} {
+		r.add(name, "", "", "", "Selected", "", "")
+	}
 	if err := r.write(context.Background(), root, nil); err != nil {
 		t.Fatal(err)
 	}
-	entries := readReferenceReport(t, root, input)
-	for _, entry := range entries {
-		if entry.Name == "Study" && (entry.DOI != "10.1234/study" || entry.Citation != "An & B. Study (Version 3)." || entry.BibTeX != "") {
-			t.Fatalf("bad WordPress citation or failure handling: %+v", entry)
+	for _, entry := range readReferenceReport(t, root, input) {
+		if entry.Name == "Study" && (entry.DOI != "10.1234/study" || entry.URL != "https://example.org/study" || entry.BibTeX != "") {
+			t.Fatalf("bad snapshot identity: %+v", entry)
 		}
 		if entry.Name != "Study" && entry.DOI != "" {
 			t.Fatalf("ambiguous/hidden identity accepted: %+v", entry)
@@ -117,16 +121,13 @@ func TestReferencesResolveOnlyUniqueVisibleWordPressIdentity(t *testing.T) {
 	}
 }
 
-func TestReferencesCatalogAndCitationAreCachedAcrossRuns(t *testing.T) {
+func TestReferencesCitationIsCachedAcrossRuns(t *testing.T) {
 	var wpRequests, citeRequests atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		switch req.URL.Path {
-		case "/wp/collections/":
+		case "/v2/datasets/Study":
 			wpRequests.Add(1)
-			_, _ = w.Write([]byte(`{"total_pages":1,"results":[{"collection_short_title":"Study","collection_doi":"10.1234/cached"}]}`))
-		case "/wp/analysis-results/":
-			wpRequests.Add(1)
-			_, _ = w.Write([]byte(`{"total_pages":1,"results":[]}`))
+			_, _ = w.Write([]byte(`{"datasets":[{"short_title":"Study","doi":"10.1234/cached"}]}`))
 		case "/cite/10.1234/cached":
 			citeRequests.Add(1)
 			if req.Header.Get("Accept") == "application/x-bibtex" {
@@ -141,13 +142,11 @@ func TestReferencesCatalogAndCitationAreCachedAcrossRuns(t *testing.T) {
 	defer srv.Close()
 	root := t.TempDir()
 
-	// Two separate downloads of the same dataset within the cache window
-	// (e.g. the user re-running or retrying a manifest) should not repeat
-	// the full WordPress catalog fetch or the per-DOI crosscite lookup.
+	// Formatting results are reused across manifests; identity uses one compact GET.
 	for i, name := range []string{"first.csv", "second.csv"} {
 		input := filepath.Join(root, name)
 		r := newCitationRun(&Options{Input: input}, srv.Client())
-		r.wordpressBase = srv.URL + "/wp"
+		r.resolverURL = srv.URL + "/v2/files/resolve-dois"
 		r.crossciteBase = srv.URL + "/cite/"
 		r.add("Study", "", "", "", "Selected", "", "")
 		if err := r.write(context.Background(), root, nil); err != nil {
@@ -159,7 +158,7 @@ func TestReferencesCatalogAndCitationAreCachedAcrossRuns(t *testing.T) {
 		}
 	}
 	if wpRequests.Load() != 2 {
-		t.Fatalf("expected the WordPress catalog to be fetched once (2 endpoints) and reused on the second run, got %d requests", wpRequests.Load())
+		t.Fatalf("expected one compact dataset lookup per manifest, got %d requests", wpRequests.Load())
 	}
 	if citeRequests.Load() != 2 {
 		t.Fatalf("expected one crosscite citation request and one BibTeX request on the first run only, got %d requests", citeRequests.Load())
@@ -183,7 +182,6 @@ func TestReferencesCancellationAndManifestIsolation(t *testing.T) {
 	cancel()
 	for _, input := range []string{a, b} {
 		r := newCitationRun(&Options{Input: input}, srv.Client())
-		r.wordpressBase = srv.URL
 		r.crossciteBase = srv.URL + "/"
 		r.add("Dataset", "10.1234/test", "", "Supplied citation v1", "Selected", "", "")
 		r.add("Dataset", "https://doi.org/10.1234/TEST", "", "Supplied citation v2", "Excluded", "", "")

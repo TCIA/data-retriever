@@ -1,4 +1,4 @@
-drs_uri,name,collection,patient_id,modality,file_size_bytes,source_manifest_url
+drs_uri,name,collection,patient_id,modality,source_series_size_bytes,source_manifest_url
 drs://nci-crdc.datacommons.io/dg.4DFC/f293760b-ec7f-527d-be83-bb4aa5214ddd,1.3.6.1.4.1.14519.5.2.1.1.11264150075058686628760053282497113997.zip,CMB-PCA,MSB-07436,CT,138663320,https://www.cancerimagingarchive.net/wp-content/uploads/CMB-PCA_drs_metadata_manifest.csv
 drs://nci-crdc.datacommons.io/dg.4DFC/6b3c7180-efc9-55d3-9bc3-72033780b72e,1.3.6.1.4.1.14519.5.2.1.1.11665238049776400497474400612415991367.zip,CMB-PCA,MSB-03973,MR,6520332,https://www.cancerimagingarchive.net/wp-content/uploads/CMB-PCA_drs_metadata_manifest.csv
 drs://nci-crdc.datacommons.io/dg.4DFC/f77622d5-e867-55ba-af61-a3bcfadc255b,1.3.6.1.4.1.14519.5.2.1.1.12967804984506705826366590617852287229.zip,CMB-PCA,MSB-07436,PT,9685614,https://www.cancerimagingarchive.net/wp-content/uploads/CMB-PCA_drs_metadata_manifest.csv

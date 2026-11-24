@@ -5,7 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -15,18 +15,34 @@ import (
 	"time"
 )
 
+type relatedReference struct {
+	Type       string `json:"type"`
+	DOI        string `json:"doi,omitempty"`
+	Citation   string `json:"citation,omitempty"`
+	BibTeX     string `json:"bibtex,omitempty"`
+	Resolution string `json:"resolution,omitempty"`
+}
+
 type datasetReference struct {
-	Name             string         `json:"name"`
-	DOI              string         `json:"doi,omitempty"`
-	URL              string         `json:"url,omitempty"`
-	Citation         string         `json:"citation,omitempty"`
-	CitationVariants []string       `json:"additional_supplied_citations,omitempty"`
-	BibTeX           string         `json:"bibtex,omitempty"`
-	Resolution       string         `json:"resolution"`
-	Selection        []string       `json:"selection"`
-	TransferResults  map[string]int `json:"transfer_results,omitempty"`
-	downloadID       string
-	series           map[string]bool
+	UnresolvedLocator   *referenceLocator `json:"unresolved_locator,omitempty"`
+	ResolverFingerprint string            `json:"resolver_release_fingerprint,omitempty"`
+	fromFileLocator     bool
+	locatorKey          string
+	IdentityResolution  string              `json:"identity_resolution,omitempty"`
+	CitationVersion     string              `json:"citation_version,omitempty"`
+	BibTeXVersion       string              `json:"bibtex_version,omitempty"`
+	RelatedReferences   []*relatedReference `json:"related_references,omitempty"`
+	Name                string              `json:"name"`
+	DOI                 string              `json:"doi,omitempty"`
+	URL                 string              `json:"url,omitempty"`
+	Citation            string              `json:"citation,omitempty"`
+	CitationVariants    []string            `json:"additional_supplied_citations,omitempty"`
+	BibTeX              string              `json:"bibtex,omitempty"`
+	Resolution          string              `json:"resolution"`
+	Selection           []string            `json:"selection"`
+	TransferResults     map[string]int      `json:"transfer_results,omitempty"`
+	downloadID          string
+	series              map[string]bool
 }
 
 type citationRun struct {
@@ -35,15 +51,18 @@ type citationRun struct {
 	entries       map[string]*datasetReference
 	terminal      map[string]string
 	client        *http.Client
-	wordpressBase string
+	resolverURL   string
+	pending       map[string]*pendingReference
 	crossciteBase string
+	warnings      []string
 }
 
 func newCitationRun(options *Options, client *http.Client) *citationRun {
-	r := &citationRun{input: options.Input, entries: make(map[string]*datasetReference), terminal: make(map[string]string), client: client, crossciteBase: "https://data.crosscite.org/"}
-	if options.metadataResolver != nil {
-		r.wordpressBase = options.metadataResolver.baseURL
+	r := &citationRun{input: options.Input, entries: make(map[string]*datasetReference), terminal: make(map[string]string), client: client, resolverURL: options.DOIResolverURL, crossciteBase: "https://data.crosscite.org/"}
+	if r.resolverURL == "" {
+		r.resolverURL = DefaultDOIResolverURL
 	}
+
 	ext := strings.ToLower(filepath.Ext(options.Input))
 	if ext == ".json" || ext == ".jsonld" {
 		if doc, err := readCroissantDocument(options.Input); err == nil {
@@ -59,6 +78,11 @@ func (r *citationRun) add(name, doi, url, citation, selection, uid, downloadID s
 	}
 	r.Lock()
 	defer r.Unlock()
+	r.addReference(name, doi, url, citation, selection, uid, downloadID)
+}
+
+// addReference is used under the run lock, including while applying resolver results.
+func (r *citationRun) addReference(name, doi, url, citation, selection, uid, downloadID string) *datasetReference {
 	doi = normalizeDatasetDOI(doi)
 	key := "doi:" + doi
 	if doi == "" {
@@ -87,6 +111,7 @@ func (r *citationRun) add(name, doi, url, citation, selection, uid, downloadID s
 	if uid != "" {
 		entry.series[uid] = true
 	}
+	return entry
 }
 
 func containsReferenceString(values []string, value string) bool {
@@ -239,6 +264,9 @@ func (r *citationRun) observeFiles(files []*FileInfo) {
 		} else if file.DatasetDOI != "" && file.SourceDOI != "" && normalizeDatasetDOI(file.DatasetDOI) != normalizeDatasetDOI(file.SourceDOI) {
 			datasetName = normalizeDatasetDOI(file.DatasetDOI)
 		}
+		if doi == "" && r.queueFileReference(file, datasetName) {
+			continue
+		}
 		r.add(datasetName, doi, file.DataDescriptionURI, file.DatasetCitation, "Selected", file.SeriesInstanceUID, file.WordPressDownloadID)
 		if source := normalizeDatasetDOI(file.SourceDOI); source != "" && source != normalizeDatasetDOI(doi) {
 			r.add(file.Collection, source, "", "", "Selected", file.SeriesInstanceUID, "")
@@ -288,6 +316,19 @@ func (r *citationRun) write(ctx context.Context, output string, runErr error) er
 	}
 	r.Lock()
 	defer r.Unlock()
+	r.warnings = nil
+	if ctx.Err() == nil {
+		pendingCtx, cancel := context.WithTimeout(ctx, referenceIdentityTimeout)
+		err := r.resolvePendingFiles(pendingCtx)
+		cancel()
+		if err != nil {
+			r.warnings = append(r.warnings, "File DOI lookup unavailable; references may be incomplete. The snapshot resolver service and resolver-enabled artifacts are required.")
+		}
+	} else {
+		for key, item := range r.pending {
+			r.unresolvedFileEntry(key, item, "File DOI lookup cancelled")
+		}
+	}
 	entries := make([]*datasetReference, 0, len(r.entries))
 	for _, entry := range r.entries {
 		if entry.Citation != "" {
@@ -298,31 +339,44 @@ func (r *citationRun) write(ctx context.Context, output string, runErr error) er
 	if len(entries) == 0 {
 		entries = append(entries, &datasetReference{Name: "Unidentified dataset(s)", Selection: []string{"Selection unavailable"}, Resolution: "Unresolved"})
 	}
-	// Cancellation still produces useful local references immediately. A
-	// cached catalog/citation (see referenceCatalogCache, referenceCitationCache)
-	// resolves instantly regardless of budget.
-	//
-	// Identity resolution is one fixed-size catalog fetch (the same TCIA-wide
-	// catalog however many datasets this manifest references), so a flat
-	// budget is enough. Citation resolution instead does one crosscite.org
-	// round trip per *unique DOI*, concurrency-limited to 4 at a time — a
-	// manifest referencing many source datasets (e.g. isBasedOn chains) can
-	// have far more unique DOIs than a fixed budget accounts for, so its
-	// budget scales with how many lookup batches that actually requires.
+	// Cancellation writes the local report immediately. Remote lookup failures
+	// remain visible in reports and logs without failing successful downloads.
 	if ctx.Err() == nil {
-		idCtx, idCancel := context.WithTimeout(ctx, 30*time.Second)
-		resolveReferenceIdentities(idCtx, r.client, r.wordpressBase, entries)
+		idCtx, idCancel := context.WithTimeout(ctx, referenceIdentityTimeout)
+		err := resolveReferenceIdentities(idCtx, r.client, r.resolverURL, entries)
 		idCancel()
+		if err != nil {
+			warning := "Snapshot dataset identity lookup unavailable; references may be incomplete."
+			if errors.Is(err, context.DeadlineExceeded) {
+				warning = "Snapshot dataset identity lookup timed out; references may be incomplete."
+			}
+			r.warnings = append(r.warnings, warning)
+		}
 
-		citeCtx, citeCancel := context.WithTimeout(ctx, referenceCitationTimeout(entries))
-		resolveReferenceCitations(citeCtx, r.client, r.crossciteBase, entries)
+		targets, related := referenceCitationTargets(entries)
+		citeCtx, citeCancel := context.WithTimeout(ctx, referenceCitationTimeout(targets))
+		resolveReferenceCitations(citeCtx, r.client, r.crossciteBase, targets)
 		citeCancel()
+		for target, notice := range related {
+			notice.Citation, notice.BibTeX = target.Citation, target.BibTeX
+			notice.Resolution = strings.ReplaceAll(target.Resolution, "Dataset citation", "Citation")
+		}
+		for _, target := range targets {
+			if target.DOI != "" && (target.Citation == "" || target.BibTeX == "") {
+				r.warnings = append(r.warnings, "Some DOI citations or BibTeX formats could not be retrieved; see per-reference details.")
+				break
+			}
+		}
 	}
+
 	merged := make(map[string]*datasetReference)
 	for _, entry := range entries {
 		key := "doi:" + entry.DOI
 		if entry.DOI == "" {
 			key = "unresolved:" + normalize(entry.Name) + ":" + entry.URL
+		}
+		if entry.fromFileLocator {
+			key = "unresolved-file:" + entry.locatorKey
 		}
 		if prior := merged[key]; prior != nil {
 			for _, selection := range entry.Selection {
@@ -343,12 +397,23 @@ func (r *citationRun) write(ctx context.Context, output string, runErr error) er
 				}
 			}
 			setCroissantStringIfEmpty(&prior.BibTeX, entry.BibTeX)
+			setCroissantStringIfEmpty(&prior.URL, entry.URL)
+			setCroissantStringIfEmpty(&prior.BibTeXVersion, entry.BibTeXVersion)
+			setCroissantStringIfEmpty(&prior.ResolverFingerprint, entry.ResolverFingerprint)
+			for _, notice := range entry.RelatedReferences {
+				prior.addRelatedReference(notice)
+			}
 		} else {
 			merged[key] = entry
 		}
 	}
 	entries = entries[:0]
 	for _, entry := range merged {
+		entry.CitationVersion = referenceVersion(entry.Citation)
+		sort.Slice(entry.RelatedReferences, func(i, j int) bool {
+			a, b := entry.RelatedReferences[i], entry.RelatedReferences[j]
+			return a.Type+"|"+a.DOI+"|"+a.Citation < b.Type+"|"+b.DOI+"|"+b.Citation
+		})
 		entry.TransferResults = make(map[string]int)
 		for uid := range entry.series {
 			status := r.terminal[uid]
@@ -374,53 +439,18 @@ func (r *citationRun) write(ctx context.Context, output string, runErr error) er
 		outcome = "Cancelled"
 	}
 	report := struct {
-		Manifest    string              `json:"manifest"`
-		GeneratedAt string              `json:"generated_at"`
-		RunOutcome  string              `json:"run_outcome"`
-		Datasets    []*datasetReference `json:"datasets"`
-	}{filepath.Base(r.input), time.Now().UTC().Format(time.RFC3339), outcome, entries}
+		Manifest       string              `json:"manifest"`
+		GeneratedAt    string              `json:"generated_at"`
+		RunOutcome     string              `json:"run_outcome"`
+		Datasets       []*datasetReference `json:"datasets"`
+		LookupWarnings []string            `json:"lookup_warnings,omitempty"`
+	}{filepath.Base(r.input), time.Now().UTC().Format(time.RFC3339), outcome, entries, r.warnings}
 	jsonBytes, err := json.MarshalIndent(report, "", "  ")
 	if err != nil {
 		return err
 	}
-	var text, bib strings.Builder
-	fmt.Fprintf(&text, "Dataset references\nManifest: %s\nRun: %s\n\nAll datasets identified in the manifest are included. Selection and transfer results do not establish research use. Cite the datasets you actually used.\n\n", report.Manifest, outcome)
-	bib.WriteString("% Dataset references. Includes excluded/referenced datasets; cite those actually used.\n")
-	for i, entry := range entries {
-		fmt.Fprintf(&text, "%d. %s\nSelection: %s\n", i+1, entry.Name, strings.Join(entry.Selection, "; "))
-		if entry.DOI != "" {
-			fmt.Fprintf(&text, "DOI: https://doi.org/%s\n", entry.DOI)
-		} else if entry.URL != "" {
-			fmt.Fprintf(&text, "Dataset page: %s\n", entry.URL)
-		}
-		if entry.Citation != "" {
-			fmt.Fprintf(&text, "%s\n", entry.Citation)
-		} else {
-			text.WriteString("Citation unresolved; consult the dataset page.\n")
-		}
-		for _, citation := range entry.CitationVariants {
-			fmt.Fprintf(&text, "Additional supplied citation: %s\n", citation)
-		}
-		if entry.Resolution != "" {
-			fmt.Fprintf(&text, "Citation metadata: %s\n", entry.Resolution)
-		}
-		statuses := make([]string, 0, len(entry.TransferResults))
-		for status := range entry.TransferResults {
-			statuses = append(statuses, status)
-		}
-		sort.Strings(statuses)
-		for _, status := range statuses {
-			fmt.Fprintf(&text, "Transfer %s: %d\n", status, entry.TransferResults[status])
-		}
-		text.WriteByte('\n')
-		fmt.Fprintf(&bib, "%% %s | %s\n", referenceComment(entry.Name), referenceComment(strings.Join(entry.Selection, "; ")))
-		if entry.BibTeX != "" {
-			bib.WriteString(entry.BibTeX)
-			bib.WriteString("\n\n")
-		} else {
-			bib.WriteString("% BibTeX unresolved; see references.txt.\n\n")
-		}
-	}
+	text, bib := formatReferences(report.Manifest, outcome, entries, r.warnings)
+
 	dir := referenceDirectory(output, r.input)
 	referenceWriteMu.Lock()
 	defer referenceWriteMu.Unlock()
@@ -430,7 +460,7 @@ func (r *citationRun) write(ctx context.Context, output string, runErr error) er
 	for _, file := range []struct {
 		name string
 		body []byte
-	}{{"references.txt", []byte(text.String())}, {"references.bib", []byte(bib.String())}, {"references.json", jsonBytes}} {
+	}{{"references.txt", []byte(text)}, {"references.bib", []byte(bib)}, {"references.json", jsonBytes}} {
 		if err := writeReferenceFile(dir, file.name, file.body); err != nil {
 			return err
 		}

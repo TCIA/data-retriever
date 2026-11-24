@@ -1,4 +1,4 @@
-drs_uri,name,collection,patient_id,modality,file_size_bytes,source_manifest_url
+drs_uri,name,collection,patient_id,modality,source_series_size_bytes,source_manifest_url
 drs://nci-crdc.datacommons.io/dg.4DFC/12f71339-e0bf-52ba-8a09-ea296f546f41,1.3.6.1.4.1.14519.5.2.1.3344.2526.100078955014435548130294840876.zip,LGG-1p19qDeletion,LGG-315,MR,7237172,https://www.cancerimagingarchive.net/wp-content/uploads/GC_manifest_LGG-1p19qDeletion_20260326.csv
 drs://nci-crdc.datacommons.io/dg.4DFC/920989ef-9deb-5dfc-b91f-de0d4bca6973,1.3.6.1.4.1.14519.5.2.1.3344.2526.100152438408985494147639968180.zip,LGG-1p19qDeletion,LGG-563,MR,8034004,https://www.cancerimagingarchive.net/wp-content/uploads/GC_manifest_LGG-1p19qDeletion_20260326.csv
 drs://nci-crdc.datacommons.io/dg.4DFC/57c45099-0495-53bf-9aec-9a75b012e8a8,1.3.6.1.4.1.14519.5.2.1.3344.2526.100670587153762372245926199897.zip,LGG-1p19qDeletion,LGG-579,MR,7502996,https://www.cancerimagingarchive.net/wp-content/uploads/GC_manifest_LGG-1p19qDeletion_20260326.csv
