@@ -16,7 +16,7 @@ import (
 
 func TestReferencesLookupFailureIsVisibleWithoutFailingRun(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, "unavailable", 503)
+		http.Error(w, "unavailable", http.StatusServiceUnavailable)
 	}))
 	defer srv.Close()
 	root := t.TempDir()
@@ -155,7 +155,7 @@ func TestReferenceDOIFailureIsNotCached(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		if fail.Load() {
-			http.Error(w, "unavailable", 503)
+			http.Error(w, "unavailable", http.StatusServiceUnavailable)
 			return
 		}
 		if r.Header.Get("Accept") == "application/x-bibtex" {

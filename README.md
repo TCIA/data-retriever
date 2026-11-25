@@ -355,6 +355,10 @@ to the file resolver. DOI formatting failures and missing resolver metadata are
 reported without failing successful file transfers. Cancellation skips remote
 lookup. Successful DOI formatting is cached for five minutes within the process.
 
+The [reference smoke manifests](test-manifests/reference-smoke/README.md) provide
+one DOI-free entry per source (IDC, NBIA, CTDC, General Commons and PathDB),
+with metadata-only commands for checking references without imaging transfers.
+
 The default resolver is `https://tcia.duckdns.org/v2/files/resolve-dois`.
 `--doi-resolver-url` selects another compatible endpoint, including a local test
 service. The new endpoint requires the resolver-enabled skill server and rebuilt

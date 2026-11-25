@@ -119,7 +119,7 @@ func resolverJSON(ctx context.Context, client *http.Client, method, endpoint str
 		}
 		return 0, fmt.Errorf("DOI resolver request failed")
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode != http.StatusOK {
 		return response.StatusCode, fmt.Errorf("DOI resolver HTTP %d", response.StatusCode)
 	}

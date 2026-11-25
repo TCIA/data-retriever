@@ -97,7 +97,7 @@ func TestReferencesResolveOnlyUniqueSnapshotIdentity(t *testing.T) {
 		case "/v2/datasets/Hidden":
 			http.NotFound(w, req)
 		default:
-			http.Error(w, "DOI service unavailable", 503)
+			http.Error(w, "DOI service unavailable", http.StatusServiceUnavailable)
 		}
 	}))
 	defer srv.Close()
