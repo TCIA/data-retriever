@@ -1,6 +1,6 @@
 # Bounded Croissant smoke manifests
 
-These runnable derivatives replace the full-dataset Croissant benchmark copies. The exact source documents remain in `core/app/testdata` for offline parser tests. Dataset identifiers, licenses and citations identify the original datasets; these examples are explicitly incomplete inventories.
+These runnable derivatives replace the full-dataset Croissant benchmark copies. Full published documents remain in `core/app/testdata` for offline parser tests; the original SAROS benchmark document is also retained there for its exact selection assertions. Dataset identifiers, licenses and citations identify the original datasets; these examples are explicitly incomplete inventories.
 
 | Manifest | Bounded payload selection | Access |
 | --- | --- | --- |
