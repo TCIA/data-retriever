@@ -1,0 +1,3 @@
+id,tcia_study_instance_uid,tcia_series_instance_uid,Collection,tcia_case_id,gender,anatomic_region,has_breast_implant,orientation_code,split,accessLevel,retrievalRoute
+case_000,1.3.6.1.4.1.14519.5.2.1.1078.3273.139985412320418407316296670477,1.3.6.1.4.1.14519.5.2.1.1078.3273.284434159400355227660618151357,CPTAC-PDA,C3L-00625,female,abdomen,FALSE,LPS,fold-4,open,direct CSV
+case_001,1.2.826.0.1.3680043.2.1125.1.66511116888361566401978081032321398,1.2.826.0.1.3680043.2.1125.1.1543700067293409822950367187567394,Pancreas-CT,PANCREAS_0006,female,abdomen,FALSE,LAI,test,open,direct CSV
