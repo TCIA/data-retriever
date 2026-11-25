@@ -5,4 +5,4 @@ Use fresh output directories and start with `--meta` to inspect the planned meta
 - [`croissant/`](croissant/README.md): bounded JSON-LD examples covering public DICOM, noncommercial terms, CTDC/General Commons, direct PathDB images and a small SAROS table.
 - `manifest-1790098311121.tcia`: the existing two-series UID example. A UID represents an entire DICOM series, not one slice.
 
-Large throughput cohorts remain under [`benchmarkManifests/examples/`](../benchmarkManifests/examples/README.md). Full published Croissant regression fixtures and placeholder XML wrappers are internal test inputs under `core/app/testdata`; they are not runnable smoke manifests.
+Large throughput cohorts remain under [`benchmarkManifests/examples/`](../benchmarkManifests/examples/README.md). Full published Croissant regression fixtures are internal test inputs under `core/app/testdata`. The existing `manifest-v2-template.tcia` and nested legacy fixture remain unchanged here for their regression test; the XML template contains a placeholder URL and is not a runnable smoke manifest.

@@ -48,8 +48,8 @@ func TestReadTCIASeriesIDs_LegacyManifestFixture(t *testing.T) {
 
 func TestReadTCIASeriesIDs_XMLManifestFixture(t *testing.T) {
 	repoRoot := repoRootFromManifestTest(t)
-	templatePath := filepath.Join(repoRoot, "core", "app", "testdata", "tcia", "manifest-v2-template.tcia")
-	nestedPath := filepath.Join(repoRoot, "core", "app", "testdata", "tcia", "manifest-v2-nested-legacy.tcia")
+	templatePath := filepath.Join(repoRoot, "test-manifests", "manifest-v2-template.tcia")
+	nestedPath := filepath.Join(repoRoot, "test-manifests", "manifest-v2-nested-legacy.tcia")
 
 	templateContent, err := os.ReadFile(templatePath)
 	if err != nil {
