@@ -1,0 +1,110 @@
+{
+  "@context": {
+    "@language": "en",
+    "@vocab": "https://schema.org/",
+    "arrayShape": "cr:arrayShape",
+    "citeAs": "cr:citeAs",
+    "column": "cr:column",
+    "conformsTo": "dct:conformsTo",
+    "containedIn": "cr:containedIn",
+    "cr": "http://mlcommons.org/croissant/",
+    "rai": "http://mlcommons.org/croissant/RAI/",
+    "data": {
+      "@id": "cr:data",
+      "@type": "@json"
+    },
+    "dataType": {
+      "@id": "cr:dataType",
+      "@type": "@vocab"
+    },
+    "dct": "http://purl.org/dc/terms/",
+    "description": {
+      "@container": "@language"
+    },
+    "equivalentProperty": "cr:equivalentProperty",
+    "examples": {
+      "@id": "cr:examples",
+      "@type": "@json"
+    },
+    "extract": "cr:extract",
+    "field": "cr:field",
+    "fileProperty": "cr:fileProperty",
+    "fileObject": "cr:fileObject",
+    "fileSet": "cr:fileSet",
+    "format": "cr:format",
+    "includes": "cr:includes",
+    "isArray": "cr:isArray",
+    "isLiveDataset": "cr:isLiveDataset",
+    "jsonPath": "cr:jsonPath",
+    "key": "cr:key",
+    "md5": "cr:md5",
+    "name": {
+      "@container": "@language"
+    },
+    "parentField": "cr:parentField",
+    "path": "cr:path",
+    "recordSet": "cr:recordSet",
+    "references": "cr:references",
+    "regex": "cr:regex",
+    "repeated": "cr:repeated",
+    "replace": "cr:replace",
+    "samplingRate": "cr:samplingRate",
+    "sc": "https://schema.org/",
+    "separator": "cr:separator",
+    "source": "cr:source",
+    "subField": "cr:subField",
+    "transform": "cr:transform",
+    "odrl": "http://www.w3.org/ns/odrl/2/",
+    "sdVersion": "cr:sdVersion"
+  },
+  "@type": "sc:Dataset",
+  "@id": "https://doi.org/10.25737/SZ96-ZG60",
+  "conformsTo": "http://mlcommons.org/croissant/1.1",
+  "name": "SAROS - A large, heterogeneous, and sparsely annotated segmentation dataset on CT imaging data",
+  "alternateName": "SAROS",
+  "license": [
+    "https://creativecommons.org/licenses/by/4.0/"
+  ],
+  "citeAs": "Koitka, S., Baldini, G., Kroll, L., van Landeghem, N., Haubold, J., Sung Kim, M., Kleesiek, J., Nensa, F., & Hosch, R. (2023). SAROS - A large, heterogeneous, and sparsely annotated segmentation dataset on CT imaging data (SAROS) (Version 2) [Data set]. The Cancer Imaging Archive. https://doi.org/10.25737/SZ96-ZG60",
+  "conditionsOfAccess": "Open-access TCIA data. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+  "description": "Bounded Data Retriever smoke-test derivative. Only the checked-in sample records are included; full imaging cohorts, archives, optional source downloads and Aspera packages are excluded. This does not represent the complete dataset.",
+  "prov:wasDerivedFrom": {
+    "@type": "sc:CreativeWork",
+    "name": "Original TCIA Croissant regression fixture",
+    "url": "https://github.com/TCIA/data-retriever/blob/8d0d394ef63d94ead01bcdae835c7b61ceb6c196/benchmarkManifests/examples/croissant/saros.analysis-result-nifti-derived.croissant.jsonld"
+  },
+  "distribution": [
+    {
+      "@type": "cr:FileObject",
+      "@id": "https://raw.githubusercontent.com/TCIA/data-retriever/09828f916cf868c357968aa2bbf4cf36727178ce/test-manifests/croissant/records/saros-data.csv",
+      "name": "saros-data.csv",
+      "contentUrl": "https://raw.githubusercontent.com/TCIA/data-retriever/09828f916cf868c357968aa2bbf4cf36727178ce/test-manifests/croissant/records/saros-data.csv",
+      "encodingFormat": "text/csv",
+      "contentSize": "585 B",
+      "sha256": "f946447a2875f361a54b2965cb73b0bed17aeddab610f376fed3bd07945cebcb",
+      "additionalProperty": [
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA download artifact role",
+          "value": "data file"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA access mechanism",
+          "value": "direct download"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA access level",
+          "value": "open"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA downstream access system",
+          "value": "direct download"
+        }
+      ],
+      "license": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  ]
+}

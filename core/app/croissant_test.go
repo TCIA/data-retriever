@@ -281,7 +281,7 @@ func TestDecodeCroissantExampleExpandsPathDBRecordSet(t *testing.T) {
 }
 
 func TestInspectCroissantManifestGroupsSourceImagesAsOptional(t *testing.T) {
-	manifestPath := filepath.Join("..", "..", "benchmarkManifests", "examples", "croissant", "saros.analysis-result-nifti-derived.croissant.jsonld")
+	manifestPath := filepath.Join("testdata", "croissant-selection", "saros.analysis-result-nifti-derived.croissant.jsonld")
 	plan, err := InspectCroissantManifest(manifestPath)
 	if err != nil {
 		t.Fatalf("InspectCroissantManifest returned error: %v", err)

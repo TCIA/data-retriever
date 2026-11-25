@@ -1,0 +1,150 @@
+{
+  "@context": {
+    "@language": "en",
+    "@vocab": "https://schema.org/",
+    "@base": "https://www.cancerimagingarchive.net/collection/hnscc-mif-mihc-comparison/croissant/",
+    "sc": "https://schema.org/",
+    "cr": "http://mlcommons.org/croissant/",
+    "rai": "http://mlcommons.org/croissant/RAI/",
+    "dct": "http://purl.org/dc/terms/",
+    "prov": "http://www.w3.org/ns/prov#",
+    "odrl": "http://www.w3.org/ns/odrl/2/",
+    "duo": "http://purl.obolibrary.org/obo/DUO_",
+    "description": {
+      "@container": "@language"
+    },
+    "arrayShape": "cr:arrayShape",
+    "citeAs": "cr:citeAs",
+    "conformsTo": "dct:conformsTo",
+    "data": {
+      "@id": "cr:data",
+      "@type": "@json"
+    },
+    "dataType": {
+      "@id": "cr:dataType",
+      "@type": "@vocab"
+    },
+    "field": "cr:field",
+    "isLiveDataset": "cr:isLiveDataset",
+    "isArray": "cr:isArray",
+    "key": "cr:key",
+    "recordSet": "cr:recordSet",
+    "sdVersion": "cr:sdVersion",
+    "sha256": "cr:sha256",
+    "value": "cr:value",
+    "annotation": "cr:annotation",
+    "source": "cr:source",
+    "fileObject": "cr:fileObject",
+    "fileSet": "cr:fileSet",
+    "extract": "cr:extract",
+    "column": "cr:column",
+    "fileProperty": "cr:fileProperty",
+    "format": "cr:format",
+    "transform": "cr:transform",
+    "separator": "cr:separator",
+    "regex": "cr:regex",
+    "readLines": "cr:readLines",
+    "unArchive": "cr:unArchive",
+    "jsonPath": "cr:jsonPath",
+    "examples": {
+      "@id": "cr:examples",
+      "@type": "@json"
+    },
+    "subField": "cr:subField",
+    "parentField": "cr:parentField",
+    "references": "cr:references",
+    "equivalentProperty": "cr:equivalentProperty",
+    "includes": "cr:includes",
+    "excludes": "cr:excludes",
+    "containedIn": "cr:containedIn",
+    "md5": "cr:md5",
+    "name": {
+      "@container": "@language"
+    },
+    "path": "cr:path",
+    "repeated": "cr:repeated",
+    "replace": "cr:replace",
+    "samplingRate": "cr:samplingRate"
+  },
+  "@type": "sc:Dataset",
+  "@id": "https://doi.org/10.7937/TCIA.2020.T90F-WB82",
+  "conformsTo": "http://mlcommons.org/croissant/1.1",
+  "name": "AI-ready restained and co-registered multiplex dataset for head-and-neck carcinoma",
+  "alternateName": "HNSCC-mIF-mIHC-comparison",
+  "license": [
+    "https://creativecommons.org/licenses/by/4.0/"
+  ],
+  "citeAs": "https://doi.org/10.7937/TCIA.2020.T90F-WB82",
+  "conditionsOfAccess": "Open metadata and payloads subject to the listed license and TCIA usage policy.",
+  "description": "Bounded Data Retriever smoke-test derivative. Only the checked-in sample records are included; full imaging cohorts, archives, optional source downloads and Aspera packages are excluded. This does not represent the complete dataset.",
+  "prov:wasDerivedFrom": {
+    "@type": "sc:CreativeWork",
+    "name": "Original TCIA Croissant regression fixture",
+    "url": "https://github.com/TCIA/data-retriever/blob/8d0d394ef63d94ead01bcdae835c7b61ceb6c196/core/app/testdata/croissant-examples/hnscc-mif-mihc-comparison.croissant.jsonld"
+  },
+  "recordSet": [
+    {
+      "@type": "cr:RecordSet",
+      "@id": "smoke-pathdb.csv",
+      "name": "pathdb.csv bounded payload inventory",
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "pathdb.csv/imageUrl",
+          "name": "imageUrl",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "https://raw.githubusercontent.com/TCIA/data-retriever/09828f916cf868c357968aa2bbf4cf36727178ce/test-manifests/croissant/records/pathdb.csv"
+            },
+            "extract": {
+              "column": "imageUrl"
+            }
+          }
+        }
+      ],
+      "additionalProperty": [
+        {
+          "@type": "sc:PropertyValue",
+          "name": "CSV record count",
+          "value": 2
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA access level",
+          "value": "open"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA downstream access system",
+          "value": "PathDB"
+        }
+      ],
+      "license": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  ],
+  "distribution": [
+    {
+      "@type": "cr:FileObject",
+      "@id": "https://raw.githubusercontent.com/TCIA/data-retriever/09828f916cf868c357968aa2bbf4cf36727178ce/test-manifests/croissant/records/pathdb.csv",
+      "name": "pathdb.csv",
+      "contentUrl": "https://raw.githubusercontent.com/TCIA/data-retriever/09828f916cf868c357968aa2bbf4cf36727178ce/test-manifests/croissant/records/pathdb.csv",
+      "encodingFormat": "text/csv",
+      "contentSize": "281 B",
+      "sha256": "2bfc9146dddde391f6574bdfd2be9ae16ccb6ff6c3d49e91c2c78f502800aaa9",
+      "license": "https://creativecommons.org/licenses/by/4.0/",
+      "additionalProperty": [
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA access level",
+          "value": "open"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA downstream access system",
+          "value": "PathDB"
+        }
+      ]
+    }
+  ]
+}

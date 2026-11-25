@@ -4,10 +4,9 @@ These manifests exercise each current Data Retriever route without requiring a
 single very large disk. Run one manifest at a time and use a fresh output
 directory for every trial.
 
-Croissant JSON-LD examples live in
-[`benchmarkManifests/examples/croissant/`](croissant/README.md). They are kept
-in a nested directory so a benchmark of this directory does not accidentally
-launch several full-dataset downloads. Pass one `.jsonld` file explicitly.
+Bounded Croissant smoke examples live in
+[`test-manifests/croissant/`](../../test-manifests/croissant/README.md).
+They are separate from these throughput benchmarks.
 
 | Manifest | Route and payload shape | Approximate transfer |
 | --- | --- | ---: |

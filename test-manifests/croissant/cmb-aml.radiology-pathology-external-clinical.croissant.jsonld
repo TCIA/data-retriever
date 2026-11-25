@@ -1,0 +1,203 @@
+{
+  "@context": {
+    "@language": "en",
+    "@vocab": "https://schema.org/",
+    "arrayShape": "cr:arrayShape",
+    "citeAs": "cr:citeAs",
+    "column": "cr:column",
+    "conformsTo": "dct:conformsTo",
+    "containedIn": "cr:containedIn",
+    "cr": "http://mlcommons.org/croissant/",
+    "rai": "http://mlcommons.org/croissant/RAI/",
+    "data": {
+      "@id": "cr:data",
+      "@type": "@json"
+    },
+    "dataType": {
+      "@id": "cr:dataType",
+      "@type": "@vocab"
+    },
+    "dct": "http://purl.org/dc/terms/",
+    "description": {
+      "@container": "@language"
+    },
+    "equivalentProperty": "cr:equivalentProperty",
+    "examples": {
+      "@id": "cr:examples",
+      "@type": "@json"
+    },
+    "extract": "cr:extract",
+    "field": "cr:field",
+    "fileProperty": "cr:fileProperty",
+    "fileObject": "cr:fileObject",
+    "fileSet": "cr:fileSet",
+    "format": "cr:format",
+    "includes": "cr:includes",
+    "isArray": "cr:isArray",
+    "isLiveDataset": "cr:isLiveDataset",
+    "jsonPath": "cr:jsonPath",
+    "key": "cr:key",
+    "md5": "cr:md5",
+    "name": {
+      "@container": "@language"
+    },
+    "parentField": "cr:parentField",
+    "path": "cr:path",
+    "recordSet": "cr:recordSet",
+    "references": "cr:references",
+    "regex": "cr:regex",
+    "repeated": "cr:repeated",
+    "replace": "cr:replace",
+    "samplingRate": "cr:samplingRate",
+    "sc": "https://schema.org/",
+    "separator": "cr:separator",
+    "source": "cr:source",
+    "subField": "cr:subField",
+    "transform": "cr:transform",
+    "odrl": "http://www.w3.org/ns/odrl/2/",
+    "sdVersion": "cr:sdVersion"
+  },
+  "@type": "sc:Dataset",
+  "@id": "https://doi.org/10.7937/PCTE-6M66",
+  "conformsTo": "http://mlcommons.org/croissant/1.1",
+  "name": "Cancer Moonshot Biobank - Acute Myeloid Leukemia Cancer Collection",
+  "alternateName": "CMB-AML",
+  "license": [
+    "https://creativecommons.org/licenses/by/4.0/",
+    "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/"
+  ],
+  "citeAs": "Cancer Moonshot Biobank. (2023). Cancer Moonshoot Biobank - Acute Myeloid Leukemia (CMB-AML) (Version 8) [dataset]. The Cancer Imaging Archive. https://doi.org/10.7937/pcte-6m66",
+  "conditionsOfAccess": "Mixed open and controlled access. Review each TCIA download row for its license, access mechanism, and controlled-access requirements.",
+  "description": "Bounded Data Retriever smoke-test derivative. Only the checked-in sample records are included; full imaging cohorts, archives, optional source downloads and Aspera packages are excluded. This does not represent the complete dataset.",
+  "prov:wasDerivedFrom": {
+    "@type": "sc:CreativeWork",
+    "name": "Original TCIA Croissant regression fixture",
+    "url": "https://github.com/TCIA/data-retriever/blob/8d0d394ef63d94ead01bcdae835c7b61ceb6c196/benchmarkManifests/examples/croissant/cmb-aml.radiology-pathology-external-clinical.croissant.jsonld"
+  },
+  "recordSet": [
+    {
+      "@type": "cr:RecordSet",
+      "@id": "smoke-cmb-aml-idc.csv",
+      "name": "cmb-aml-idc.csv bounded payload inventory",
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "cmb-aml-idc.csv/SeriesInstanceUID",
+          "name": "SeriesInstanceUID",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "https://raw.githubusercontent.com/TCIA/data-retriever/09828f916cf868c357968aa2bbf4cf36727178ce/test-manifests/croissant/records/cmb-aml-idc.csv"
+            },
+            "extract": {
+              "column": "SeriesInstanceUID"
+            }
+          }
+        }
+      ],
+      "additionalProperty": [
+        {
+          "@type": "sc:PropertyValue",
+          "name": "CSV record count",
+          "value": 1
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA access level",
+          "value": "open"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA downstream access system",
+          "value": "Imaging Data Commons (IDC)"
+        }
+      ],
+      "license": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    {
+      "@type": "cr:RecordSet",
+      "@id": "smoke-cmb-aml-ctdc.csv",
+      "name": "cmb-aml-ctdc.csv bounded payload inventory",
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "cmb-aml-ctdc.csv/drs_uri",
+          "name": "drs_uri",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "https://raw.githubusercontent.com/TCIA/data-retriever/09828f916cf868c357968aa2bbf4cf36727178ce/test-manifests/croissant/records/cmb-aml-ctdc.csv"
+            },
+            "extract": {
+              "column": "drs_uri"
+            }
+          }
+        }
+      ],
+      "additionalProperty": [
+        {
+          "@type": "sc:PropertyValue",
+          "name": "CSV record count",
+          "value": 1
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA access level",
+          "value": "controlled"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA downstream access system",
+          "value": "Clinical Translational Data Commons (CTDC)"
+        }
+      ],
+      "license": "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/"
+    }
+  ],
+  "distribution": [
+    {
+      "@type": "cr:FileObject",
+      "@id": "https://raw.githubusercontent.com/TCIA/data-retriever/09828f916cf868c357968aa2bbf4cf36727178ce/test-manifests/croissant/records/cmb-aml-idc.csv",
+      "name": "cmb-aml-idc.csv",
+      "contentUrl": "https://raw.githubusercontent.com/TCIA/data-retriever/09828f916cf868c357968aa2bbf4cf36727178ce/test-manifests/croissant/records/cmb-aml-idc.csv",
+      "encodingFormat": "text/csv",
+      "contentSize": "81 B",
+      "sha256": "8f595bd4fe1e4f39be53965dcb3b6acba8f6730e6c78524b36cd87720262f26e",
+      "license": "https://creativecommons.org/licenses/by/4.0/",
+      "additionalProperty": [
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA access level",
+          "value": "open"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA downstream access system",
+          "value": "Imaging Data Commons (IDC)"
+        }
+      ]
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "https://raw.githubusercontent.com/TCIA/data-retriever/09828f916cf868c357968aa2bbf4cf36727178ce/test-manifests/croissant/records/cmb-aml-ctdc.csv",
+      "name": "cmb-aml-ctdc.csv",
+      "contentUrl": "https://raw.githubusercontent.com/TCIA/data-retriever/09828f916cf868c357968aa2bbf4cf36727178ce/test-manifests/croissant/records/cmb-aml-ctdc.csv",
+      "encodingFormat": "text/csv",
+      "contentSize": "83 B",
+      "sha256": "af2091f8496049bf12538b83e8772d459885e0400f93b461af300c76ba542c42",
+      "license": "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/",
+      "additionalProperty": [
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA access level",
+          "value": "controlled"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA downstream access system",
+          "value": "Clinical Translational Data Commons (CTDC)"
+        }
+      ]
+    }
+  ]
+}

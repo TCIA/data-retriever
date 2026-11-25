@@ -1,0 +1,141 @@
+{
+  "@context": {
+    "@language": "en",
+    "@vocab": "https://schema.org/",
+    "arrayShape": "cr:arrayShape",
+    "citeAs": "cr:citeAs",
+    "column": "cr:column",
+    "conformsTo": "dct:conformsTo",
+    "containedIn": "cr:containedIn",
+    "cr": "http://mlcommons.org/croissant/",
+    "rai": "http://mlcommons.org/croissant/RAI/",
+    "data": {
+      "@id": "cr:data",
+      "@type": "@json"
+    },
+    "dataType": {
+      "@id": "cr:dataType",
+      "@type": "@vocab"
+    },
+    "dct": "http://purl.org/dc/terms/",
+    "description": {
+      "@container": "@language"
+    },
+    "equivalentProperty": "cr:equivalentProperty",
+    "examples": {
+      "@id": "cr:examples",
+      "@type": "@json"
+    },
+    "extract": "cr:extract",
+    "field": "cr:field",
+    "fileProperty": "cr:fileProperty",
+    "fileObject": "cr:fileObject",
+    "fileSet": "cr:fileSet",
+    "format": "cr:format",
+    "includes": "cr:includes",
+    "isArray": "cr:isArray",
+    "isLiveDataset": "cr:isLiveDataset",
+    "jsonPath": "cr:jsonPath",
+    "key": "cr:key",
+    "md5": "cr:md5",
+    "name": {
+      "@container": "@language"
+    },
+    "parentField": "cr:parentField",
+    "path": "cr:path",
+    "recordSet": "cr:recordSet",
+    "references": "cr:references",
+    "regex": "cr:regex",
+    "repeated": "cr:repeated",
+    "replace": "cr:replace",
+    "samplingRate": "cr:samplingRate",
+    "sc": "https://schema.org/",
+    "separator": "cr:separator",
+    "source": "cr:source",
+    "subField": "cr:subField",
+    "transform": "cr:transform",
+    "odrl": "http://www.w3.org/ns/odrl/2/",
+    "sdVersion": "cr:sdVersion"
+  },
+  "@type": "sc:Dataset",
+  "@id": "https://doi.org/10.7937/k9/tcia.2020.a8sh-7363",
+  "conformsTo": "http://mlcommons.org/croissant/1.1",
+  "name": "HNSCC",
+  "alternateName": "HNSCC",
+  "license": [
+    "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/"
+  ],
+  "citeAs": "Grossberg A, Elhalawani H, Mohamed A, Mulder S, Williams B, White AL, Zafereo J, Wong AJ, Berends JE, AboHashem S, Aymard JM, Kanwar A, Perni S, Rock CD, Chamchod S, Kantor M, Browne T, Hutcheson K, Gunn GB, Frank SJ, Rosenthal DI, Garden AS, Fuller CD, M.D. Anderson Cancer Center Head and Neck Quantitative Imaging Working Group. (2020) HNSCC Version 4 [Dataset] . The Cancer Imaging Archive. DOI: https://doi.org/10.7937/k9/tcia.2020.a8sh-7363",
+  "conditionsOfAccess": "Mixed open and controlled access. Review each TCIA download row for its license, access mechanism, and controlled-access requirements.",
+  "description": "Bounded Data Retriever smoke-test derivative. Only the checked-in sample records are included; full imaging cohorts, archives, optional source downloads and Aspera packages are excluded. This does not represent the complete dataset.",
+  "prov:wasDerivedFrom": {
+    "@type": "sc:CreativeWork",
+    "name": "Original TCIA Croissant regression fixture",
+    "url": "https://github.com/TCIA/data-retriever/blob/8d0d394ef63d94ead01bcdae835c7b61ceb6c196/benchmarkManifests/examples/croissant/hnscc.mixed-access.croissant.jsonld"
+  },
+  "recordSet": [
+    {
+      "@type": "cr:RecordSet",
+      "@id": "smoke-hnscc-gc.csv",
+      "name": "hnscc-gc.csv bounded payload inventory",
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "hnscc-gc.csv/drs_uri",
+          "name": "drs_uri",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "https://raw.githubusercontent.com/TCIA/data-retriever/09828f916cf868c357968aa2bbf4cf36727178ce/test-manifests/croissant/records/hnscc-gc.csv"
+            },
+            "extract": {
+              "column": "drs_uri"
+            }
+          }
+        }
+      ],
+      "additionalProperty": [
+        {
+          "@type": "sc:PropertyValue",
+          "name": "CSV record count",
+          "value": 1
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA access level",
+          "value": "controlled"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA downstream access system",
+          "value": "General Commons"
+        }
+      ],
+      "license": "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/"
+    }
+  ],
+  "distribution": [
+    {
+      "@type": "cr:FileObject",
+      "@id": "https://raw.githubusercontent.com/TCIA/data-retriever/09828f916cf868c357968aa2bbf4cf36727178ce/test-manifests/croissant/records/hnscc-gc.csv",
+      "name": "hnscc-gc.csv",
+      "contentUrl": "https://raw.githubusercontent.com/TCIA/data-retriever/09828f916cf868c357968aa2bbf4cf36727178ce/test-manifests/croissant/records/hnscc-gc.csv",
+      "encodingFormat": "text/csv",
+      "contentSize": "83 B",
+      "sha256": "248ac1d589a2befc3125b0346092baeb587d3f4c290d6e726babe9ea3c6cacfe",
+      "license": "https://www.cancerimagingarchive.net/nih-controlled-data-access-policy/",
+      "additionalProperty": [
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA access level",
+          "value": "controlled"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA downstream access system",
+          "value": "General Commons"
+        }
+      ]
+    }
+  ]
+}
