@@ -9,7 +9,7 @@ Croissant JSON-LD examples live in
 in a nested directory so a benchmark of this directory does not accidentally
 launch several full-dataset downloads. Pass one `.jsonld` file explicitly.
 
-| Manifest | Route and payload shape | Approximate transfer |
+| Manifest | Route and payload shape | Approximate payload size |
 | --- | --- | ---: |
 | `idc-rider-lung-pet-ct-pt.csv` | IDC/S3 many-small: 509 PT series, 115,076 DICOM instances | 4.73 GiB |
 | `idc-cmb-aml-few-large-sm.csv` | IDC/S3 few-large: one slide-microscopy series containing five instances | 5.59 GiB |
@@ -21,6 +21,17 @@ launch several full-dataset downloads. Pass one `.jsonld` file explicitly.
 | `pathdb-large-svs-{prod,tst}.csv` | PathDB few-large: the same three SVS files on production and staging | 5.00 GiB |
 | `pathdb-single-very-large-svs-{prod,tst}.csv` | PathDB single-large: the same one SVS file on production and staging | 5.00 GiB |
 | `pathdb-normal-mix-{prod,tst}.csv` | PathDB normal size mix: the same six SVS files from 59 MB to 3.13 GB | 4.69 GiB |
+
+For CTDC and General Commons, `source_series_size_bytes` preserves the source
+manifest's DICOM series size estimate, **not the compressed ZIP object size**.
+The November 2026 sample audit confirmed this distinction for two CMB-PCA and
+two LGG-1p19qDeletion ZIPs: each estimate equaled the sum of uncompressed DICOM
+members, excluding the ZIP's LICENSE member. The DRS table sizes are source
+series-size estimates; actual ZIP transfers can be smaller. The single-large
+LDCT archive's transferred byte size has not been reverified. These estimates
+are deliberately not supplied as `file_size_bytes`, which the retriever checks
+against bytes transferred. PathDB `file_size_bytes` values describe the actual
+file objects. Provider and HTTP integrity checks remain enabled.
 
 The General Commons and CTDC manifests are controlled-access metadata. A
 manifest does not grant access. Testers need authorization and their own TCIA

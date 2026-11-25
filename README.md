@@ -172,6 +172,7 @@ Launch with `--cli` (or `-cli`) to skip the GUI entirely:
 | `--meta` | `-m` | off | Fetch metadata only (no images) |
 | `--no-md5` | | off | Disable MD5 validation |
 | `--no-decompress` | | off | Keep downloads as ZIP archives |
+| `--doi-resolver-url` | | TCIA snapshot REST resolver | Resolve missing dataset DOIs through a compatible metadata service |
 | `--refresh-metadata` | | off | Force re-fetch all metadata |
 | `--metadata-workers` | | `20` | Parallel metadata fetch workers |
 | `--server-friendly` | | off | Conservative settings to avoid rate-limiting |
@@ -333,14 +334,46 @@ particular download components, the report states that the individual selection
 is unresolved. This does not imply those data were downloaded or used in research.
 
 Supplied citation text is preserved, including distinct supplied versions sharing
-a DOI. DOI variants are normalized and deduplicated. Missing dataset identities
-can be matched against unique visible WordPress records using download ID, URL,
-or dataset name. DOI content negotiation supplies missing citation text and
-BibTeX; unresolved references remain explicit and never block downloads. Lookup
-is bounded to 25 seconds per run and skipped on cancellation. BibTeX comes from
-the DOI service's current metadata; supplied version-specific text remains in
-`references.txt` and `references.json`. Cite the datasets and versions actually
-used in your research.
+a DOI. DOI variants are normalized and deduplicated. **Known DOIs go directly to
+citation-formatting services**: no WordPress catalog or separate DataCite REST
+metadata lookup is required.
+
+When a DOI is missing, the retriever submits exact public file locators to the
+snapshot REST `POST /v2/files/resolve-dois` endpoint in batches of up to 200.
+Supported mappings are DRS URIs, file IDs, controlled series UIDs, and public
+PathDB file URLs. Each file keeps its own identity until uniquely resolved, so a
+bare manifest can contain multiple datasets. Matched responses record the
+snapshot release fingerprint in `references.json`. Unmatched, ambiguous and
+unavailable results remain unresolved; the retriever does not guess from a
+filename or replace a failed exact match with a collection-name guess.
+
+When only a dataset short title is available, including provider metadata that
+identifies a collection but lacks a DOI, the compact snapshot dataset endpoint
+can resolve one unique dataset identity. The reference pipeline does not fetch
+WordPress catalogs. Signed URLs, credentials and query strings are not forwarded
+to the file resolver. DOI formatting failures and missing resolver metadata are
+reported without failing successful file transfers. Cancellation skips remote
+lookup. Successful DOI formatting is cached for five minutes within the process.
+
+The [reference smoke manifests](test-manifests/reference-smoke/README.md) provide
+one DOI-free entry per source (IDC, NBIA, CTDC, General Commons and PathDB),
+with metadata-only commands for checking references without imaging transfers.
+
+The default resolver is `https://tcia.duckdns.org/v2/files/resolve-dois`.
+`--doi-resolver-url` selects another compatible endpoint, including a local test
+service. The new endpoint requires the resolver-enabled skill server and rebuilt
+research-detail indexes; older deployments produce an explicit warning and
+unresolved references. Existing download-license enrichment and the Croissant
+review UI retain their separate metadata behavior.
+
+BibTeX comes from the DOI service's current metadata. Standard DOI content
+negotiation is used as a fallback for publishers outside the DataCite formatter. When its BibTeX omits a
+version, an explicit `(Version ...)` in that service's current citation supplies
+the version field. Supplied version-specific text remains in `references.txt`
+and `references.json`; it never populates the cross-run DOI cache. JSON exposes
+`citation_version` and `bibtex_version` separately. Citation versions describe
+metadata and do not independently verify the versions of downloaded files.
+Cite the datasets and versions actually used in your research.
 
 ## Reviewing Croissant downloads
 
