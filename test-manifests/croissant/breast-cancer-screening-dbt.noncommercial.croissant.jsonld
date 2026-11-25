@@ -1,0 +1,141 @@
+{
+  "@context": {
+    "@language": "en",
+    "@vocab": "https://schema.org/",
+    "arrayShape": "cr:arrayShape",
+    "citeAs": "cr:citeAs",
+    "column": "cr:column",
+    "conformsTo": "dct:conformsTo",
+    "containedIn": "cr:containedIn",
+    "cr": "http://mlcommons.org/croissant/",
+    "rai": "http://mlcommons.org/croissant/RAI/",
+    "data": {
+      "@id": "cr:data",
+      "@type": "@json"
+    },
+    "dataType": {
+      "@id": "cr:dataType",
+      "@type": "@vocab"
+    },
+    "dct": "http://purl.org/dc/terms/",
+    "description": {
+      "@container": "@language"
+    },
+    "equivalentProperty": "cr:equivalentProperty",
+    "examples": {
+      "@id": "cr:examples",
+      "@type": "@json"
+    },
+    "extract": "cr:extract",
+    "field": "cr:field",
+    "fileProperty": "cr:fileProperty",
+    "fileObject": "cr:fileObject",
+    "fileSet": "cr:fileSet",
+    "format": "cr:format",
+    "includes": "cr:includes",
+    "isArray": "cr:isArray",
+    "isLiveDataset": "cr:isLiveDataset",
+    "jsonPath": "cr:jsonPath",
+    "key": "cr:key",
+    "md5": "cr:md5",
+    "name": {
+      "@container": "@language"
+    },
+    "parentField": "cr:parentField",
+    "path": "cr:path",
+    "recordSet": "cr:recordSet",
+    "references": "cr:references",
+    "regex": "cr:regex",
+    "repeated": "cr:repeated",
+    "replace": "cr:replace",
+    "samplingRate": "cr:samplingRate",
+    "sc": "https://schema.org/",
+    "separator": "cr:separator",
+    "source": "cr:source",
+    "subField": "cr:subField",
+    "transform": "cr:transform",
+    "odrl": "http://www.w3.org/ns/odrl/2/",
+    "sdVersion": "cr:sdVersion"
+  },
+  "@type": "sc:Dataset",
+  "@id": "https://doi.org/10.7937/E4WT-CD02",
+  "conformsTo": "http://mlcommons.org/croissant/1.1",
+  "name": "Breast Cancer Screening - Digital Breast Tomosynthesis",
+  "alternateName": "Breast-Cancer-Screening-DBT",
+  "license": [
+    "https://creativecommons.org/licenses/by-nc/4.0/"
+  ],
+  "citeAs": "Buda, M., Saha, A., Walsh, R., Ghate, S., Li, N., Swiecicki, A., Lo, J. Y., Yang, J., & Mazurowski, M. (2020). Breast Cancer Screening - Digital Breast Tomosynthesis (BCS-DBT) (Version 5) [dataset]. The Cancer Imaging Archive. https://doi.org/10.7937/E4WT-CD02",
+  "conditionsOfAccess": "Open-access TCIA data with a noncommercial-use license condition. Users must follow the listed license and TCIA Data Usage Policies and Restrictions.",
+  "description": "Bounded Data Retriever smoke-test derivative. Only the checked-in sample records are included; full imaging cohorts, archives, optional source downloads and Aspera packages are excluded. This does not represent the complete dataset.",
+  "prov:wasDerivedFrom": {
+    "@type": "sc:CreativeWork",
+    "name": "Original TCIA Croissant regression fixture",
+    "url": "https://github.com/TCIA/data-retriever/blob/8d0d394ef63d94ead01bcdae835c7b61ceb6c196/benchmarkManifests/examples/croissant/breast-cancer-screening-dbt.noncommercial.croissant.jsonld"
+  },
+  "recordSet": [
+    {
+      "@type": "cr:RecordSet",
+      "@id": "smoke-dbt.csv",
+      "name": "dbt.csv bounded payload inventory",
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "dbt.csv/SeriesInstanceUID",
+          "name": "SeriesInstanceUID",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "https://raw.githubusercontent.com/TCIA/data-retriever/09828f916cf868c357968aa2bbf4cf36727178ce/test-manifests/croissant/records/dbt.csv"
+            },
+            "extract": {
+              "column": "SeriesInstanceUID"
+            }
+          }
+        }
+      ],
+      "additionalProperty": [
+        {
+          "@type": "sc:PropertyValue",
+          "name": "CSV record count",
+          "value": 1
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA access level",
+          "value": "open_noncommercial"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA downstream access system",
+          "value": "Imaging Data Commons (IDC)"
+        }
+      ],
+      "license": "https://creativecommons.org/licenses/by-nc/4.0/"
+    }
+  ],
+  "distribution": [
+    {
+      "@type": "cr:FileObject",
+      "@id": "https://raw.githubusercontent.com/TCIA/data-retriever/09828f916cf868c357968aa2bbf4cf36727178ce/test-manifests/croissant/records/dbt.csv",
+      "name": "dbt.csv",
+      "contentUrl": "https://raw.githubusercontent.com/TCIA/data-retriever/09828f916cf868c357968aa2bbf4cf36727178ce/test-manifests/croissant/records/dbt.csv",
+      "encodingFormat": "text/csv",
+      "contentSize": "83 B",
+      "sha256": "d9a39b14fc47b8a164db8558775975e2b4784eb6ff311e0ecdd29dbe0d0f5200",
+      "license": "https://creativecommons.org/licenses/by-nc/4.0/",
+      "additionalProperty": [
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA access level",
+          "value": "open_noncommercial"
+        },
+        {
+          "@type": "sc:PropertyValue",
+          "name": "TCIA downstream access system",
+          "value": "Imaging Data Commons (IDC)"
+        }
+      ]
+    }
+  ]
+}
